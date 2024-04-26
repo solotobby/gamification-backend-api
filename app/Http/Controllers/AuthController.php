@@ -34,7 +34,12 @@ use Stevebauman\Location\Facades\Location;
 class AuthController extends Controller
 {
     public function register(Request $request){
-       $curLocation = currentLocation();
+        if(env('APP_ENV') != 'localenv'){
+             $curLocation = currentLocation();
+        }else{
+            $curLocation = 'Nigeria';
+        }
+
        if($curLocation == 'Nigeria'){
        
         $request->validate([
@@ -68,7 +73,11 @@ class AuthController extends Controller
 
             $user = $res['user'];
             $wallet = $res['wallet'];
-            $profile = $res['profile'];
+            if(env('APP_ENV') != 'localenv'){
+                $profile = $res['profile'];
+            }else{
+                $profile = [];
+            }
         
             $token = $user->createToken('freebyz_api')->accessToken;
            
@@ -109,9 +118,9 @@ class AuthController extends Controller
         $currency = $curLocation == "Nigeria" ? 'Naira' : 'Dollar';
        
         $wallet =  Wallet::create(['user_id'=> $user->id, 'balance' => '0.00', 'base_currency' => $currency]);
-
-        $profile = setProfile($user);
-
+        if(env('APP_ENV') != 'localenv'){
+            $profile = setProfile($user);
+        }
         if($ref_id != ''){
             Referral::create(['user_id' => $user->id, 'referee_id' => $ref_id]);
         }
@@ -120,9 +129,10 @@ class AuthController extends Controller
         //     $phone = '234'.substr($request->phone, 1);
         //     generateVirtualAccountOnboarding($user, $phone);
         // }
-
-        activityLog($user, 'account_creation', $user->name .' Registered ', 'regular');
-
+        if(env('APP_ENV') != 'localenv'){
+            activityLog($user, 'account_creation', $user->name .' Registered ', 'regular');
+        }
+       
         //process email verification code
 
         $startTime = date("Y-m-d H:i:s");
@@ -131,18 +141,23 @@ class AuthController extends Controller
         $code = random_int(100000, 999999);
 
         OTP::create(['user_id' => $user->id, 'pinId' => $convertedTime, 'phone_number' => '1234567890', 'otp' => $code, 'is_verified' => false]);
-        $subject = 'Freebyz Email Verirification';
+        if(env('APP_ENV') != 'localenv'){
+            $subject = 'Freebyz Email Verification';
+            $content = 'Hi,'.$user->name.' Your Email Verification Code is '.$code;
+            Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
 
-        $content = 'Hi,'.$user->name.' Your Email Verification Code is '.$code;
-        Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
-
-        // $content = 'Your withdrawal request has been granted and your acount credited successfully. Thank you for choosing Freebyz.com';
-        $subject = 'Welcome to Freebyz';
-        Mail::to($request->email)->send(new Welcome($user,  $subject, ''));
+            // $content = 'Your withdrawal request has been granted and your acount credited successfully. Thank you for choosing Freebyz.com';
+            $subject = 'Welcome to Freebyz';
+            Mail::to($request->email)->send(new Welcome($user,  $subject, ''));
+        }
 
         $data['user'] = $user;
         $data['wallet'] = $wallet;
+        if(env('APP_ENV') != 'localenv'){
         $data['profile'] = $profile;
+        }else{
+            $data['profile'] = [];
+        }
         return $data;
     }
 
@@ -171,10 +186,11 @@ class AuthController extends Controller
              if(Hash::check($request->password, $user->password)){
                 $data['user'] = User::with(['roles'])->where('email', $request->email)->first();
                 $data['token'] = $user->createToken('freebyz')->accessToken;
-                $data['profile']=setProfile($user);//set profile page 
-               
-                activityLog($user, 'login', $user->name .' Logged In', 'regular');
-
+                if(env('APP_ENV') != 'localenv'){
+                    $data['profile']=setProfile($user);//set profile page 
+                
+                    activityLog($user, 'login', $user->name .' Logged In', 'regular');
+                }
                 return response()->json(['message' => 'Login  successful', 'status' => true, 'data' => $data], 200);
 
               } else{
