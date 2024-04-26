@@ -264,10 +264,10 @@ class AuthController extends Controller
             if($validateEmail){
                 $token = Str::random(64);
                 \DB::table('password_resets')->insert(['email' => $validateEmail->email, 'token' => $token, 'created_at' => now()]);
-                // $subject = 'Freebyz Password Reset Link';
-                // $r_link = url('password/reset/'.$token);    
-                // $content = 'Hi,'.$validateEmail->name.'. Your Password Reset Link is '.$r_link;
-                // Mail::to($validateEmail->email)->send(new GeneralMail($validateEmail, $content, $subject, ''));
+                $subject = 'Freebyz Password Reset Link';
+                $r_link = url('password/reset/'.$token);    
+                $content = 'Hi,'.$validateEmail->name.'. Your Password Reset Link is: '.$r_link;
+                Mail::to($validateEmail->email)->send(new GeneralMail($validateEmail, $content, $subject, ''));
 
             }else{
                 return response()->json(['status' => false, 'message' => 'No account associated with the email'], 401);
