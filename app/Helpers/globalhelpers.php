@@ -9,6 +9,7 @@ use App\Models\ActivityLog;
 use App\Models\Banner;
 use App\Models\BannerImpression;
 use App\Models\Campaign;
+use App\Models\CampaignWorker;
 use App\Models\Category;
 use App\Models\ConversionRate;
 use App\Models\Notification;
@@ -327,6 +328,12 @@ if(!function_exists('checkWalletBalance')){
         return 'invalid';
        }
        
+    }
+}
+
+if(!function_exists('walletBalance')){
+    function walletBalance(){
+        return Wallet::where('user_id', auth()->user()->id)->first();
     }
 }
 
@@ -1154,5 +1161,116 @@ if(!function_exists('allCountries')){
 
     }
 }
+
+if(!function_exists('getInitials')){
+    function getInitials($name){
+        $names = explode(' ', $name);
+        $initials = '';
+        foreach ($names as $name) {
+            $initials .= isset($name[0]) . '.';
+        }
+        $initials = rtrim($initials, '.');
+        return $initials; 
+    }
+}
+
+if(!function_exists('dashboardAvailableJobs')){
+    function dashboardAvailableJobs(){
+        $campaigns = Campaign::where('status', 'Live')->where('is_completed', false)->orderBy('created_at', 'DESC')->take(10)->get();
+        $list = [];
+        foreach($campaigns as $key => $value){
+            // $data['pending'] = 'Pending';
+            // $data['approve'] = 'Approved';
+            // $attempts = $value->completed->count();
+            // $completed = $value->completed()->where('status', '!=', 'Denied')->count(); //->where('status', 'Pending')->orWhere('status', 'Approved')->count();//->where('status', '!=', 'Denied')->count();//->orWhere('status', 'Pending')->orWhere('status', 'Approved')->count();//count();   //->where('status', '!=', 'Denied')->count();
+    
+            $c = $value->pending_count + $value->completed_count;//
+            $div = $c / $value->number_of_staff;
+            $progress = $div * 100;
+    
+            $list[] = [ 
+                'id' => $value->id, 
+                'job_id' => $value->job_id, 
+                'campaign_amount' => $value->campaign_amount,
+                'post_title' => $value->post_title, 
+                'number_of_staff' => $value->number_of_staff, 
+                'type' => $value->campaignType->name, 
+                'category' => $value->campaignCategory->name,
+                //'attempts' => $attempts,
+                'completed' => $c, //$value->completed_count+$value->pending_count,
+                'is_completed' => $c >= $value->number_of_staff ? true : false,
+                'progress' => $progress,
+                'currency' => $value->currency,
+                'created_at' => $value->created_at
+            ];
+        }
+    
+        //$sortedList = collect($list)->sortBy('is_completed')->values()->all();//collect($list)->sortByDesc('is_completed')->values()->all(); //collect($list)->sortBy('is_completed')->values()->all();
+        $user = User::where('id', auth()->user()->id)->first();
+
+        // if($user->wallet->base_currency == 'Naira')
+        //campaigns created
+        $data['total_campaigns'] = $user->myCampaigns()->count();
+        $data['total_jobs_done'] = $user->myJobs()->where('status', 'Approved')->count();
+        $data['total_referral'] = $user->referees->count();
+        $data['referral_code'] = $user->referral_code;
+        $data['wallet'] = $user->wallet;
+
+
+        // Remove objects where 'is_completed' is true
+        $data['av_jobs'] = array_filter($list, function ($item) {
+                return $item['is_completed'] !== true;
+            });
+
+        
+        // $completed = CampaignWorker::where('user_id', auth()->user()->id)->where('status', 'Approved')->count();
+      
+
+        return $data;
+    }
+}
+
+if(!function_exists('availableJobs')){
+    function availableJobs(){
+        $campaigns = Campaign::where('status', 'Live')->where('is_completed', false)->orderBy('created_at', 'DESC')->get();
+        $list = [];
+        foreach($campaigns as $key => $value){
+            // $data['pending'] = 'Pending';
+            // $data['approve'] = 'Approved';
+            // $attempts = $value->completed->count();
+            // $completed = $value->completed()->where('status', '!=', 'Denied')->count(); //->where('status', 'Pending')->orWhere('status', 'Approved')->count();//->where('status', '!=', 'Denied')->count();//->orWhere('status', 'Pending')->orWhere('status', 'Approved')->count();//count();   //->where('status', '!=', 'Denied')->count();
+    
+            $c = $value->pending_count + $value->completed_count;//
+            $div = $c / $value->number_of_staff;
+            $progress = $div * 100;
+    
+            $list[] = [ 
+                'id' => $value->id, 
+                'job_id' => $value->job_id, 
+                'campaign_amount' => $value->campaign_amount,
+                'post_title' => $value->post_title, 
+                'number_of_staff' => $value->number_of_staff, 
+                'type' => $value->campaignType->name, 
+                'category' => $value->campaignCategory->name,
+                //'attempts' => $attempts,
+                'completed' => $c, //$value->completed_count+$value->pending_count,
+                'is_completed' => $c >= $value->number_of_staff ? true : false,
+                'progress' => $progress,
+                'currency' => $value->currency,
+                'created_at' => $value->created_at
+            ];
+        }
+    
+        //$sortedList = collect($list)->sortBy('is_completed')->values()->all();//collect($list)->sortByDesc('is_completed')->values()->all(); //collect($list)->sortBy('is_completed')->values()->all();
+    
+        // Remove objects where 'is_completed' is true
+        $filteredArray = array_filter($list, function ($item) {
+            return $item['is_completed'] !== true;
+        });
+      
+        return $filteredArray;
+    }
+}
+
 
 

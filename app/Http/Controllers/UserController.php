@@ -6,6 +6,7 @@ use App\Helpers\CapitalSage;
 use App\Helpers\PaystackHelpers;
 use App\Helpers\Sendmonny;
 use App\Helpers\SystemActivities;
+use App\Http\Resources\UserResource;
 use App\Mail\UpgradeUser;
 use App\Models\DataBundle;
 use App\Models\PaymentTransaction;
@@ -17,6 +18,7 @@ use App\Models\Wallet;
 use App\Models\Withrawal;
 use App\Notifications\NewNotification;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +32,19 @@ class UserController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
+    }
+
+    public function userResource(){
+
+        try{
+             $data['user'] = new UserResource(auth()->user());
+             $data['wallet'] = walletBalance();
+
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+        }
+        return response()->json(['status' => true, 'message' => 'Auth User Resource', 'data' => $data], 200);
+
     }
 
     public function upgrade()

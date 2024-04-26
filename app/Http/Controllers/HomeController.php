@@ -31,6 +31,7 @@ use App\Models\VirtualAccount;
 use App\Models\Wallet;
 use App\Models\Withrawal;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Facades\Auth;
 use Nette\Utils\Random;
 
@@ -67,6 +68,24 @@ class HomeController extends Controller
         } 
     }
 
+    public function dashboard(){
+        try{
+
+            if(auth()->user()->age_range == '' || auth()->user()->gender == ''){ //compell people to take survey
+                $data = 'redirect user to take survey';
+            }else{
+                // $data['dashboardAvailableJobs'] =  dashboardAvailableJobs();
+                // $data['wallet'] = walletBalance();
+
+                $data = dashboardAvailableJobs();
+            }
+
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+        }
+        return response()->json(['status' => true, 'message' => 'Dashboard available jobs', 'data' => $data], 200);
+
+    }
     public function userHome()
     {
         //Sendmonny::accessToken();

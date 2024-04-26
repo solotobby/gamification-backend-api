@@ -29,7 +29,7 @@ class SurveyController extends Controller
             return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
         }
 
-        return response()->json(['status' => true, 'data' => $interests,  'message' => 'List of interests'], 200);
+        return response()->json(['status' => true, 'message' => 'List of interests', 'data' => $interests], 200);
 
         //return view('user.survey.index', ['interests' => $interests]);
     }
@@ -38,25 +38,36 @@ class SurveyController extends Controller
     public function storeSurvey(Request $request){
         
         $request->validate([
-            'interest' => 'required|array|min:10',
+            'interest' => 'required|array|min:2',
             'age_range' => 'required|string',
             'gender' => 'required|string'
         ]);
-        $user = User::where('id', auth()->user()->id)->first();
 
-        $user->age_range = $request->age_range;
-        $user->gender = $request->gender;
-        $user->save();
+
+        try{
+           
+            $user = User::where('id', auth()->user()->id)->first();
+
+            $user->age_range = $request->age_range;
+            $user->gender = $request->gender;
+            $user->save();
+            
+            foreach($request->interest as $int){
+                \DB::table('user_interest')->insert(['user_id'=>$user->id, 'preference_id' => $int, 'created_at' => now(), 'updated_at' => now()]);
+            }
+            // $date = \Carbon\Carbon::today()->toDateString();
         
-        foreach($request->interest as $int){
-            \DB::table('user_interest')->insert(['user_id'=>$user->id, 'preference_id' => $int, 'created_at' => now(), 'updated_at' => now()]);
+            ActivityLog::create(['user_id' => $user->id, 'activity_type' => 'survey_points', 'description' =>  getInitials($user->name) .' earned 100 points for taking freebyz survey', 'user_type' => 'regular']);
+            // LoginPoints::create(['user_id' => $user->id, 'date' => $date, 'point' => '100']);
+
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
         }
-        // $date = \Carbon\Carbon::today()->toDateString();
-        
-        ActivityLog::create(['user_id' => $user->id, 'activity_type' => 'survey_points', 'description' =>  SystemActivities::getInitials($user->name) .' earned 100 points for taking freebyz survey', 'user_type' => 'regular']);
-        // LoginPoints::create(['user_id' => $user->id, 'date' => $date, 'point' => '100']);
 
-        return view('user.survey.completed');
+        return response()->json(['status' => true, 'message' => 'Interest Created Successfully'], 201);
+
+
+        // return view('user.survey.completed');
 
     }
 }
