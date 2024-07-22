@@ -366,7 +366,7 @@ class AuthController extends Controller
         ]);
 
         try{
-           $checkValidity = \DB::table('password_resets')->where(['token' => $request->code])->first();
+           $checkValidity = \DB::table('password_resets')->where(['token' => $request->code])->firstOrFail();
             if($checkValidity){
 
                 return response()->json(['status' => true, 'message' => 'Email verified, redirect to registration page'], 200);
