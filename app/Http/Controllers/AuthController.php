@@ -11,6 +11,7 @@ use App\Helpers\Sendmonny;
 use App\Helpers\SystemActivities;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendMassEmail;
+use App\Mail\EmailVerification;
 use App\Mail\GeneralMail;
 use App\Mail\Welcome;
 use App\Models\AccountInformation;
@@ -331,6 +332,50 @@ class AuthController extends Controller
             'status' => 'success',
             'message' => 'User is logged out successfully'
             ], 200);
+
+    }
+
+    public function emailVerification(Request $request){
+        $request->validate([
+            'email' => 'required|email|max:255',
+        ]);
+
+        try{
+            
+            $token = rand(10000, 10000000);
+
+            \DB::table('password_resets')->insert(['email' => $request->email, 'token' => $token, 'created_at' => now()]);
+            $subject = 'Freebyz Email Verification';
+            // $r_link = url('password/reset/'.$token);    
+            $content = 'Hi, Your email verification code is: '.$token;
+            $user['name'] = '';
+            $user['email'] =$request->email;
+            
+            Mail::to($request->email)->send(new EmailVerification($request->email, $content, $subject, ''));
+
+            return response()->json(['status' => true, 'message' => 'Verification Email Sent Successfully'], 200);
+
+         }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+        }
+    }
+
+    public function emailVerifyCode(Request $request){
+        $request->validate([
+            'code' => 'required|numeric',
+        ]);
+
+        try{
+           $checkValidity = \DB::table('password_resets')->where(['token' => $request->code])->first();
+            if($checkValidity){
+
+                return response()->json(['status' => true, 'message' => 'Email verified, redirect to registration page'], 200);
+            }
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+        }
+        
+
 
     }
 }

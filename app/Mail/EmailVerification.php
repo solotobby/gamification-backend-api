@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class GeneralMail extends Mailable
+class EmailVerification extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -17,14 +17,14 @@ class GeneralMail extends Mailable
      * @return void
      */
 
-    public $user;
+    public $email;
     public $content;
     public $subject;
     public $url;
 
-    public function __construct($user, $content, $subject, $url)
+    public function __construct($email, $content, $subject, $url)
     {
-        $this->user = $user;
+        $this->email = $email;
         $this->content = $content;
         $this->subject = $subject;
         $this->url = $url;
@@ -37,8 +37,8 @@ class GeneralMail extends Mailable
      */
     public function build()
     {
-        return $this->markdown('emails.general')->subject($this->subject)->with([
-            'name' => $this->user->name == null ? '' : $this->user->name,
+        return $this->markdown('emails.email_verification')->subject($this->subject)->with([
+            // 'name' => $this->user->name == null ? '' : $this->user->name,
             'content' => $this->content,
             'url' => isset($this->url) && $this->url ? $this->url : 'home'
         ]);

@@ -518,5 +518,25 @@ class GeneralController extends Controller
     //    return $res['data']['authorization_url'];
     }
 
+    public function deviceLocation(){
+       
+        if(env('APP_DEBUG') == true){
+            $ip = '31.205.133.91';
+        }else{
+            $ip = request()->getClientIp();
+        }
+       
+        $location = Location::get($ip);
+        
+        // return ['ip'=>$location->ip, 'country'=>$location->countryName, 'region'=>$location->regionName, 'city'=>$location->cityName];
+
+        $data['ip'] = $location->ip;
+        $data['country'] = $location->countryName;
+        $data['region'] = $location->regionName;
+        $data['city'] = $location->cityName;
+        return response()->json(['message' => 'Basic Device Location', 'status' => true, 'data' => $data], 200);
+
+    }
+
 
 }
