@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['namespace' => 'auth'], function () {
     Route::post('register', [AuthController::class, 'register']);
+    // Route::post('int/register', [AuthController::class, 'intReg']);
+    // Route::post('local/register', [AuthController::class, 'localReg']);
     Route::post('login',  [AuthController::class,'login']);
     Route::post('process/otp',  [AuthController::class,'sendEmailOTP']);
     Route::post('validate/otp',  [AuthController::class,'validateOTP']);
@@ -42,6 +44,9 @@ Route::group(['namespace' => 'auth'], function () {
     Route::get('device/location', [GeneralController::class, 'deviceLocation']);
     Route::post('email/verification', [AuthController::class, 'emailVerification']);
     Route::post('email/verify/code', [AuthController::class, 'emailVerifyCode']);
+
+    Route::post('phone/verification', [AuthController::class, 'phoneVerification']);
+    Route::post('phone/verify/otp', [AuthController::class, 'phoneVerifyOTP']);
 });
 
 Route::middleware(['auth:api'])->group(function () {

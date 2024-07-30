@@ -34,6 +34,39 @@ use Stevebauman\Location\Facades\Location;
 
 class AuthController extends Controller
 {
+
+    public function localReg(Request $request){
+
+    }
+
+    public function intReg(Request $request){
+        $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'country' => ['required', 'string', 'max:255'],
+            'source' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'numeric', 'regex:/^([0-9\s\-\+\(\)]*)$/', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        try{
+            if(env('APP_ENV') != 'localenv'){
+                $curLocation = currentLocation();
+           }else{
+               $curLocation = 'Nigeria';
+           }
+            $res = $this->createUser($request, $curLocation);
+
+
+            
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+       }
+       return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
+
+    }
+
     public function register(Request $request){
         if(env('APP_ENV') != 'localenv'){
              $curLocation = currentLocation();
@@ -130,6 +163,7 @@ class AuthController extends Controller
         //     $phone = '234'.substr($request->phone, 1);
         //     generateVirtualAccountOnboarding($user, $phone);
         // }
+
         if(env('APP_ENV') != 'localenv'){
             activityLog($user, 'account_creation', $user->name .' Registered ', 'regular');
         }
@@ -376,8 +410,36 @@ class AuthController extends Controller
         }catch(Exception $exception){
             return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
         }
-        
+    
+    }
 
+    public function phoneVerification(Request $request){
+        $request->validate([
+            'phone' => ['required', 'numeric', 'digits:11'], //'unique:users'
+        ]);
 
+        try{ 
+             $phone_number ='234'.substr($request->phone, 1);
+             return $response = sendOTP($phone_number);
+
+            //  if($response['status'] == 200){
+            //     OTP::create(['user_id' => auth()->user()->id, 'pinId' => $response['pinId'], 'otp' => '11111', 'phone_number' => $response['to'], 'is_verified' => false]);
+            // }
+
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+        }
+    }
+
+    public function phoneVerifyOTP(Request $request){
+        $request->validate([
+             'otp' => 'numeric|required|digits:6',
+             'pinId' => 'numeric|required'
+        ]);
+        try{
+           return $response = OTPVerify($request->pinId, $request->otp);
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+        }
     }
 }
