@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SurveyController;
@@ -57,6 +58,21 @@ Route::middleware(['auth:api'])->group(function () {
     
     Route::prefix('dashboard')->group(function () {
         Route::get('/', [HomeController::class, 'dashboard']);
+       
+        Route::post('/campaign', [CampaignController::class, 'postCampaign']);
+        Route::post('/submit/campaign', [CampaignController::class, 'submitWork']);
+
+        Route::get('/campaign/categories', [CampaignController::class, 'getCategories']);
+        Route::get('/campaign/sub/categories/{id}', [CampaignController::class, 'getSubCategories']);
+        // Route::get('/campaign/sub/categories/info/{id}', [CampaignController::class, 'getSubcategoriesInfo']);
+
+        Route::get('/campaign/list', [CampaignController::class, 'index']);
+        Route::get('/campaign/pause/{id}', [CampaignController::class, 'pauseCampaign']);
+        Route::post('/campaign/add/worker', [CampaignController::class, 'addMoreWorkers']);
+
+        Route::get('/campaign/activities/{id}', [CampaignController::class, 'activities']);
+
+        Route::get('/campaign/{id}', [CampaignController::class, 'viewCampaign']);
     });
 
 

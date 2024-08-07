@@ -58,11 +58,11 @@ class SystemActivities{
         return $initials; 
     }
 
-    // public static function activityLog($user, $activity_type, $description, $user_type){
-    //     // return ActivityLog::create(['user_id' => '33', 'activity_type' => 'account_creation', 'description' => 'cood', 'user_type' => 'regular']);
-    //    return [$user, $activity_type, $description, $user_type];
-    //     // return ActivityLog::create(['user_id' => $user->id, 'activity_type' => $activity_type, 'description' => $description, 'user_type' => $user_type]);
-    // }
+    public static function activityLog($user, $activity_type, $description, $user_type){
+        // return ActivityLog::create(['user_id' => '33', 'activity_type' => 'account_creation', 'description' => 'cood', 'user_type' => 'regular']);
+       
+        return ActivityLog::create(['user_id' => $user->id, 'activity_type' => $activity_type, 'description' => $description, 'user_type' => $user_type]);
+    }
 
     public static function showActivityLog(){
         $startOfWeek = Carbon::now()->startOfWeek();
@@ -157,7 +157,7 @@ class SystemActivities{
         if($campaign_id == null){
             return false;
         }
-       $campaign = Campaign::with(['campaignType', 'campaignCategory'])->where('job_id', $campaign_id)->first();
+       $campaign = Campaign::with(['campaignType:id,name', 'campaignCategory:id,name'])->where('job_id', $campaign_id)->first();
        if($campaign){
             $campaign->impressions += 1;
             $campaign->save();
