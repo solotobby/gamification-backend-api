@@ -66,12 +66,19 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/campaign/sub/categories/{id}', [CampaignController::class, 'getSubCategories']);
         // Route::get('/campaign/sub/categories/info/{id}', [CampaignController::class, 'getSubcategoriesInfo']);
 
+        
         Route::get('/campaign/list', [CampaignController::class, 'index']);
+        Route::get('/campaign/approved', [CampaignController::class, 'approvedCampaigns']);
+        Route::get('/campaign/denied', [CampaignController::class, 'deniedCampaigns']);
+       
         Route::get('/campaign/pause/{id}', [CampaignController::class, 'pauseCampaign']);
         Route::post('/campaign/add/worker', [CampaignController::class, 'addMoreWorkers']);
+        
 
         Route::get('/campaign/activities/{id}', [CampaignController::class, 'activities']);
-
+        Route::get('/campaign/activities/response/{id}', [CampaignController::class, 'viewResponse']);
+        Route::post('/campaign/activities/response/decision', [CampaignController::class, 'campaignDecision']);
+       
         Route::get('/campaign/{id}', [CampaignController::class, 'viewCampaign']);
     });
 
