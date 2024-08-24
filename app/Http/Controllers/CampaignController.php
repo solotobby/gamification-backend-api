@@ -272,6 +272,7 @@ class CampaignController extends Controller
             $est_amount = $request->number_of_staff * $request->campaign_amount;
             $percent = (60 / 100) * $est_amount;
             $total = $est_amount + $percent;
+            
             $job_id = rand(10000,10000000);
 
             if(auth()->user()->wallet->base_currency == "Naira"){
@@ -378,6 +379,27 @@ class CampaignController extends Controller
                 'user_type' => 'admin'
             ]);
             return $campaign;
+    }
+
+    public function calculateCampaignPrice(Request $request){
+
+       $validated = $request->validate([
+            'staff_number' => 'required|numeric',
+            'unit_price' => 'required|string',
+        ]);
+
+        try{
+            
+            $est_amount = $validated['staff_number'] * $validated['unit_price'];
+            $percent = (60 / 100) * $est_amount;
+            $total = $est_amount + $percent;
+
+        }catch(Exception $exception){
+            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
+        }
+        return response()->json(['status' => true, 'message' => 'Campaign Price', 'data' => $total], 200);
+
+
     }
 
 

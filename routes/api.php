@@ -60,6 +60,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/', [HomeController::class, 'dashboard']);
        
         Route::post('/campaign', [CampaignController::class, 'postCampaign']);
+        Route::post('/campaign/calculate/price', [CampaignController::class, 'calculateCampaignPrice']);
         Route::post('/submit/campaign', [CampaignController::class, 'submitWork']);
 
         Route::get('/campaign/categories', [CampaignController::class, 'getCategories']);
