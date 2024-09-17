@@ -204,15 +204,16 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-       
+        try{
         $user = User::where('email', $request->email)->first();
-        $role = $user->getRoleNames();
-        if($role == []){
-            $user->assignRole('regular');
-           // 
-        }
-
+    
         if($user){
+
+            $role = $user->getRoleNames();
+            if($role == []){
+                $user->assignRole('regular');
+               // 
+            }
             if($user->referral_code == null){
                 $user->referral_code = Str::random(7);
                 $user->save();
@@ -232,7 +233,13 @@ class AuthController extends Controller
                 return response()->json(['status' => false, 'message' => 'Incorrect Login or Password'], 401);
 
               }            
+        }else{
+            return response()->json(['status' => false, 'message' => 'Incorrect Login or Password'], 401);
         }
+
+    }catch(\Exception  $exception){
+        return response()->json(['message' => "User not found", 'data' => $exception->getMessage()], 403);
+    }
 
     }
 
