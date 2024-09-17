@@ -230,11 +230,11 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Login  successful', 'status' => true, 'data' => $data], 200);
 
               } else{
-                return response()->json(['status' => false, 'message' => 'Incorrect Login or Password'], 401);
+                return response()->json(['status' => false, 'message' => 'Incorrect Login or Password'], 403);
 
               }            
         }else{
-            return response()->json(['status' => false, 'message' => 'Incorrect Login or Password'], 401);
+            return response()->json(['status' => false, 'message' => 'Incorrect Login or Password'], 403);
         }
 
     }catch(\Exception  $exception){
