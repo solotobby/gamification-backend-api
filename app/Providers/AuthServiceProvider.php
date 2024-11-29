@@ -23,4 +23,5 @@ class AuthServiceProvider extends ServiceProvider
     {
         //
     }
+
 }
