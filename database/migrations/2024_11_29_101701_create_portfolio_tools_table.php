@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('portfolio_tools', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
+            $table->unsignedBigInteger('portfolio_id');
+            $table->unsignedBigInteger('tool_id');
         });
     }
 

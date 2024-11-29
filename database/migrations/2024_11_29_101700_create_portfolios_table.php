@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('portfolios', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('skill_id');
+            $table->string('title');
+            $table->longText('description');
             $table->timestamps();
         });
     }

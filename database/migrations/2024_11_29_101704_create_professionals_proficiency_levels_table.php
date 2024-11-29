@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('professionals_proficiency_levels', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->string('status')->default('active');
             $table->timestamps();
         });
     }

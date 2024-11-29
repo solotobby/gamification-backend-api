@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('professionals_categories', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->boolean('status')->default(true);
             $table->timestamps();
         });
     }

@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('professional_tools', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('professional_id');
+            $table->unsignedBigInteger('tool_id');
             $table->timestamps();
         });
     }

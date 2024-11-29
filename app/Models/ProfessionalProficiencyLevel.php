@@ -8,4 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class ProfessionalProficiencyLevel extends Model
 {
     use HasFactory;
+
+    protected $table = "professionals_proficiency_levels";
+    protected $fillable = [
+        'name',
+        'status'
+    ];
 }

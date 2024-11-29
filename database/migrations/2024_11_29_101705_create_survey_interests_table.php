@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('survey_interests', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('survey_id');
+            $table->unsignedBigInteger('interest_id');
+            $table->string('unit');
             $table->timestamps();
         });
     }

@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('professionals_sub_categories', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('professional_category_id');
+            $table->string('name');
+            $table->string('unique_id');
+            $table->string('status')->default('active');
             $table->timestamps();
         });
     }

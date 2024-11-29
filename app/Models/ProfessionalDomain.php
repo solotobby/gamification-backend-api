@@ -8,4 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class ProfessionalDomain extends Model
 {
     use HasFactory;
+    protected $table = 'professional_domains';
+    protected $fillable = [
+        'professional_sub_categories_id',
+        'name'
+    ];
 }
