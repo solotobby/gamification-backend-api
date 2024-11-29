@@ -18,9 +18,11 @@ class AuthRepositoryModel
             'country' => $request->country,
             'phone' => $request->phone,
             'source' => $request->source,
-            'role' => 'regular',
             'password' => Hash::make($request->password),
         ]);
+
+        // Assign the 'regular' role to the user
+        $user->assignRole('regular');
 
         // Generate a referral code
         $user->referral_code = Str::random(7);

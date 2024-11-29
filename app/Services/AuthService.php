@@ -32,31 +32,29 @@ class AuthService
 
     public function registerUser($request)
     {
-     //   try {
-            // Validate the registration request
-            $this->validator->validateRegistration($request);
-
+        $this->validator->validateRegistration($request);
+       try {
             // Create the user and related resources
             $result = $this->createUser($request);
 
             $user = $result['user'];
             $wallet = $result['wallet'];
             $profile = $result['profile'];
-          //  $token = $user->createToken('freebyz_api')->accessToken;
+            $token = $user->createToken('freebyz')->accessToken;
 
             // Prepare response data
             $data = [
                 'user' => $user,
                 'wallet' => $wallet,
                 'profile' => $profile,
-               // 'token' => $token,
+                'token' => $token,
             ];
 
             return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
-       // } catch (\Exception $e) {
+        } catch (\Exception $e) {
             // Handle exceptions gracefully
-          //  throw new BadRequestException('Error processing request');
-      //  }
+           throw new BadRequestException('Error processing request');
+        }
     }
 
     public function createUser($payload)
