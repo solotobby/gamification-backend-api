@@ -49,10 +49,10 @@ class AuthValidator
     }
 
     public static function validateLogin($request){
-        $validationRules =$request->validate([
+        $validationRules = [
             'email' => 'required|email|max:255',
             'password' => 'required',
-        ]);
+        ];
 
         $validator = Validator::make($request->all(), $validationRules);
 

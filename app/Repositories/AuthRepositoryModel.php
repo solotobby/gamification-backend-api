@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthRepositoryModel
 {
-
     public function createUser($request)
     {
         $user = User::create([
@@ -31,16 +30,25 @@ class AuthRepositoryModel
         return $user;
     }
 
-    public function updateUser($request, $id){
+    public function updateUser($request, $id)
+    {
         $user = User::find($id);
         return $user;
     }
 
-    public function findUser($email){
-        $user = User::with('role')->where('email', $email)->first();
+    public function findUser($email)
+    {
+        $user = User::where('email', $email)->first();
         return $user;
     }
-    public function generateOTP($user){
+
+    public function findUserWithRole($email)
+    {
+        $user =  User::with(['roles'])->where('email', $email)->first();
+        return $user;
+    }
+    public function generateOTP($user)
+    {
         $startTime = now();
         $convertedTime = $startTime->addMinutes(2);
         $otpCode = random_int(100000, 999999);
@@ -55,7 +63,8 @@ class AuthRepositoryModel
         return $otpCode;
     }
 
-    public function validatePassword($request, $userPassword){
-       return Hash::check($request, $userPassword);
+    public function validatePassword($requestPassword, $userPassword)
+    {
+        return Hash::check($requestPassword, $userPassword);
     }
 }

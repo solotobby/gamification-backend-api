@@ -67,24 +67,26 @@ class AuthService
             // Find user by email
             $user = $this->auth->findUser($request->email);
 
+            // return $user;
             if ($user) {
+                // Get user role
                 $role = $user->getRoleNames();
-                if ($role == []) {
-                    // Assign role to user if user doesn't have one
+                if ($role->isEmpty()) {
+                    // Assign role if not already assigned
                     $user->assignRole('regular');
                 }
                 if ($user->referral_code == null) {
+                    // Assign referral code if not already assigned
                     $this->refer->addReferralCode($user);
                 }
 
+                // Check for password
                 $validatePassword  = $this->auth->validatePassword($request->password, $user->password);
                 if ($validatePassword) {
-
-                    $data['user'] = $this->auth->findUser($request->email);
+                    $data['user'] = $this->auth->findUserWithRole($request->email);
                     $data['token'] = $user->createToken('freebyz')->accessToken;
                     if (env('APP_ENV') != 'localenv') {
                         $data['profile'] = setProfile($user); //set profile page
-
                         activityLog($user, 'login', $user->name . ' Logged In', 'regular');
                     }
                     return response()->json(['message' => 'Login  successful', 'status' => true, 'data' => $data], 200);
@@ -100,7 +102,6 @@ class AuthService
     }
     public function createUser($payload)
     {
-
         // Create user
         $user = $this->auth->createUser($payload);
 

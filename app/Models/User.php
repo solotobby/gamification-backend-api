@@ -28,8 +28,8 @@ class User extends Authenticatable
         'twitter_id',
         'avatar',
         'role',
-        'referral_code', 
-        'source', 
+        'referral_code',
+        'source',
         'phone',
         'country',
         'age_range',
@@ -111,7 +111,7 @@ class User extends Authenticatable
     public function myFeedBackList(){
         return $this->hasMany(Feedback::class,  'user_id');
     }
-    
+
     public function myFeedBackReplies(){
         return $this->hasMany(FeedbackReplies::class,  'user_id');
     }
@@ -152,5 +152,5 @@ class User extends Authenticatable
         return $this->hasMany(Rating::class, 'campaign_id');
     }
 
-    
+
 }
