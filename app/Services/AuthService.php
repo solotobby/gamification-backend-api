@@ -8,6 +8,7 @@ use App\Mail\GeneralMail;
 use App\Mail\Welcome;
 use Illuminate\Support\Facades\Mail;
 use App\Exceptions\BadRequestException;
+use App\Exceptions\NotFoundException;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
@@ -33,7 +34,7 @@ class AuthService
     public function registerUser($request)
     {
         $this->validator->validateRegistration($request);
-       try {
+        try {
             // Create the user and related resources
             $result = $this->createUser($request);
 
@@ -53,10 +54,50 @@ class AuthService
             return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
         } catch (\Exception $e) {
             // Handle exceptions gracefully
-           throw new BadRequestException('Error processing request');
+            throw new BadRequestException('Error processing request');
         }
     }
 
+    public function loginUser($request)
+    {
+        // Validate request data
+        $this->validator->validateLogin($request);
+
+        try {
+            // Find user by email
+            $user = $this->auth->findUser($request->email);
+
+            if ($user) {
+                $role = $user->getRoleNames();
+                if ($role == []) {
+                    // Assign role to user if user doesn't have one
+                    $user->assignRole('regular');
+                }
+                if ($user->referral_code == null) {
+                    $this->refer->addReferralCode($user);
+                }
+
+                $validatePassword  = $this->auth->validatePassword($request->password, $user->password);
+                if ($validatePassword) {
+
+                    $data['user'] = $this->auth->findUser($request->email);
+                    $data['token'] = $user->createToken('freebyz')->accessToken;
+                    if (env('APP_ENV') != 'localenv') {
+                        $data['profile'] = setProfile($user); //set profile page
+
+                        activityLog($user, 'login', $user->name . ' Logged In', 'regular');
+                    }
+                    return response()->json(['message' => 'Login  successful', 'status' => true, 'data' => $data], 200);
+                } else {
+                    throw new BadRequestException('Incorrect Login Details');
+                }
+            } else {
+                throw new BadRequestException('Incorrect Login Details');
+            }
+        } catch (\Exception  $exception) {
+            throw new NotFoundException('User Not Found');
+        }
+    }
     public function createUser($payload)
     {
 
@@ -89,7 +130,7 @@ class AuthService
 
 
         // Generate OTP
-       $otp = $this->auth->generateOTP($user);
+        $otp = $this->auth->generateOTP($user);
 
         // Send verification emails if not local
         if (env('APP_ENV') !== 'localenv') {

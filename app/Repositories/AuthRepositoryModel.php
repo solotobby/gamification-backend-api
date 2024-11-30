@@ -31,6 +31,15 @@ class AuthRepositoryModel
         return $user;
     }
 
+    public function updateUser($request, $id){
+        $user = User::find($id);
+        return $user;
+    }
+
+    public function findUser($email){
+        $user = User::with('role')->where('email', $email)->first();
+        return $user;
+    }
     public function generateOTP($user){
         $startTime = now();
         $convertedTime = $startTime->addMinutes(2);
@@ -44,5 +53,9 @@ class AuthRepositoryModel
             'is_verified' => false,
         ]);
         return $otpCode;
+    }
+
+    public function validatePassword($request, $userPassword){
+       return Hash::check($request, $userPassword);
     }
 }

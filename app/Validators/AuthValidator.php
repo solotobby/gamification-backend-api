@@ -47,4 +47,17 @@ class AuthValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function validateLogin($request){
+        $validationRules =$request->validate([
+            'email' => 'required|email|max:255',
+            'password' => 'required',
+        ]);
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }
