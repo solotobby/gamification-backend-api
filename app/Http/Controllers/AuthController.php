@@ -71,28 +71,9 @@ class AuthController extends Controller
 
 
 
-    public function sendResetPasswordLink(Request $request)
+    public function sendRessetPasswordLink(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email|max:255',
-        ]);
-
-        try {
-            $validateEmail = User::where('email', $request->email)->select(['id', 'name', 'email'])->first();
-            if ($validateEmail) {
-                $token = Str::random(64);
-                \DB::table('password_resets')->insert(['email' => $validateEmail->email, 'token' => $token, 'created_at' => now()]);
-                $subject = 'Freebyz Password Reset Link';
-                $r_link = url('password/reset/' . $token);
-                $content = 'Hi,' . $validateEmail->name . '. Your Password Reset Link is: ' . $r_link;
-                Mail::to($validateEmail->email)->send(new GeneralMail($validateEmail, $content, $subject, ''));
-            } else {
-                return response()->json(['status' => false, 'message' => 'No account associated with the email'], 401);
-            }
-        } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-        return response()->json(['status' => true, 'message' => 'Reset Password Link Sent'], 200);
+    return $this->authService->sendResetPasswordLink($request);
     }
 
     public function resetPassword(Request $request)

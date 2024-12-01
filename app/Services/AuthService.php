@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\User;
+
 use App\Validators\AuthValidator;
 use App\Mail\GeneralMail;
 use App\Mail\Welcome;
@@ -15,16 +15,14 @@ use App\Repositories\WalletRepositoryModel;
 
 class AuthService
 {
-    private $user, $validator, $auth, $wallet, $refer;
+    private $validator, $auth, $wallet, $refer;
 
     public function __construct(
-        User $user,
         AuthValidator $validator,
         AuthRepositoryModel $auth,
         WalletRepositoryModel $wallet,
         ReferralRepositoryModel $refer
     ) {
-        $this->user = $user;
         $this->validator = $validator;
         $this->auth = $auth;
         $this->wallet = $wallet;
@@ -52,7 +50,7 @@ class AuthService
             ];
 
             return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
-        } catch (\Exception $e) {
+        } catch (\Throwable) {
             // Handle exceptions gracefully
             throw new BadRequestException('Error processing request');
         }
@@ -68,7 +66,7 @@ class AuthService
             $user = $this->auth->findUser($request->email);
 
             if (!$user) {
-                throw new NotFoundException('User not found');
+                return response()->json(['status' => false, 'message' => 'User not found'], 404);
             }
 
             // Ensure user has a role
@@ -79,7 +77,7 @@ class AuthService
 
             // Validate the password
             if (!$this->auth->validatePassword($request->password, $user->password)) {
-                throw new BadRequestException('Incorrect login details');
+                return response()->json(['status' => false, 'message' => 'Incorrect login details'], 403);
             }
 
             // Generate user data and token
@@ -97,10 +95,6 @@ class AuthService
                 'status' => true,
                 'data' => $data,
             ], 200);
-        } catch (NotFoundException $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 404);
-        } catch (BadRequestException $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 400);
         } catch (\Throwable) {
             throw new BadRequestException('Error processing request');
         }
@@ -129,7 +123,7 @@ class AuthService
             $user = $this->auth->findUser($request->email);
 
             if (!$user) {
-                throw new NotFoundException('User Not Found');
+                return response()->json(['status' => false, 'message' => 'User not found'], 404);
             }
 
             $otp = $this->auth->generateOTP($user);
@@ -141,8 +135,6 @@ class AuthService
             }
 
             return response()->json(['status' => true, 'message' => 'Email Verification code sent'], 200);
-        } catch (\Throwable) {
-            throw new BadRequestException('Error processing request');
         } catch (\Throwable) {
             throw new BadRequestException('Error processing request');
         }
@@ -189,6 +181,35 @@ class AuthService
         }
     }
 
+    public function sendResetPasswordLink($request)
+    {
+        // Validate request
+        $this->validator->validateResetPasswordLink($request);
+
+        try {
+            // Find user by email
+            $validateEmail = $this->auth->findUser($request->email);
+            // return $validateEmail;
+            if (!$validateEmail) {
+                return response()->json(['status' => false, 'message' => 'No account associated with this email'], 404);
+            }
+
+            // Create URL token and store it in the password_resets table
+            $token = $this->auth->createToken($validateEmail->email);
+
+            // Create reset link
+            $link = url('password/reset/' . $token);
+
+            // Send email
+            $subject = 'Freebyz Password Reset Link';
+            $content = 'Hi, ' . $validateEmail->name . '. Your Password Reset Link is: ' . $link;
+            Mail::to($validateEmail->email)->send(new GeneralMail($validateEmail, $content, $subject, ''));
+
+            return response()->json(['status' => true, 'message' => 'Reset Password Link Sent'], 200);
+        } catch (\Throwable) {
+            throw new BadRequestException('Error processing request');
+        }
+    }
     protected function createUser($payload)
     {
         // Create user

@@ -87,4 +87,15 @@ class AuthValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function validateResetPasswordLink($request){
+        $validationRules = [
+            'email' => 'required|email|max:255',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }

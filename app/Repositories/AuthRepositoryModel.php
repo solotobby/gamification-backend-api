@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Profile;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class AuthRepositoryModel
 {
@@ -89,5 +90,16 @@ class AuthRepositoryModel
     public function validatePassword($requestPassword, $userPassword)
     {
         return Hash::check($requestPassword, $userPassword);
+    }
+
+    public function createToken($email)
+    {
+        $token = Str::random(64);
+        DB::table('password_resets')->insert([
+            'email' => $email,
+            'token' => $token,
+            'created_at' => now()
+        ]);
+        return $token;
     }
 }
