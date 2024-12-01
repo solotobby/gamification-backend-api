@@ -71,7 +71,7 @@ class AuthController extends Controller
 
 
 
-    public function sendRessetPasswordLink(Request $request)
+    public function sendResetPasswordLink(Request $request)
     {
         $request->validate([
             'email' => 'required|email|max:255',
@@ -95,7 +95,7 @@ class AuthController extends Controller
         return response()->json(['status' => true, 'message' => 'Reset Password Link Sent'], 200);
     }
 
-    public function ressetPassword(Request $request)
+    public function resetPassword(Request $request)
     {
         $request->validate([
             'token' => 'required|string',
