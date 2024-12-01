@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\OTP;
 use App\Models\User;
+use App\Models\Profile;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 
@@ -30,9 +31,11 @@ class AuthRepositoryModel
         return $user;
     }
 
-    public function updateUser($request, $id)
+    public function updateUserVerificationStatus($id)
     {
         $user = User::find($id);
+        $user->email_verified_at = now();
+        $user->save();
         return $user;
     }
 
@@ -61,6 +64,26 @@ class AuthRepositoryModel
             'is_verified' => false,
         ]);
         return $otpCode;
+    }
+
+    public function findOtp($otp)
+    {
+        return OTP::where('otp', $otp)->first();
+    }
+
+    public function deleteOtp(OTP $otp)
+    {
+        $otp->delete();
+    }
+
+    public function updateOrCreateProfile($userId, $data)
+    {
+        return Profile::updateOrCreate(['user_id' => $userId], $data);
+    }
+
+    public function findUserWithRoleById($userId)
+    {
+        return User::with(['roles'])->find($userId);
     }
 
     public function validatePassword($requestPassword, $userPassword)

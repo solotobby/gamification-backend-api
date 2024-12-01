@@ -34,67 +34,12 @@ class AuthController extends Controller
 
     public function sendEmailOTP(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email|max:255',
-        ]);
-
-        try {
-
-            $user = User::where('email', $request->email)->first();
-
-            if ($user) {
-
-                $startTime = date("Y-m-d H:i:s");
-                $convertedTime = date('Y-m-d H:i:s', strtotime('+2 minutes', strtotime($startTime)));
-
-                $code = random_int(100000, 999999);
-
-                OTP::create(['user_id' => $user->id, 'pinId' => $convertedTime, 'phone_number' => '1234567890', 'otp' => $code, 'is_verified' => false]);
-                $subject = 'Freebyz Email Verification';
-
-                $content = 'Hi,' . $user->name . ' Your Email Verification Code is ' . $code;
-                Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
-            } else {
-                return response()->json(['status' => false, 'message' => 'User cannot be found'], 401);
-            }
-        } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-        return response()->json(['status' => true, 'message' => 'Email Verification code sent'], 200);
+       return $this->authService->resendEmailOTP($request);
     }
 
     public function validateOTP(Request $request)
     {
-        $request->validate([
-            'otp' => 'required|numeric|digits:6',
-        ]);
-
-        try {
-
-            $otp = OTP::where('otp', $request->otp)->first();
-            if ($otp) {
-                $startTime = date($otp->created_at);
-                $convertedTime = date('Y-m-d H:i:s', strtotime('+1 minutes', strtotime($startTime)));
-                $curdateTime = date('Y-m-d H:i:s');
-                if ($curdateTime > $otp->pinId) {
-                    $otp->delete();
-                    return response()->json(['status' => false, 'message' => 'Otp expired, please request another one'], 401);
-                }
-                // return [$startTime, $convertedTime, $curdateTime];
-
-            } else {
-                return response()->json(['status' => false, 'message' => 'Otp is not correct, please request another one'], 401);
-            }
-
-            Profile::updateOrCreate(['user_id' => $otp->user_id, 'email_verified' => true]);
-
-            $user = User::with(['roles'])->where('id', $otp->user_id)->first();
-
-            $otp->delete();
-        } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-        return response()->json(['status' => true, 'message' => 'Email Verified successfully', 'data' => $user], 200);
+       return $this->authService->validateOTP($request);
     }
 
     public function localReg(Request $request) {}

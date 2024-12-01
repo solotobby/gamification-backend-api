@@ -48,10 +48,37 @@ class AuthValidator
         }
     }
 
-    public static function validateLogin($request){
+    public static function validateLogin($request)
+    {
         $validationRules = [
             'email' => 'required|email|max:255',
             'password' => 'required',
+        ];
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function validateResendOTP($request)
+    {
+        $validationRules = [
+            'email' => 'required|email|max:255',
+        ];
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function validateOTP($request)
+    {
+        $validationRules = [
+            'otp' => 'required|numeric|digits:6',
         ];
 
         $validator = Validator::make($request->all(), $validationRules);
