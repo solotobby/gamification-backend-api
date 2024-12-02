@@ -47,4 +47,67 @@ class AuthValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function validateLogin($request)
+    {
+        $validationRules = [
+            'email' => 'required|email|max:255',
+            'password' => 'required',
+        ];
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function validateResendOTP($request)
+    {
+        $validationRules = [
+            'email' => 'required|email|max:255',
+        ];
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function validateOTP($request)
+    {
+        $validationRules = [
+            'otp' => 'required|numeric|digits:6',
+        ];
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function validateResetPasswordLink($request){
+        $validationRules = [
+            'email' => 'required|email|max:255',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function validateResetPassword($request){
+        $validationRules = [
+                'token' => 'required|string',
+                'password' => 'required|string|min:8|confirmed',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }

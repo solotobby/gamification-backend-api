@@ -2,8 +2,14 @@
 
 namespace App\Exceptions;
 
+
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
+use App\Exceptions\NotFoundException;
+use App\Exceptions\BadRequestException;
+use App\Exceptions\UnauthorizedException;
+use App\Exceptions\ForbiddenException;
 
 class Handler extends ExceptionHandler
 {
@@ -26,5 +32,53 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
+
+    /**
+     * Handle the rendering of the exception.
+     */
+    public function render($request, Throwable $exception)
+    {
+        // Handle custom NotFoundException
+        if ($exception instanceof NotFoundException) {
+            return response()->json([
+                'status' => false,
+                'message' => $exception->getMessage(),
+            ], 404);
+        }
+
+        // Handle custom BadRequestException
+        if ($exception instanceof BadRequestException) {
+            return response()->json([
+                'status' => false,
+                'message' => $exception->getMessage(),
+            ], 404);
+        }
+
+        // Optionally handle other custom exceptions or general cases
+        if ($exception instanceof UnauthorizedException) {
+            return response()->json([
+                'status' => false,
+                'message' => $exception->getMessage(),
+            ], 403);
+        }
+
+         // Optionally handle other custom exceptions or general cases
+         if ($exception instanceof ForbiddenException) {
+            return response()->json([
+                'status' => false,
+                'message' => $exception->getMessage(),
+            ], 401);
+        }
+
+         // Optionally handle other custom exceptions or general cases
+         if ($exception instanceof HttpException) {
+            return response()->json([
+                'status' => false,
+                'message' => $exception->getMessage(),
+            ], $exception->getStatusCode());
+        }
+
+        return parent::render($request, $exception);
     }
 }
