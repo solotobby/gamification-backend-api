@@ -98,4 +98,16 @@ class AuthValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function validateResetPassword($request){
+        $validationRules = [
+                'token' => 'required|string',
+                'password' => 'required|string|min:8|confirmed',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }

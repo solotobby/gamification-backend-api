@@ -32,6 +32,9 @@ class AuthRepositoryModel
         return $user;
     }
 
+    public function updateUserPassword($email, $password){
+        return $this->findUser($email)->update(['password'=> Hash::make($password)]);
+    }
     public function updateUserVerificationStatus($id)
     {
         $user = User::find($id);
@@ -101,5 +104,14 @@ class AuthRepositoryModel
             'created_at' => now()
         ]);
         return $token;
+    }
+
+    public function verifyToken($token){
+       return DB::table('password_resets')->where('token', $token)->first();
+    }
+
+    public function deleteToken($token)
+    {
+        DB::table('password_resets')->where('token', $token)->delete();
     }
 }

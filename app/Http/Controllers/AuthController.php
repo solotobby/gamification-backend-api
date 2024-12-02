@@ -14,11 +14,13 @@ use App\Models\Profile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
     protected $authService;
-    public function __construct(AuthService $authService)    {
+    public function __construct(AuthService $authService)
+    {
         $this->authService = $authService;
     }
 
@@ -34,12 +36,12 @@ class AuthController extends Controller
 
     public function sendEmailOTP(Request $request)
     {
-       return $this->authService->resendEmailOTP($request);
+        return $this->authService->resendEmailOTP($request);
     }
 
     public function validateOTP(Request $request)
     {
-       return $this->authService->validateOTP($request);
+        return $this->authService->validateOTP($request);
     }
 
     public function localReg(Request $request) {}
@@ -73,32 +75,12 @@ class AuthController extends Controller
 
     public function sendRessetPasswordLink(Request $request)
     {
-    return $this->authService->sendResetPasswordLink($request);
+        return $this->authService->sendResetPasswordLink($request);
     }
 
-    public function resetPassword(Request $request)
+    public function ressetPassword(Request $request)
     {
-        $request->validate([
-            'token' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        try {
-            $check = \DB::table('password_resets')->where('token', $request->token)->first();
-            if ($check) {
-                $user = User::where('email', $check->email)->first();
-                $user->password = Hash::make($request->password);
-                $user->save();
-
-                \DB::table('password_resets')->where('token', $request->token)->delete();
-            } else {
-                return response()->json(['status' => false, 'message' => 'Something unexpected happen, contact the developer'], 401);
-            }
-        } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-
-        return response()->json(['status' => true, 'message' => 'Password Reset Successful'], 200);
+        return $this->authService->resetPassword($request);
     }
 
     public function logout(Request $request)

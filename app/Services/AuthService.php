@@ -8,10 +8,10 @@ use App\Mail\GeneralMail;
 use App\Mail\Welcome;
 use Illuminate\Support\Facades\Mail;
 use App\Exceptions\BadRequestException;
-use App\Exceptions\NotFoundException;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
+use Throwable;
 
 class AuthService
 {
@@ -50,7 +50,7 @@ class AuthService
             ];
 
             return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Handle exceptions gracefully
             throw new BadRequestException('Error processing request');
         }
@@ -95,7 +95,7 @@ class AuthService
                 'status' => true,
                 'data' => $data,
             ], 200);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             throw new BadRequestException('Error processing request');
         }
     }
@@ -135,7 +135,7 @@ class AuthService
             }
 
             return response()->json(['status' => true, 'message' => 'Email Verification code sent'], 200);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             throw new BadRequestException('Error processing request');
         }
     }
@@ -176,7 +176,7 @@ class AuthService
                 'message' => 'Email verified successfully',
                 'data' => $user,
             ], 200);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             throw new BadRequestException('Error processing request');
         }
     }
@@ -206,8 +206,31 @@ class AuthService
             Mail::to($validateEmail->email)->send(new GeneralMail($validateEmail, $content, $subject, ''));
 
             return response()->json(['status' => true, 'message' => 'Reset Password Link Sent'], 200);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             throw new BadRequestException('Error processing request');
+        }
+    }
+
+    public function resetPassword($request)
+    {
+
+        $this->validator->validateResetPassword($request);
+        try {
+            // Verify Token
+            $checkToken = $this->auth->verifyToken($request->token);
+            if (!$checkToken) {
+                return response()->json(['status' => false, 'message' => 'Something unexpected happen, contact the admin or try again later'], 401);
+            }
+
+            // Update Password
+            $this->auth->updateUserPassword($checkToken->email, $request->password);
+
+            // Delete Token
+            $this->auth->deleteToken($request->token);
+
+            return response()->json(['status' => true, 'message' => 'Password Reset Successful'], 200);
+        } catch (Throwable) {
+            return response()->json(['status' => false, 'message' => 'Error processing request'], 500);
         }
     }
     protected function createUser($payload)
