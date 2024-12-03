@@ -6,6 +6,7 @@ use App\Models\OTP;
 use App\Models\User;
 use App\Models\Profile;
 use Illuminate\Support\Str;
+use App\Models\SurveyInterest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
@@ -32,8 +33,9 @@ class AuthRepositoryModel
         return $user;
     }
 
-    public function updateUserPassword($email, $password){
-        return $this->findUser($email)->update(['password'=> Hash::make($password)]);
+    public function updateUserPassword($email, $password)
+    {
+        return $this->findUser($email)->update(['password' => Hash::make($password)]);
     }
     public function updateUserVerificationStatus($id)
     {
@@ -106,12 +108,31 @@ class AuthRepositoryModel
         return $token;
     }
 
-    public function verifyToken($token){
-       return DB::table('password_resets')->where('token', $token)->first();
+    public function verifyToken($token)
+    {
+        return DB::table('password_resets')->where('token', $token)->first();
     }
 
     public function deleteToken($token)
     {
         DB::table('password_resets')->where('token', $token)->delete();
+    }
+
+    public function dashboardStat($userId)
+    {
+        // Fetch the user
+        $user = User::find($userId);
+
+        // Fetch related data
+        $profile = Profile::where('user_id', $userId)->first();
+        $interest = DB::table('user_interest')->where([
+            'user_id' => $user->id
+        ]);
+        // Return collected data with fallback for missing records
+        return [
+            'is_survey' => $interest ? 1 : 0, // True if interest exists
+            'is_welcome' => $profile->is_welcome ?? 0, // False if profile or field is null
+            'is_verified' => $user->is_verified ?? 0,  // False if user is not verified
+        ];
     }
 }

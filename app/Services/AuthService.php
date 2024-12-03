@@ -15,21 +15,24 @@ use Throwable;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Repositories\LogRepositoryModel;
 
 class AuthService
 {
-    private $validator, $auth, $wallet, $refer;
+    private $validator, $auth, $wallet, $refer, $log;
 
     public function __construct(
         AuthValidator $validator,
         AuthRepositoryModel $auth,
         WalletRepositoryModel $wallet,
-        ReferralRepositoryModel $refer
+        ReferralRepositoryModel $refer,
+        LogRepositoryModel $log,
     ) {
         $this->validator = $validator;
         $this->auth = $auth;
         $this->wallet = $wallet;
         $this->refer = $refer;
+        $this->log = $log;
     }
 
     public function registerUser($request)
@@ -87,10 +90,13 @@ class AuthService
             $data['user'] = $this->auth->findUserWithRole($request->email);
             $data['token'] = $user->createToken('freebyz')->accessToken;
 
+            $data['dashboard'] = $this->auth->dashboardStat($user->id);
+
             // Perform environment-specific actions
             if (env('APP_ENV') !== 'localenv') {
                 $data['profile'] = setProfile($user);
-                activityLog($user, 'login', "{$user->name} logged in", 'regular');
+                //    Log Activities
+                $this->log->createLogForSurvey($user);
             }
 
             return response()->json([
@@ -98,7 +104,8 @@ class AuthService
                 'status' => true,
                 'data' => $data,
             ], 200);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            return $e;
             throw new BadRequestException('Error processing request');
         }
     }
@@ -313,7 +320,7 @@ class AuthService
             $user['name'] = '';
             $user['email'] = $request->email;
 
-           // Mail::to($request->email)->send(new EmailVerification($request->email, $content, $subject, ''));
+            // Mail::to($request->email)->send(new EmailVerification($request->email, $content, $subject, ''));
 
             return response()->json(['status' => true, 'message' => 'Verification Email Sent Successfully'], 200);
         } catch (Exception $exception) {
@@ -394,7 +401,6 @@ class AuthService
         } catch (Exception $exception) {
             return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
         }
-      //  return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
+        //  return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
     }
-
 }
