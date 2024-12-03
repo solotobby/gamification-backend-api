@@ -46,13 +46,14 @@ class AuthService
             $wallet = $result['wallet'];
             $profile = $result['profile'];
             $token = $user->createToken('freebyz')->accessToken;
-
+            $dashboard = $this->auth->dashboardStat($user->id);
             // Prepare response data
             $data = [
                 'user' => $user,
                 'wallet' => $wallet,
                 'profile' => $profile,
                 'token' => $token,
+                'dashboard' => $dashboard,
             ];
 
             return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
@@ -89,7 +90,6 @@ class AuthService
             // Generate user data and token
             $data['user'] = $this->auth->findUserWithRole($request->email);
             $data['token'] = $user->createToken('freebyz')->accessToken;
-
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
 
             // Perform environment-specific actions
@@ -105,7 +105,7 @@ class AuthService
                 'data' => $data,
             ], 200);
         } catch (Throwable $e) {
-            return $e;
+           // return $e;
             throw new BadRequestException('Error processing request');
         }
     }

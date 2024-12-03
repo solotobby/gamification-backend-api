@@ -127,7 +127,7 @@ class AuthRepositoryModel
         $profile = Profile::where('user_id', $userId)->first();
         $interest = DB::table('user_interest')->where([
             'user_id' => $user->id
-        ]);
+        ])->first();
         // Return collected data with fallback for missing records
         return [
             'is_survey' => $interest ? 1 : 0, // True if interest exists
