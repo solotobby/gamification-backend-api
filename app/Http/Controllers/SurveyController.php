@@ -24,8 +24,11 @@ class SurveyController extends Controller
 
     public function storeSurvey(Request $request)
     {
+        return $this->survey->createUserLists($request);
+    }
 
-       return $this->survey->createUserLists($request);
-
+    public function markWelcome()
+    {
+        return $this->survey->markWelcomeAsDone();
     }
 }

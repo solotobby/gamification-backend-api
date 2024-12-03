@@ -56,6 +56,18 @@ class SurveyService
         }
     }
 
+    public function markWelcomeAsDone()
+    {
+        $user = $this->auth->findUser(Auth::user()->email);
+
+        // mark welcome done
+        $this->survey->markWelcome($user->id);
+        return response()->json([
+            'status' => true,
+            'message' => 'User welcome status successfully done'
+        ], 200);
+    }
+
     public function createUserLists($request)
     {
 
@@ -63,7 +75,16 @@ class SurveyService
 
         try {
             $user = $this->auth->findUser(Auth::user()->email);
-//
+
+            // check if survey already done
+            $check = $this->auth->dashboardStat($user->id);
+            
+            if (is_array($check) && isset($check['is_survey']) && $check['is_survey'] == 1) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User Interest already submitted'
+                ], 200);
+            }
             $this->survey->updateUserAgeAndGender($user);
             // Save User Interest
             $this->survey->addUserInterest($user, $request->interest);

@@ -16,6 +16,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Repositories\LogRepositoryModel;
+use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
@@ -119,6 +120,8 @@ class AuthService
             'message' => 'User is logged out successfully'
         ], 200);
     }
+
+  
     protected function ensureUserHasRole($user)
     {
         if ($user->getRoleNames()->isEmpty()) {

@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\User;
+use App\Models\Profile;
 use App\Models\Preference;
 use Illuminate\Support\Facades\DB;
 
@@ -35,5 +36,17 @@ class SurveyRepositoryModel
                 'updated_at' => now()
             ]);
         }
+    }
+
+    public function markWelcome($userId)
+    {
+        $profile = Profile::where(
+            'user_id',
+            $userId
+        )->first();
+
+        $profile->is_welcome = 1;
+        $profile->save();
+        return true;
     }
 }

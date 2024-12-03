@@ -40,13 +40,13 @@ class Handler extends ExceptionHandler
             ], 400); // Adjusted to use 400 for bad request
         }
 
-        // Handle custom UnauthorizedException
-        if ($exception instanceof UnauthorizedException) {
-            return response()->json([
-                'status' => false,
-                'message' => $exception->getMessage(),
-            ], 401); // Changed to 401 for unauthorized
-        }
+        // Handle custom UnauthorizedException (Unauthenticated)
+    if ($exception instanceof UnauthorizedException) {
+        return response()->json([
+            'status' => false, // Add status field
+            'message' => 'Unauthenticated.' // Custom message
+        ], 401);
+    }
 
         // Handle custom ForbiddenException
         if ($exception instanceof ForbiddenException) {

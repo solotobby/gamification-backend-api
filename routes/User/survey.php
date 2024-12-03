@@ -7,5 +7,6 @@ use App\Http\Controllers\SurveyController;
 Route::middleware(['auth:api', 'isUser'])->group(function () {
     Route::get('/survey', [SurveyController::class, 'survey']);
     Route::post('/survey', [SurveyController::class, 'storeSurvey']);
+    Route::post('/mark/welcome', [SurveyController::class, 'markWelcome']);
 });
 
