@@ -2,9 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use Auth;
 use Closure;
-use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class isUser
 {
@@ -17,16 +16,22 @@ class isUser
      */
     public function handle($request, Closure $next)
     {
+        // Ensure the user is authenticated
         if (!Auth::check()) {
-            return response()->json(['status' => false, 'message' => 'Unauthorized Access Please Login'], 401);
-        }
-        $userid = auth()->user()->id;
-        $getUserRole = User::where('id', $userid)->first();
-        $userRoles = 'regular';
-        if ($getUserRole->role != $userRoles){
-            return response()->json(['status' => false, 'message' => 'This page is forbidden, Login as a user'], 403);
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized Access. Please log in.',
+            ], 401);
         }
 
+        // Check if the user role is 'regular'
+        $user = Auth::user();
+        if ($user->role !== 'regular') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Access forbidden. Please log in as a regular user.',
+            ], 403);
+        }
 
         return $next($request);
     }
