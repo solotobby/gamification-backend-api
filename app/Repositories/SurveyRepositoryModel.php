@@ -2,14 +2,38 @@
 
 namespace App\Repositories;
 
+use App\Models\User;
 use App\Models\Preference;
+use Illuminate\Support\Facades\DB;
 
 
 class SurveyRepositoryModel
 {
 
-    public function listAllInterest(){
+    public function listAllInterest()
+    {
         return Preference::orderBy('name', 'ASC')->get();
     }
 
+    public function updateUserAgeAndGender($data)
+    {
+        $user = User::where('id', $data->id)->first();
+
+        $user->age_range = $data->age_range;
+        $user->gender = $data->gender;
+        $user->save();
+        return $user;
+    }
+
+    public function addUserInterest($user, $data)
+    {
+        foreach ($data as $int) {
+            DB::table('user_interest')->insert([
+                'user_id' => $user->id,
+                'preference_id' => $int,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+    }
 }

@@ -3,23 +3,28 @@
 namespace App\Services;
 
 
-use App\Validators\AuthValidator;
-use App\Exceptions\BadRequestException;
+use App\Validators\SurveyValidator;
 use App\Repositories\SurveyRepositoryModel;
+use App\Repositories\AuthRepositoryModel;
 use Illuminate\Support\Facades\Auth;
+use App\Repositories\LogRepositoryModel;
 use Throwable;
 
 class SurveyService
 {
-    private  $survey;
+    private  $validator, $survey, $auth, $log;
 
     public function __construct(
-        AuthValidator $validator,
+        SurveyValidator $validator,
         SurveyRepositoryModel $survey,
+        AuthRepositoryModel $auth,
+        LogRepositoryModel $log,
 
     ) {
         $this->validator = $validator;
         $this->survey = $survey;
+        $this->auth = $auth;
+        $this->log = $log;
     }
 
     public function getLists()
@@ -47,6 +52,33 @@ class SurveyService
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request',
+            ], 500);
+        }
+    }
+
+    public function createUserLists($request)
+    {
+
+        $this->validator->validateSurveyCreation($request);
+
+        try {
+            $user = $this->auth->findUser(Auth::user()->email);
+//
+            $this->survey->updateUserAgeAndGender($user);
+            // Save User Interest
+            $this->survey->addUserInterest($user, $request->interest);
+
+            //    Log Activities
+            $this->log->createLogForSurvey($user);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Interest Created Successfully'
+            ], 201);
+        } catch (Throwable) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request'
             ], 500);
         }
     }
