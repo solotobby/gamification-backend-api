@@ -2,72 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\SystemActivities;
-use App\Models\ActivityLog;
-use App\Models\LoginPoints;
-use App\Models\Preference;
+
 use App\Models\User;
-use Exception;
+use App\Services\SurveyService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+
 
 class SurveyController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth');
-    // }
+    protected $survey;
+    public function __construct(SurveyService $survey)
+    {
+        $this->survey = $survey;
+    }
 
-    public function survey(){
-        try{
-            $user = Auth::user();
-            if($user->interests()->count() > 0){
-                return back();
-            }
-            $interests = Preference::orderBy('name', 'ASC')->get();
-        }catch(Exception $exception){
-            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-
-        return response()->json(['status' => true, 'message' => 'List of interests', 'data' => $interests], 200);
-
-        //return view('user.survey.index', ['interests' => $interests]);
+    public function survey()
+    {
+        return $this->survey->getLists();
     }
 
 
-    public function storeSurvey(Request $request){
-        
-        $request->validate([
-            'interest' => 'required|array|min:2',
-            'age_range' => 'required|string',
-            'gender' => 'required|string'
-        ]);
+    public function storeSurvey(Request $request)
+    {
+        return $this->survey->createUserLists($request);
+    }
 
-
-        try{
-           
-            $user = User::where('id', auth()->user()->id)->first();
-
-            $user->age_range = $request->age_range;
-            $user->gender = $request->gender;
-            $user->save();
-            
-            foreach($request->interest as $int){
-                \DB::table('user_interest')->insert(['user_id'=>$user->id, 'preference_id' => $int, 'created_at' => now(), 'updated_at' => now()]);
-            }
-            // $date = \Carbon\Carbon::today()->toDateString();
-        
-            ActivityLog::create(['user_id' => $user->id, 'activity_type' => 'survey_points', 'description' =>  getInitials($user->name) .' earned 100 points for taking freebyz survey', 'user_type' => 'regular']);
-            // LoginPoints::create(['user_id' => $user->id, 'date' => $date, 'point' => '100']);
-
-        }catch(Exception $exception){
-            return response()->json(['status' => false,  'error'=>$exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-
-        return response()->json(['status' => true, 'message' => 'Interest Created Successfully'], 201);
-
-
-        // return view('user.survey.completed');
-
+    public function markWelcome()
+    {
+        return $this->survey->markWelcomeAsDone();
     }
 }

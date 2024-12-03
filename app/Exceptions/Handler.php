@@ -2,31 +2,19 @@
 
 namespace App\Exceptions;
 
-
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Illuminate\Validation\ValidationException;
 use Throwable;
-use App\Exceptions\NotFoundException;
-use App\Exceptions\BadRequestException;
-use App\Exceptions\UnauthorizedException;
-use App\Exceptions\ForbiddenException;
 
 class Handler extends ExceptionHandler
 {
-    /**
-     * The list of the inputs that are never flashed to the session on validation exceptions.
-     *
-     * @var array<int, string>
-     */
     protected $dontFlash = [
         'current_password',
         'password',
         'password_confirmation',
     ];
 
-    /**
-     * Register the exception handling callbacks for the application.
-     */
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
@@ -34,9 +22,6 @@ class Handler extends ExceptionHandler
         });
     }
 
-    /**
-     * Handle the rendering of the exception.
-     */
     public function render($request, Throwable $exception)
     {
         // Handle custom NotFoundException
@@ -52,33 +37,43 @@ class Handler extends ExceptionHandler
             return response()->json([
                 'status' => false,
                 'message' => $exception->getMessage(),
-            ], 404);
+            ], 400); // Adjusted to use 400 for bad request
         }
 
-        // Optionally handle other custom exceptions or general cases
-        if ($exception instanceof UnauthorizedException) {
+        // Handle custom UnauthorizedException (Unauthenticated)
+    if ($exception instanceof UnauthorizedException) {
+        return response()->json([
+            'status' => false, // Add status field
+            'message' => 'Unauthenticated.' // Custom message
+        ], 401);
+    }
+
+        // Handle custom ForbiddenException
+        if ($exception instanceof ForbiddenException) {
             return response()->json([
                 'status' => false,
                 'message' => $exception->getMessage(),
-            ], 403);
+            ], 403); // Adjusted to use 403 for forbidden
         }
 
-         // Optionally handle other custom exceptions or general cases
-         if ($exception instanceof ForbiddenException) {
+        // Handle ValidationException for failed validation
+        if ($exception instanceof ValidationException) {
             return response()->json([
                 'status' => false,
-                'message' => $exception->getMessage(),
-            ], 401);
+                'message' => 'Validation error',
+                'errors' => $exception->errors(), // Return the validation errors
+            ], 422); // HTTP status 422 for validation errors
         }
 
-         // Optionally handle other custom exceptions or general cases
-         if ($exception instanceof HttpException) {
+        // Handle HttpException (General HTTP Errors)
+        if ($exception instanceof HttpException) {
             return response()->json([
                 'status' => false,
                 'message' => $exception->getMessage(),
             ], $exception->getStatusCode());
         }
 
+        // Default Laravel exception handler
         return parent::render($request, $exception);
     }
 }

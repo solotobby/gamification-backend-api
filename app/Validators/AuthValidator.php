@@ -7,13 +7,6 @@ use Illuminate\Validation\ValidationException;
 
 class AuthValidator
 {
-    /**
-     * Validate the registration request based on the user's location.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return void
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public static function validateRegistration($request)
     {
         // Get the current location, default to 'Nigeria' if in localenv
