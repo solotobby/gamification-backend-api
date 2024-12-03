@@ -15,3 +15,9 @@ Route::group(['namespace' => 'auth'], function () {
     Route::post('resset/password', [AuthController::class, 'ressetPassword']);
 
  });
+
+
+ Route::middleware(['auth:api', 'isUser'])->group(function () {
+
+    Route::post('/logout',  [AuthController::class,'logout']);
+ });

@@ -121,7 +121,7 @@ class AuthService
         ], 200);
     }
 
-  
+
     protected function ensureUserHasRole($user)
     {
         if ($user->getRoleNames()->isEmpty()) {
@@ -188,15 +188,17 @@ class AuthService
             // Update user verification details
             $this->auth->updateUserVerificationStatus($otp->user_id);
             // Fetch user details
-            $user = $this->auth->findUserWithRoleById($otp->user_id);
+            $data['user'] = $user = $this->auth->findUserWithRoleById($otp->user_id);
 
+            //dashboard data
+            $data['dashboard'] =  $this->auth->dashboardStat($user->id);
             // Delete OTP after successful verification
             $this->auth->deleteOtp($otp);
 
             return response()->json([
                 'status' => true,
                 'message' => 'Email verified successfully',
-                'data' => $user,
+                'data' => $data,
             ], 200);
         } catch (Throwable) {
             throw new BadRequestException('Error processing request');
