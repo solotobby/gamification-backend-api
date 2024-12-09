@@ -90,6 +90,7 @@ class AuthService
 
             // Generate user data and token
             $data['user'] = $this->auth->findUserWithRole($request->email);
+            $data['wallet'] = $user->wallet;
             $data['token'] = $user->createToken('freebyz')->accessToken;
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
 

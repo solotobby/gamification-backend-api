@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 //AUTHENTICATION ROUTES
 
 Route::group(['namespace' => 'auth'], function () {
@@ -20,4 +21,5 @@ Route::group(['namespace' => 'auth'], function () {
  Route::middleware(['auth:api', 'isUser'])->group(function () {
 
     Route::post('/logout',  [AuthController::class,'logout']);
+    Route::get('/user-details', [UserController::class, 'userResource']);
  });
