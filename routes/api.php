@@ -21,7 +21,12 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-
+Route::get('/unauthenticated', function () {
+    return response()->json([
+        'status' => false,
+        'message' => 'Unauthenticated access. Please log in.',
+    ], 401);
+})->name('unauthenticated');
 
 // Route::group(['middleware' => 'cors'], function () {
 //     Route::middleware(['auth:api'])->group(function () {
