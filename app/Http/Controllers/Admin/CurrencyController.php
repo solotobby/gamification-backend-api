@@ -21,6 +21,10 @@ class CurrencyController extends Controller
     }
     public function getCurrenciesList(){
         return $this->currency->getCurrenciesList();
+
+    }
+    public function updateCurrency(Request $request){
+        return $this->currency->updateCurrency($request);
     }
 
 

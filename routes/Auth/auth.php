@@ -23,3 +23,9 @@ Route::group(['namespace' => 'auth'], function () {
     Route::post('/logout',  [AuthController::class,'logout']);
     Route::get('/user-details', [UserController::class, 'userResource']);
  });
+
+ Route::middleware(['auth:api', 'isAdmin'])->prefix('admin')->group(function () {
+    Route::post('login',  [AuthController::class, 'login']);
+    Route::post('/logout',  [AuthController::class,'logout']);
+    Route::get('/admin-details', [UserController::class, 'userResource']);
+ });
