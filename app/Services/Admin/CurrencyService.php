@@ -110,4 +110,40 @@ class CurrencyService
             ], 500);
         }
     }
+
+    public function toggleStatus($id)
+{
+    try {
+        // Find the currency by ID
+        $currency = $this->currency->getCurrencyById($id);
+
+        if (!$currency) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Currency not found.',
+            ], 404);
+        }
+
+        // Toggle the is_active status
+        $currency->is_active = !$currency->is_active;
+        $currency->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Currency status updated successfully.',
+            'data' => [
+                'id' => $currency->id,
+                'is_active' => $currency->is_active
+            ]
+        ], 200);
+
+    } catch (Throwable $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Error toggling currency status.',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
 }

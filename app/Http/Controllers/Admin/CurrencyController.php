@@ -27,5 +27,8 @@ class CurrencyController extends Controller
         return $this->currency->updateCurrency($request);
     }
 
+    public function toggleCurrencyStatus($id){
+        return $this->currency->toggleStatus($id);
+    }
 
 }

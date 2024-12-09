@@ -14,9 +14,5 @@ Route::group(['namespace' => 'auth'], function () {
 
     //get location
     Route::get('device/location', [GeneralController::class, 'deviceLocation']);
-    Route::post('email/verification', [AuthController::class, 'emailVerification']);
-    Route::post('email/verify/code', [AuthController::class, 'emailVerifyCode']);
-
-    Route::post('phone/verification', [AuthController::class, 'phoneVerification']);
-    Route::post('phone/verify/otp', [AuthController::class, 'phoneVerifyOTP']);
+   
 });
