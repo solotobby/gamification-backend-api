@@ -264,7 +264,7 @@ class AuthService
         $user = $this->auth->createUser($payload);
 
         // Set wallet and currency
-        $curLocation = env('APP_ENV') !== 'localenv' ? currentLocation() : 'Nigeria';
+        $curLocation = env('APP_ENV') !== 'local' ? currentLocation() : 'Nigeria';
         $currency = $curLocation === 'Nigeria' ? 'Naira' : 'Dollar';
 
         // Create wallet
