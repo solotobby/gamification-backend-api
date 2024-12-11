@@ -173,7 +173,7 @@ class CampaignService
                 ], 404);
             }
 
-            $data = $categories->map(function ($category) {
+            $data['category'] = $categories->map(function ($category) {
                 // Fetch subcategories for this category
                 $subCategories = $this->campaignModel->listSubCategories($category->id);
 
@@ -195,6 +195,18 @@ class CampaignService
                     'subcategories' => $subCategoryData
                 ];
             });
+
+            $baseCurrency = auth()->user()->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+
+            // Get the currency details
+            $data['currency']  = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Campaign Categories',
+                'data' => $data
+            ], 200);
         } catch (Throwable  $e) {
             return response()->json([
                 'status' => false,
@@ -203,11 +215,6 @@ class CampaignService
             ], 500);
         }
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Campaign Categories',
-            'data' => $data
-        ], 200);
     }
 
     public function viewCampaign($id)
