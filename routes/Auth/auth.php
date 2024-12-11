@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 //AUTHENTICATION ROUTES
 
 Route::group(['namespace' => 'auth'], function () {
@@ -17,7 +18,8 @@ Route::group(['namespace' => 'auth'], function () {
  });
 
 
- Route::middleware(['auth:api', 'isUser'])->group(function () {
-
+ Route::middleware(['auth:api', 'isAdmin'])->prefix('admin')->group(function () {
+    Route::post('login',  [AuthController::class, 'login']);
     Route::post('/logout',  [AuthController::class,'logout']);
+    Route::get('/admin-details', [UserController::class, 'userResource']);
  });
