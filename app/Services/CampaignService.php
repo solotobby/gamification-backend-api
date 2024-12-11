@@ -8,8 +8,19 @@ use App\Repositories\Admin\CurrencyRepositoryModel;
 use Throwable;
 use Illuminate\Support\Facades\Mail;
 use App\Validators\CampaignValidator;
-use App\Mail\CreateCampaign;
+use App\Helpers\SystemActivities;
 use App\Mail\ApproveCampaign;
+use App\Mail\CreateCampaign;
+use App\Mail\GeneralMail;
+use App\Models\Campaign;
+use App\Models\CampaignWorker;
+use App\Models\Category;
+use App\Models\DisputedJobs;
+use App\Models\PaymentTransaction;
+use App\Models\Rating;
+use App\Models\User;
+use App\Models\Wallet;
+use Exception;
 
 class CampaignService
 {
@@ -29,28 +40,62 @@ class CampaignService
     public function getCampaigns()
     {
         try {
-            $campaign =  Campaign::where('user_id', auth()->user()->id)->orderBy('created_at', 'DESC')->paginate(10);
+            $user = auth()->user();
 
+            // Fetch campaigns by user ID
+            $campaigns = $this->campaignModel->getCampaignsByPagination($user->id);
+
+            // Fetch user's base currency and map it
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+
+            // Fetch currency details
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+            // Validate retrieved data
+            if (!$currency) {
+                return response()->json(['status' => false, 'message' => 'Currency not found.'], 404);
+            }
+
+            // Prepare campaign data
             $data = [];
-            foreach ($campaign as $camp) {
+            foreach ($campaigns as $campaign) {
+                $unitPrice = $campaign->campaign_amount;
+                $totalAmount = $campaign->total_amount;
+
+                // Check if conversion is needed
+                if ($currency->code !== $campaign->currency) {
+                    $currencyRate = $this->currencyModel->convertCurrency($campaign->currency, $currency->code);
+
+                    if (!$currencyRate) {
+                        return response()->json(['status' => false, 'message' => 'Currency conversion rate not found.'], 404);
+                    }
+
+                    $rate = $currencyRate->rate;
+                    $unitPrice *= $rate;
+                    $totalAmount *= $rate;
+                }
+
                 $data[] = [
-                    'id' => $camp->id,
-                    'user_id' => $camp->user_id,
-                    'job_id' => $camp->job_id,
-                    'title' => $camp->post_title,
-                    'approved' => $camp->pending_count . '/' . $camp->completed_count,
-                    'unit_price' => $camp->campaign_amount,
-                    'total_amount' => $camp->total_amount,
-                    'currency' =>  $camp->currency == 'NGN' ? '&#8358;' : '$',
-                    'status' => $camp->status,
-                    'created' => $camp->created_at
+                    'id' => $campaign->id,
+                    'user_id' => $campaign->user_id,
+                    'job_id' => $campaign->job_id,
+                    'title' => $campaign->post_title,
+                    'approved' => $campaign->pending_count . '/' . $campaign->completed_count,
+                    'unit_price' => round($unitPrice, 2),
+                    'total_amount' => round($totalAmount, 2),
+                    'currency' => $currency->code == 'NGN' ? '#' : '$',
+                    'status' => $campaign->status,
+                    'created' => $campaign->created_at,
                 ];
             }
+
+            return response()->json(['status' => true, 'message' => 'Campaign List', 'data' => $data], 200);
         } catch (Throwable $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json(['status' => false, 'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
         }
-        return response()->json(['status' => true, 'message' => 'Campaign List', 'data' => $data], 200);
     }
+
     public function create($request)
     {
         $this->validator->validateCampaignCreation($request);
@@ -75,7 +120,7 @@ class CampaignService
 
             // Get the Subcategory amount from db
             $subAmount = $this->campaignModel->getSubCategoryAmount($request->campaign_subcategory, $request->campaign_type);
-           // return $subAmount;
+            // return $subAmount;
             // Calculate estimated amount and total
             $estAmount = $request->number_of_staff * $subAmount->amount;
             $percent = (60 / 100) * $estAmount;
@@ -214,15 +259,14 @@ class CampaignService
                 'message' => 'Error processing request'
             ], 500);
         }
-
     }
 
-    public function viewCampaign($id)
+    public function viewCampaign($job_id)
     {
 
-        if ($job_id == null) {
-            abort(400);
-        }
+        // if ($job_id == null) {
+        //     abort(400);
+        // }
 
         try {
             $getCampaign = SystemActivities::viewCampaign($job_id);
@@ -388,7 +432,7 @@ class CampaignService
         return response()->json(['status' => true, 'message' => 'Campaign ' . $campaign->status . ' successfully', 'data' => $campaign], 200);
     }
 
-    public function campaignDecision(Request $request)
+    public function campaignDecision($request)
     {
         $request->validate([
             'reason' => 'required|string',
@@ -641,7 +685,7 @@ class CampaignService
         return view('user.campaign.disputed_jobs', ['lists' => $disputedJobs]);
     }
 
-    public function processDisputedJobs(Request $request)
+    public function processDisputedJobs($request)
     {
         $workDone = CampaignWorker::where('id', $request->id)->first();
         $workDone->is_dispute = true;
@@ -664,160 +708,160 @@ class CampaignService
         }
     }
 
-    public function addMoreWorkers(Request $request)
-    {
+    // public function addMoreWorkers($request)
+    // {
 
-        $validated = $this->validate($request, [
+    //     $validated = $this->validate($request, [
 
-            'new_number' => 'required|numeric',
-            'job_id' => 'required|string',
-
-
-        ]);
-
-        try {
-
-            $campaign = Campaign::where('job_id', $validated['job_id'])->first();
-            $est_amount = $validated['new_number'] * $campaign->campain_amount;
-            $percent = (60 / 100) * $est_amount;
-            $total = $est_amount + $percent;
-            //[$est_amount, $percent, $total];
-            $wallet = Wallet::where('user_id', auth()->user()->id)->first();
-            if (auth()->user()->wallet->base_currency == 'Naira') {
-
-                $uploadFee = '';
-                if ($campaign->allow_upload == 1) {
-                    $uploadFee = $validated['new_number'] * 5;
-                } else {
-                    $uploadFee = 0;
-                }
-                if ($wallet->balance >= $total) {
-                    $wallet->balance -= $total + $uploadFee;
-                    $wallet->save();
+    //         'new_number' => 'required|numeric',
+    //         'job_id' => 'required|string',
 
 
-                    $campaign->number_of_staff += $validated['new_number'];
-                    $campaign->total_amount += $est_amount;
-                    $campaign->is_completed = false;
-                    $campaign->save();
+    //     ]);
 
-                    $currency = 'NGN';
-                    $channel = 'paystack';
+    //     try {
 
-                    $ref = time();
-                    PaymentTransaction::create([
-                        'user_id' => auth()->user()->id,
-                        'campaign_id' => $campaign->id,
-                        'reference' => $ref,
-                        'amount' => $total,
-                        'status' => 'successful',
-                        'currency' => $currency,
-                        'channel' => $channel,
-                        'type' => 'added_more_worker',
-                        'description' => 'Added worker for ' . $campaign->post_title . ' campaign',
-                        'tx_type' => 'Debit',
-                        'user_type' => 'regular'
-                    ]);
+    //         $campaign = Campaign::where('job_id', $validated['job_id'])->first();
+    //         $est_amount = $validated['new_number'] * $campaign->campain_amount;
+    //         $percent = (60 / 100) * $est_amount;
+    //         $total = $est_amount + $percent;
+    //         //[$est_amount, $percent, $total];
+    //         $wallet = Wallet::where('user_id', auth()->user()->id)->first();
+    //         if (auth()->user()->wallet->base_currency == 'Naira') {
 
-                    //credit admin
-                    $adminWallet = Wallet::where('user_id', '1')->first();
-                    $adminWallet->balance += $percent;
-                    $adminWallet->save();
-                    PaymentTransaction::create([
-                        'user_id' => '1',
-                        'campaign_id' => $campaign->id,
-                        'reference' => $ref,
-                        'amount' => $percent,
-                        'status' => 'successful',
-                        'currency' => $currency,
-                        'channel' => $channel,
-                        'type' => 'campaign_revenue_add',
-                        'description' => 'Revenue for worker added on ' . $campaign->post_title . ' campaign',
-                        'tx_type' => 'Credit',
-                        'user_type' => 'admin'
-                    ]);
-
-                    $content = "You have successfully increased the number of your workers.";
-                    $subject = "Add More Worker";
-                    $user = User::where('id', auth()->user()->id)->first();
-                    Mail::to(auth()->user()->email)->send(new GeneralMail($user, $content, $subject, ''));
-                    // return back()->with('success', 'Worker Updated Successfully');
-                    $data = $campaign;
-                } else {
-                    return response()->json(['status' => false, 'message' => 'You do not have suficient funds in your wallet'], 401);
-                }
-            } else {
-                if ($wallet->usd_balance >= $total) {
-                    $campaign = Campaign::where('job_id', $validated['job_id'])->first();
-                    $uploadFee = '';
-                    if ($campaign->allow_upload == 1) {
-                        $uploadFee = $validated['new_number'] * 0.01;
-                    } else {
-                        $uploadFee = 0;
-                    }
-
-                    $wallet->usd_balance -= $total + $uploadFee;
-                    $wallet->save();
-
-                    $campaign->number_of_staff += $validated['new_number'];
-                    $campaign->total_amount += $est_amount;
-                    $campaign->is_completed = false;
-                    $campaign->save();
+    //             $uploadFee = '';
+    //             if ($campaign->allow_upload == 1) {
+    //                 $uploadFee = $validated['new_number'] * 5;
+    //             } else {
+    //                 $uploadFee = 0;
+    //             }
+    //             if ($wallet->balance >= $total) {
+    //                 $wallet->balance -= $total + $uploadFee;
+    //                 $wallet->save();
 
 
-                    $currency = 'USD';
-                    $channel = 'paypal';
+    //                 $campaign->number_of_staff += $validated['new_number'];
+    //                 $campaign->total_amount += $est_amount;
+    //                 $campaign->is_completed = false;
+    //                 $campaign->save();
 
-                    $ref = time();
-                    PaymentTransaction::create([
-                        'user_id' => auth()->user()->id,
-                        'campaign_id' => $campaign->id,
-                        'reference' => $ref,
-                        'amount' => $total,
-                        'status' => 'successful',
-                        'currency' => $currency,
-                        'channel' => $channel,
-                        'type' => 'added_more_worker',
-                        'description' => 'Added worker for ' . $campaign->post_title . ' campaign',
-                        'tx_type' => 'Debit',
-                        'user_type' => 'regular'
-                    ]);
+    //                 $currency = 'NGN';
+    //                 $channel = 'paystack';
 
-                    //credit admin
-                    $adminWallet = Wallet::where('user_id', '1')->first();
-                    $adminWallet->usd_balance += $percent;
-                    $adminWallet->save();
+    //                 $ref = time();
+    //                 PaymentTransaction::create([
+    //                     'user_id' => auth()->user()->id,
+    //                     'campaign_id' => $campaign->id,
+    //                     'reference' => $ref,
+    //                     'amount' => $total,
+    //                     'status' => 'successful',
+    //                     'currency' => $currency,
+    //                     'channel' => $channel,
+    //                     'type' => 'added_more_worker',
+    //                     'description' => 'Added worker for ' . $campaign->post_title . ' campaign',
+    //                     'tx_type' => 'Debit',
+    //                     'user_type' => 'regular'
+    //                 ]);
 
-                    PaymentTransaction::create([
-                        'user_id' => '1',
-                        'campaign_id' => $campaign->id,
-                        'reference' => $ref,
-                        'amount' => $percent,
-                        'status' => 'successful',
-                        'currency' => $currency,
-                        'channel' => $channel,
-                        'type' => 'campaign_revenue_add',
-                        'description' => 'Revenue for worker added on ' . $campaign->post_title . ' campaign',
-                        'tx_type' => 'Credit',
-                        'user_type' => 'admin'
-                    ]);
+    //                 //credit admin
+    //                 $adminWallet = Wallet::where('user_id', '1')->first();
+    //                 $adminWallet->balance += $percent;
+    //                 $adminWallet->save();
+    //                 PaymentTransaction::create([
+    //                     'user_id' => '1',
+    //                     'campaign_id' => $campaign->id,
+    //                     'reference' => $ref,
+    //                     'amount' => $percent,
+    //                     'status' => 'successful',
+    //                     'currency' => $currency,
+    //                     'channel' => $channel,
+    //                     'type' => 'campaign_revenue_add',
+    //                     'description' => 'Revenue for worker added on ' . $campaign->post_title . ' campaign',
+    //                     'tx_type' => 'Credit',
+    //                     'user_type' => 'admin'
+    //                 ]);
+
+    //                 $content = "You have successfully increased the number of your workers.";
+    //                 $subject = "Add More Worker";
+    //                 $user = User::where('id', auth()->user()->id)->first();
+    //                 Mail::to(auth()->user()->email)->send(new GeneralMail($user, $content, $subject, ''));
+    //                 // return back()->with('success', 'Worker Updated Successfully');
+    //                 $data = $campaign;
+    //             } else {
+    //                 return response()->json(['status' => false, 'message' => 'You do not have suficient funds in your wallet'], 401);
+    //             }
+    //         } else {
+    //             if ($wallet->usd_balance >= $total) {
+    //                 $campaign = Campaign::where('job_id', $validated['job_id'])->first();
+    //                 $uploadFee = '';
+    //                 if ($campaign->allow_upload == 1) {
+    //                     $uploadFee = $validated['new_number'] * 0.01;
+    //                 } else {
+    //                     $uploadFee = 0;
+    //                 }
+
+    //                 $wallet->usd_balance -= $total + $uploadFee;
+    //                 $wallet->save();
+
+    //                 $campaign->number_of_staff += $validated['new_number'];
+    //                 $campaign->total_amount += $est_amount;
+    //                 $campaign->is_completed = false;
+    //                 $campaign->save();
 
 
-                    $content = "You have successfully increased the number of your workers.";
-                    $subject = "Add More Worker";
-                    $user = User::where('id', auth()->user()->id)->first();
-                    Mail::to(auth()->user()->email)->send(new GeneralMail($user, $content, $subject, ''));
-                    $data = $campaign;
-                    // return back()->with('success', 'Worker Updated Successfully');
-                } else {
-                    return response()->json(['status' => false, 'message' => 'You do not have suficient funds in your wallet'], 401);
-                }
-            }
-        } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-        return response()->json(['status' => true, 'message' => 'Worker Updated Successfully', 'data' => $data], 201);
-    }
+    //                 $currency = 'USD';
+    //                 $channel = 'paypal';
+
+    //                 $ref = time();
+    //                 PaymentTransaction::create([
+    //                     'user_id' => auth()->user()->id,
+    //                     'campaign_id' => $campaign->id,
+    //                     'reference' => $ref,
+    //                     'amount' => $total,
+    //                     'status' => 'successful',
+    //                     'currency' => $currency,
+    //                     'channel' => $channel,
+    //                     'type' => 'added_more_worker',
+    //                     'description' => 'Added worker for ' . $campaign->post_title . ' campaign',
+    //                     'tx_type' => 'Debit',
+    //                     'user_type' => 'regular'
+    //                 ]);
+
+    //                 //credit admin
+    //                 $adminWallet = Wallet::where('user_id', '1')->first();
+    //                 $adminWallet->usd_balance += $percent;
+    //                 $adminWallet->save();
+
+    //                 PaymentTransaction::create([
+    //                     'user_id' => '1',
+    //                     'campaign_id' => $campaign->id,
+    //                     'reference' => $ref,
+    //                     'amount' => $percent,
+    //                     'status' => 'successful',
+    //                     'currency' => $currency,
+    //                     'channel' => $channel,
+    //                     'type' => 'campaign_revenue_add',
+    //                     'description' => 'Revenue for worker added on ' . $campaign->post_title . ' campaign',
+    //                     'tx_type' => 'Credit',
+    //                     'user_type' => 'admin'
+    //                 ]);
+
+
+    //                 $content = "You have successfully increased the number of your workers.";
+    //                 $subject = "Add More Worker";
+    //                 $user = User::where('id', auth()->user()->id)->first();
+    //                 Mail::to(auth()->user()->email)->send(new GeneralMail($user, $content, $subject, ''));
+    //                 $data = $campaign;
+    //                 // return back()->with('success', 'Worker Updated Successfully');
+    //             } else {
+    //                 return response()->json(['status' => false, 'message' => 'You do not have suficient funds in your wallet'], 401);
+    //             }
+    //         }
+    //     } catch (Exception $exception) {
+    //         return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+    //     }
+    //     return response()->json(['status' => true, 'message' => 'Worker Updated Successfully', 'data' => $data], 201);
+    // }
 
     public function adminActivities($id)
     {

@@ -34,15 +34,25 @@ class CampaignRepositoryModel
     public function getSubCategoryAmount($subcategoryId, $categoryId)
     {
         return SubCategory::where('id', $subcategoryId)
-        ->where('category_id', $categoryId)
-        ->select('amount')
-        ->first();
+            ->where('category_id', $categoryId)
+            ->select('amount')
+            ->first();
     }
     public function createCampaign($request)
     {
         return Campaign::create($request->all());
     }
 
+    public function getCampaignsByPagination($id)
+    {
+        return Campaign::where(
+            'user_id',
+            $id
+        )->orderBy(
+            'created_at',
+            'DESC'
+        )->paginate(5);
+    }
     public function processPaymentTransaction($user, $campaign, $amount, $currency, $channel)
     {
         $ref = time();

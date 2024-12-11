@@ -50,6 +50,12 @@ class WalletRepositoryModel
             case 'naira':
                 return 'NGN';
 
+            case 'ngn':
+                return 'NGN';
+                
+            case 'usd':
+                return 'USD';
+
             case 'dollar':
                 return 'USD';
 
