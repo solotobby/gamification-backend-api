@@ -20,7 +20,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             RewardSeeder::class,
             ConversionRateSeeder::class,
-            SettingsSeeder::class
+            SettingsSeeder::class,
+            CurrencySeeder::class
             // GamesSeeder::class
         ]);
     }
