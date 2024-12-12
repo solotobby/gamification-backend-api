@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\Currency;
 use App\Models\Wallet;
 
 
@@ -18,8 +19,22 @@ class WalletRepositoryModel
         $wallet = Wallet::where(
             'user_id',
             $user->id
-        )->where('', '',    $currency)->where('amount', $amount)->first();
+        )->where('', '',    $currency)->where(
+            'amount', $amount)->first();
     }
+
+    public function updateWalletBaseCurrency($user, $currencyId)
+    {
+        $currency = Currency::where('id', $currencyId)->first();
+        $wallet = Wallet::where(
+            'user_id',
+            $user->id
+        )->first();
+        $wallet->base_currency = $currency->code;
+        $wallet->save();
+        return true;
+    }
+
 
     public function checkWalletBalance($user, $currency, $amount)
     {
@@ -52,7 +67,7 @@ class WalletRepositoryModel
 
             case 'ngn':
                 return 'NGN';
-                
+
             case 'usd':
                 return 'USD';
 

@@ -94,12 +94,8 @@ class AuthService
             $data['token'] = $user->createToken('freebyz')->accessToken;
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
 
-            // Perform environment-specific actions
-            if (env('APP_ENV') !== 'localenv') {
-                $data['profile'] = setProfile($user);
-                //    Log Activities
-                $this->log->createLogForSurvey($user);
-            }
+            //    Log Activities
+            $this->log->createLogForLogin($user);
 
             return response()->json([
                 'message' => 'Login successful',
@@ -107,7 +103,7 @@ class AuthService
                 'data' => $data,
             ], 200);
         } catch (Throwable $e) {
-           // return $e;
+            // return $e;
             throw new BadRequestException('Error processing request');
         }
     }
@@ -139,11 +135,10 @@ class AuthService
 
     public function resendEmailOTP($request)
     {
-        // Validate request data
-        $this->validator->validateResendOTP($request);
 
         try {
-            $user = $this->auth->findUser($request->email);
+            $user = auth()->user();
+           // $user = $this->auth->findUser($user->email);
 
             if (!$user) {
                 return response()->json(['status' => false, 'message' => 'User not found'], 404);
@@ -165,10 +160,9 @@ class AuthService
 
     public function validateOTP($request)
     {
-        // Validate request data
-        $this->validator->validateOTP($request);
 
         try {
+            $user = auth()->user();
             // Find the OTP
             $otp = $this->auth->findOtp($request->otp);
 
@@ -184,22 +178,17 @@ class AuthService
             }
 
             // Update or create user profile
-            $this->auth->updateOrCreateProfile($otp->user_id, ['email_verified' => true]);
+            $this->auth->updateOrCreateProfile($user->id, ['email_verified' => true]);
 
             // Update user verification details
             $this->auth->updateUserVerificationStatus($otp->user_id);
-            // Fetch user details
-            $data['user'] = $user = $this->auth->findUserWithRoleById($otp->user_id);
 
-            //dashboard data
-            $data['dashboard'] =  $this->auth->dashboardStat($user->id);
             // Delete OTP after successful verification
             $this->auth->deleteOtp($otp);
 
             return response()->json([
                 'status' => true,
                 'message' => 'Email verified successfully',
-                'data' => $data,
             ], 200);
         } catch (Throwable) {
             throw new BadRequestException('Error processing request');
@@ -264,17 +253,15 @@ class AuthService
         $user = $this->auth->createUser($payload);
 
         // Set wallet and currency
-        $curLocation = env('APP_ENV') !== 'local' ? currentLocation() : 'Nigeria';
-        $currency = $curLocation === 'Nigeria' ? 'Naira' : 'Dollar';
+        $curLocation = $payload->country;
+        $currency = $curLocation === 'Nigeria' ? 'NGN' : 'USD';
 
         // Create wallet
         $wallet = $this->wallet->createWallet($user, $currency);
 
         // Handle optional profile creation for non-local environments
         $profile = [];
-        if (env('APP_ENV') !== 'localenv') {
-            $profile = setProfile($user);
-        }
+        $profile = $this->auth->setProfile($user, $payload->country_code);
 
         // Process referral if applicable
         $ref_id = $payload['ref_id'] ?? null;
@@ -283,9 +270,8 @@ class AuthService
         }
 
         // Activity logging for non-local environments
-        if (env('APP_ENV') !== 'localenv') {
-            activityLog($user, 'account_creation', $user->name . ' Registered ', 'regular');
-        }
+
+        activityLog($user, 'account_creation', $user->name . ' Registered ', 'regular');
 
 
         // Generate OTP
