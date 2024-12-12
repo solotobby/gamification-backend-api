@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 use App\Models\SurveyInterest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Stevebauman\Location\Facades\Location;
 
 class AuthRepositoryModel
 {
@@ -76,6 +77,18 @@ class AuthRepositoryModel
     {
         return OTP::where('otp', $otp)->first();
     }
+
+    function setProfile($user, $code)
+    {
+        $profile = Profile::firstOrNew(['user_id' => $user->id]);
+
+        $profile->country = $user->country;
+        $profile->country_code = $code;
+        $profile->save();
+
+        return $profile;
+    }
+
 
     public function deleteOtp(OTP $otp)
     {

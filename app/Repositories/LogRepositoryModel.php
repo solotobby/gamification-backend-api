@@ -23,7 +23,7 @@ class LogRepositoryModel
         ActivityLog::create([
             'user_id' => $user->id,
             'activity_type' => 'login',
-            'description' =>  getInitials($user->name) . 'logged in',
+            'description' =>  $user->name . ' logged in',
             'user_type' => 'regular'
         ]);
         // LoginPoints::create(['user_id' => $user->id, 'date' => $date, 'point' => '100']);
