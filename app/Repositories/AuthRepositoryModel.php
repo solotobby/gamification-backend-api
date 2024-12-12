@@ -148,4 +148,5 @@ class AuthRepositoryModel
             'is_verified' => $user->is_verified ?? 0,  // False if user is not verified
         ];
     }
+
 }

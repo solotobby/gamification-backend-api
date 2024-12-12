@@ -36,6 +36,7 @@ class SurveyRepositoryModel
                 'updated_at' => now()
             ]);
         }
+        return true;
     }
 
     public function markWelcome($userId)

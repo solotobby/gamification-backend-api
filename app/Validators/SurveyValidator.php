@@ -12,7 +12,8 @@ class SurveyValidator
         $validationRules = [
             'interest' => 'required|array|min:2',
             'age_range' => 'required|string',
-            'gender' => 'required|string'
+            'gender' => 'required|string',
+            'currency'=> 'required|numeric',
         ];
 
         $validator = Validator::make($request->all(), $validationRules);

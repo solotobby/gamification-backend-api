@@ -14,6 +14,11 @@ class CurrencyRepositoryModel
         return Currency::orderBy('created_at', 'DESC')->get();
     }
 
+    public function getActiveCurrenciesList()
+    {
+        return Currency::where('is_active', true)->orderBy('created_at', 'DESC')->get();
+    }
+
     public function getCurrencyById($id)
     {
         return Currency::where('id', $id)->first();
