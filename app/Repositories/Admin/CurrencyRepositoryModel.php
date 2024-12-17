@@ -38,14 +38,14 @@ class CurrencyRepositoryModel
     public function convertCurrency($from, $to)
     {
 
-       $mapFrom = $this->mapRateCurrency($from);
-       $mapTo = $this->mapRateCurrency($to);
+      // $mapFrom = $this->mapRateCurrency($from);
+      // $mapTo = $this->mapRateCurrency($to);
         return ConversionRate::where(
             'from',
-            $mapFrom
+            $from
         )->where(
             'to',
-            $mapTo
+            $to
         )->first();
     }
 
@@ -54,10 +54,10 @@ class CurrencyRepositoryModel
         switch (strtolower($currency)) {
 
             case 'ngn':
-                return 'Naira';
+                return 'NGN';
 
             case 'usd':
-                return 'Dollar';
+                return 'USD';
 
             default:
                 return false;

@@ -6,6 +6,8 @@ use App\Http\Controllers\CampaignController;
 Route::middleware(['auth:api', 'isUser'])->group(function () {
     Route::post('/campaign', [CampaignController::class, 'postCampaign']);
     Route::get('/campaign', [CampaignController::class, 'getCampaigns']);
+    Route::patch('/campaign/add/worker', [CampaignController::class, 'addWorkerToCampaign']);
+
     Route::post('/campaign/calculate/price', [CampaignController::class, 'calculateCampaignPrice']);
     Route::post('/submit/campaign', [CampaignController::class, 'submitWork']);
 

@@ -26,9 +26,9 @@ class CampaignController extends Controller
         return $this->campaign->getCampaigns();
     }
 
-    public function updateCampaign(Request $request)
+    public function addWorkerToCampaign(Request $request)
     {
-        return $this->campaign->updateCampaign($request);
+        return $this->campaign->updateCampaignWorker($request);
     }
 
     public function postCampaign(Request $request)

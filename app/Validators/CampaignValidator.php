@@ -27,4 +27,16 @@ class CampaignValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function validateCampaignUpdating($request){
+        $validationRules = [
+            'new_worker_number' => 'required',
+            'campaign_id' => 'required',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }

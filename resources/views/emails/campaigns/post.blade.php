@@ -13,14 +13,14 @@
             <td style="padding: 30px 30px 20px">
                 <p style="margin-bottom: 10px;">Hi <strong>{{ $poster }},</strong></p>
                 <p style="margin-bottom: 10px;">
-                    Thank you for yout interest in using this amazing feature on Freebyz.com. <br>
+                    Thank you for your interest in using this amazing feature on Freebyz.com. <br>
                     This is to let you know that your campaign has been created successfully and it is under review. You will receive an update in 24hours. Below are the details:<br><br>
 
                     <b> Campaign ID:</b> {{ $job_id }} <br>
                     <b>Campaign Name:</b> {{ $campaign_name }} <br>
                     <b>Campaign Type:</b> {{ $type }} <br>
                     <b>Campaign Category:</b> {{ $category }} <br>
-                    @if(auth()->user()->wallet->base_currency == "Naira")
+                    @if(auth()->user()->wallet->base_currency == "Naira" || "NGN")
                     <b>Amount per Job:</b> &#8358;{{ $amount }} <br>
                     @else
                     <b>Amount per Job:</b> ${{ $amount }} <br>

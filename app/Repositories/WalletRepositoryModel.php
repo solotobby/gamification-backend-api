@@ -20,7 +20,9 @@ class WalletRepositoryModel
             'user_id',
             $user->id
         )->where('', '',    $currency)->where(
-            'amount', $amount)->first();
+            'amount',
+            $amount
+        )->first();
     }
 
     public function updateWalletBaseCurrency($user, $currencyId)
@@ -51,11 +53,17 @@ class WalletRepositoryModel
             case 'naira':
                 return $wallet->balance >= $amount;
 
+            case 'ngn':
+                return $wallet->balance >= $amount;
+
             case 'dollar':
                 return $wallet->usd_balance >= $amount;
 
+            case 'usd':
+                return $wallet->usd_balance >= $amount;
+                
             default:
-                return false;
+                return $wallet->bonus >= $amount;
         }
     }
 
@@ -75,7 +83,7 @@ class WalletRepositoryModel
                 return 'USD';
 
             default:
-                return false;
+                return $currency;
         }
     }
 

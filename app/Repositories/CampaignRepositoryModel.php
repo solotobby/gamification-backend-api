@@ -53,7 +53,18 @@ class CampaignRepositoryModel
             'DESC'
         )->paginate(5);
     }
-    public function processPaymentTransaction($user, $campaign, $amount, $currency, $channel)
+
+    public function getCampaignById($id, $userId)
+    {
+        return Campaign::where(
+            'id',
+            $id
+        )->where(
+            'user_id',
+            $userId
+        )->first();
+    }
+    public function processPaymentTransaction($user, $campaign, $amount, $currency, $channel, $type, $description)
     {
         $ref = time();
 
@@ -83,6 +94,35 @@ class CampaignRepositoryModel
         $adminWallet->save();
     }
 
+    public function updateCampaignDetails($campaignId, $numberOfStaff, $totalAmount)
+    {
+        $campaign = Campaign::where('id', $campaignId)->first();
+
+        $campaign->extension_references = null;
+        $campaign->number_of_staff += $numberOfStaff;
+        $campaign->total_amount += $totalAmount;
+        $campaign->is_completed = false;
+        $campaign->save();
+
+        return $campaign;
+    }
+
+    public function createPaymentTransaction($userId, $campaignId, $amount)
+{
+    $ref = time();
+
+    PaymentTransaction::create([
+        'user_id' => $userId,
+        'campaign_id' => $campaignId,
+        'reference' => $ref,
+        'amount' => $amount,
+        'status' => 'successful',
+        'currency' => 'NGN',
+        'channel' => 'paystack',
+        'type' => 'edit_campaign_payment',
+        'description' => 'Extend Campaign Payment'
+    ]);
+}
     public function logAdminTransaction($amount, $currency, $channel, $user)
     {
         $ref = time();

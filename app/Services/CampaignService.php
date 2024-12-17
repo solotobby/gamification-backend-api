@@ -63,10 +63,13 @@ class CampaignService
                 $unitPrice = $campaign->campaign_amount;
                 $totalAmount = $campaign->total_amount;
 
+                //return $campaign->currency;
                 // Check if conversion is needed
                 if ($currency->code !== $campaign->currency) {
+
                     $currencyRate = $this->currencyModel->convertCurrency($campaign->currency, $currency->code);
 
+                    // return $currencyRate;
                     if (!$currencyRate) {
                         return response()->json(['status' => false, 'message' => 'Currency conversion rate not found.'], 404);
                     }
@@ -82,9 +85,9 @@ class CampaignService
                     'job_id' => $campaign->job_id,
                     'title' => $campaign->post_title,
                     'approved' => $campaign->pending_count . '/' . $campaign->completed_count,
-                    'unit_price' => round($unitPrice, 2),
-                    'total_amount' => round($totalAmount, 2),
-                    'currency' => $currency->code == 'NGN' ? '#' : '$',
+                    'unit_price' => round($unitPrice, 5),
+                    'total_amount' => round($totalAmount, 5),
+                    'currency' => $currency->code,
                     'status' => $campaign->status,
                     'created' => $campaign->created_at,
                 ];
@@ -144,8 +147,16 @@ class CampaignService
                 ], 500);
             }
 
-            // Process the campaign
-            $campaign = $this->processCampaign($total, $request, $jobId, $percent, $allowUpload, $priotize);
+            $type =
+                // Process the campaign
+                $campaign = $this->processCampaign(
+                    $total,
+                    $request,
+                    $jobId,
+                    $percent,
+                    $allowUpload,
+                    $priotize,
+                );
 
             // Notify user via email
             Mail::to($user->email)->send(new CreateCampaign($campaign));
@@ -165,51 +176,80 @@ class CampaignService
     }
 
 
-    public function updateCampaign($request)
+    public function updateCampaignWorker($request)
     {
 
-        $est_amount = $request->number_of_staff * $request->campaign_amount;
-        $percent = (50 / 100) * $est_amount;
-        $total = $est_amount + $percent;
-        //$total = $request->total_amount_pay;
+        $this->validator->validateCampaignUpdating($request);
+        try {
 
-        $wallet = Wallet::where('user_id', auth()->user()->id)->first();
+            $user = auth()->user();
+            // Get the campaign details using the UserId and CampaignId
+            $campaign = $this->campaignModel->getCampaignById($request->campaign_id, $user->id);
+            // return $campaign;
+            $baseCurrency = $user->wallet->base_currency;
 
-        if ($wallet->balance >= $total) {
-            $wallet->balance -= $total;
-            $wallet->save();
-            $camp = $camp = Campaign::where('id', $request->post_id)->first();
+            // Get the Subcategory amount from db
+            $subAmount = $this->campaignModel->getSubCategoryAmount(
+                $campaign->campaign_subcategory,
+                $campaign->campaign_type
+            );
+            $estAmount = $request->new_worker_number * $subAmount->amount;
+            $percent = (60 / 100) * $estAmount;
+            $total = $estAmount + $percent;
 
-            $camp->extension_references = null;
-            $camp->number_of_staff += $request->number_of_staff;
-            $camp->total_amount += $total;
-            $camp->save();
+            // Check wallet balance and debit if valid
+            if (!$this->walletModel->checkWalletBalance($user, $baseCurrency, $total)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You do not have sufficient funds in your wallet',
+                ], 401);
+            }
 
-            $ref = time();
+            if (!$this->walletModel->debitWallet($user, $baseCurrency, $total)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Wallet debit failed. Please try again.',
+                ], 500);
+            }
 
-            PaymentTransaction::create([
-                'user_id' => auth()->user()->id,
-                'campaign_id' => $request->post_id,
-                'reference' => $ref,
-                'amount' => $total,
-                'status' => 'successful',
-                'currency' => 'NGN',
-                'channel' => 'paystack',
-                'type' => 'edit_campaign_payment',
-                'description' => 'Extend Campaign Payment'
-            ]);
+            // Process the campaign
+            $saveCampaign = $this->campaignModel->updateCampaignDetails(
+                $campaign->id,
+                $request->new_worker_number,
+                $total
+            );
+            // Create transaction
+            $this->campaignModel->createPaymentTransaction(
+                $user->id,
+                $request->campaign_id,
+                $total
+            );
 
-            Mail::to(auth()->user()->email)->send(new CreateCampaign($camp));
-            return back()->with('success', 'Campaign Updated Successfully');
-        } else {
-            return back()->with('error', 'You do not have suficient funds in your wallet');
+            // Notify user via email
+            Mail::to($user->email)->send(new CreateCampaign($saveCampaign));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Campaign Updated Successfully',
+                'data' => $saveCampaign,
+            ], 201);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Error processing request',
+            ], 500);
         }
     }
+
     public function getCategories()
     {
         try {
-            // Fetch all active category
-            $categories =  $this->campaignModel->listCategories();
+            $baseCurrency = auth()->user()->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+
+            // Fetch all active categories
+            $categories = $this->campaignModel->listCategories();
             if (!$categories) {
                 return response()->json([
                     'status' => false,
@@ -218,15 +258,29 @@ class CampaignService
                 ], 404);
             }
 
-            $data['category'] = $categories->map(function ($category) {
+            $data['category'] = $categories->map(function ($category) use ($mapCurrency) {
                 // Fetch subcategories for this category
                 $subCategories = $this->campaignModel->listSubCategories($category->id);
 
                 // Transform the subcategories
-                $subCategoryData = $subCategories->map(function ($sub) {
+                $subCategoryData = $subCategories->map(function ($sub) use ($mapCurrency) {
+                    $amount = $sub->amount;
+
+                    // If the currency is not NGN, convert the amount
+                    if ($mapCurrency !== 'NGN') {
+                        $currencyRate = $this->currencyModel->convertCurrency('NGN', $mapCurrency);
+
+                        if (!$currencyRate) {
+                            return response()->json(['status' => false, 'message' => 'Currency conversion rate not found.'], 404);
+                        }
+
+                        $rate = $currencyRate->rate;
+                        $amount *= $rate; // Convert the amount based on the rate
+                    }
+
                     return [
                         'id' => $sub->id,
-                        'amount' => $sub->amount,
+                        'amount' => round($amount, 5),
                         'category_id' => $sub->category_id,
                         'name' => $sub->name,
                         //'amt_usd' => $sub->usd ?? $sub->amount,
@@ -241,33 +295,22 @@ class CampaignService
                 ];
             });
 
-            $baseCurrency = auth()->user()->wallet->base_currency;
-            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
-
             // Get the currency details
             $data['currency']  = $this->currencyModel->getCurrencyByCode($mapCurrency);
 
+
             return response()->json([
                 'status' => true,
-                'message' => 'Campaign Categories',
+                'message' => 'Categories fetched successfully',
                 'data' => $data
             ], 200);
-        } catch (Throwable  $e) {
-            return response()->json([
-                'status' => false,
-                'error' => $e->getMessage(),
-                'message' => 'Error processing request'
-            ], 500);
+        } catch (Throwable $e) {
+            return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error processing request'], 500);
         }
     }
 
     public function viewCampaign($job_id)
     {
-
-        // if ($job_id == null) {
-        //     abort(400);
-        // }
-
         try {
             $getCampaign = SystemActivities::viewCampaign($job_id);
 
@@ -345,7 +388,13 @@ class CampaignService
         $campaign = $this->campaignModel->createCampaign($request);
 
         // Process payment transaction
-        $this->campaignModel->processPaymentTransaction($user, $campaign, $total, $currency, $channel);
+        $this->campaignModel->processPaymentTransaction(
+            $user,
+            $campaign,
+            $total,
+            $currency,
+            $channel,
+        );
 
         // Update admin wallet
         $this->campaignModel->updateAdminWallet($percent, $currency);
