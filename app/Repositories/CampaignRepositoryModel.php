@@ -64,7 +64,7 @@ class CampaignRepositoryModel
             $userId
         )->first();
     }
-    public function processPaymentTransaction($user, $campaign, $amount, $currency, $channel, $type, $description)
+    public function processPaymentTransaction($user, $campaign, $amount, $currency, $channel)
     {
         $ref = time();
 
@@ -79,6 +79,7 @@ class CampaignRepositoryModel
             'type' => 'campaign_posted',
             'description' => $campaign->post_title . ' Campaign'
         ]);
+        return true;
     }
 
     public function updateAdminWallet($percent, $currency)

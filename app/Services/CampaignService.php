@@ -114,15 +114,18 @@ class CampaignService
             $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
 
             // Determine prioritization amount and status
-            $prAmount = $request->priotize ? (int)($currency->priotize) : 0;
+            $prAmount = $request->priotize ? (float)($currency->priotize) : 0;
             $priotize = $request->priotize ? 'Priotize' : 'Pending';
 
             // Calculate initial upload amount
-            $iniAmount = $request->allow_upload ? $request->number_of_staff * (int)($currency->allow_upload) : 0;
+            $iniAmount = $request->allow_upload ? $request->number_of_staff * (float)($currency->allow_upload) : 0;
             $allowUpload = (bool)$request->allow_upload;
 
             // Get the Subcategory amount from db
-            $subAmount = $this->campaignModel->getSubCategoryAmount($request->campaign_subcategory, $request->campaign_type);
+            $subAmount = $this->campaignModel->getSubCategoryAmount(
+                $request->campaign_subcategory,
+                $request->campaign_type
+            );
             // return $subAmount;
             // Calculate estimated amount and total
             $estAmount = $request->number_of_staff * $subAmount->amount;
@@ -133,21 +136,28 @@ class CampaignService
             $jobId = rand(10000, 10000000);
 
             // Check wallet balance and debit if valid
-            if (!$this->walletModel->checkWalletBalance($user, $baseCurrency, $total)) {
+            if (!$this->walletModel->checkWalletBalance(
+                $user,
+                $baseCurrency,
+                $total
+            )) {
                 return response()->json([
                     'status' => false,
                     'message' => 'You do not have sufficient funds in your wallet',
                 ], 401);
             }
 
-            if (!$this->walletModel->debitWallet($user, $baseCurrency, $total)) {
+            if (!$this->walletModel->debitWallet(
+                $user,
+                $baseCurrency,
+                $total
+            )) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Wallet debit failed. Please try again.',
                 ], 500);
             }
 
-            $type =
                 // Process the campaign
                 $campaign = $this->processCampaign(
                     $total,
@@ -185,8 +195,17 @@ class CampaignService
             $user = auth()->user();
             // Get the campaign details using the UserId and CampaignId
             $campaign = $this->campaignModel->getCampaignById($request->campaign_id, $user->id);
-            // return $campaign;
+
             $baseCurrency = $user->wallet->base_currency;
+
+            // Map currency to determine upload amount
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+
+            // Get the currency details and status
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+            // Calculate initial upload amount
+            $iniAmount = $campaign->allow_upload ? $request->new_worker_number * (float)($currency->allow_upload) : 0;
 
             // Get the Subcategory amount from db
             $subAmount = $this->campaignModel->getSubCategoryAmount(
@@ -195,7 +214,7 @@ class CampaignService
             );
             $estAmount = $request->new_worker_number * $subAmount->amount;
             $percent = (60 / 100) * $estAmount;
-            $total = $estAmount + $percent;
+            $total = $estAmount + $percent + $iniAmount;
 
             // Check wallet balance and debit if valid
             if (!$this->walletModel->checkWalletBalance($user, $baseCurrency, $total)) {
