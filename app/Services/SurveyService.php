@@ -89,6 +89,7 @@ class SurveyService
             // Save User Interest
             $this->survey->addUserInterest($user, $request->interest);
 
+            // Update user Profile base currency
             $this->wallet->updateWalletBaseCurrency($user, $request->currency);
             //    Log Activities
             $this->log->createLogForSurvey($user);
