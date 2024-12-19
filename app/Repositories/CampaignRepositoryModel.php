@@ -178,7 +178,8 @@ class CampaignRepositoryModel
         return $amounts;
     }
 
-    public function getJobsByIdAndType($camId, $type){
+    public function getJobsByIdAndType($camId, $type)
+    {
         $query = CampaignWorker::where(
             'campaign_id',
             $camId
@@ -193,6 +194,25 @@ class CampaignRepositoryModel
             'created_at',
             'DESC'
         )->paginate(10);
+    }
+
+    public function getJobByIdAndCampaignId($jobId, $campaignId)
+    {
+        return CampaignWorker::where(
+            'id',
+            $jobId
+        )->where(
+            'campaign_id',
+            $campaignId
+        )->first();
+    }
+
+    public function getJobById($jobId)
+    {
+        return CampaignWorker::where(
+            'id',
+            $jobId
+        )->first();
     }
 
     public function logAdminTransaction($amount, $currency, $channel, $user)

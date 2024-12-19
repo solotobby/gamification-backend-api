@@ -396,7 +396,6 @@ class CampaignService
     public function campaignJobList($request, $campaignId)
     {
         try {
-
             $userId = auth()->user()->id;
             $type = strtolower($request->query('type'));
 
@@ -484,10 +483,58 @@ class CampaignService
         }
     }
 
-    public function jobDetails($jobId){
+    public function jobDetails($request){
+        $userId = auth()->user()->id;
 
+        $campId = $request->query('campaign_id');
+        $jobId = $request->query('job_id');
+
+        if (empty($campId) || empty($jobId)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Campaign Id and Job Id cannot be empty'
+            ], 400);
+        }
+
+        $campaign = $this->campaignModel->getCampaignById($campId, $userId);
+
+        // Return error if campaign is not found
+        if (!$campaign) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Campaign not found'
+            ], 404);
+        }
+
+        $job = $this->campaignModel->getJobByIdAndCampaignId($jobId, $campId);
+       // return $job;
+        $data = [
+            'job_id' => $job->id,
+            'campaign_id' => $campaign->id,
+            'campaign_name' => $campaign->post_title,
+            'campaign_description' => $campaign->description,
+            'proof_of_completion' => $campaign->proof,
+            'worker_name' => $this->authModel->findUserById($job->user_id)->name,
+            'worker_id' => $job->user_id,
+            'worker_proof' => $job->comment,
+            'worker_proof_url' => $job->proof_url,
+            'job_status' => $job->status,
+            'approval_or_denial_reason' => $job->reason,
+            'created_at' => $job->created_at,
+            'updated_at' => $job->updated_at,
+            'has_dispute' => $job->is_dispute,
+            'dispute_resolved' => $job->is_dispute_resolved,
+
+
+        ];
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Job details retrieved successfully',
+            'data' => $data
+        ], 200);
     }
-    
+
     public function decreasePendingCountAfterDenial($id)
     {
         $userId = auth()->user()->id;

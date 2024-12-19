@@ -57,8 +57,8 @@ class CampaignController extends Controller
         return $this->campaign->pauseCampaign($campaignId);
     }
 
-    public function jobDetails($jobId)
+    public function jobDetails(Request $request)
     {
-        return $this->campaign->jobDetails($jobId);
+        return $this->campaign->jobDetails($request);
     }
 }
