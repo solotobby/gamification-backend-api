@@ -484,6 +484,28 @@ class CampaignService
         }
     }
 
+    public function jobDetails($jobId){
+
+    }
+    
+    public function decreasePendingCountAfterDenial($id)
+    {
+        $userId = auth()->user()->id;
+        $campaign = $this->campaignModel->getCampaignById($id, $userId);
+        $campaign->pending_count -= 1;
+        $campaign->save();
+        return true;
+    }
+
+    public function increaseCompletedCountAfterApproval($id)
+    {
+        $userId = auth()->user()->id;
+        $campaign = $this->campaignModel->getCampaignById($id, $userId);
+        $campaign->completed_count += 1;
+        $campaign->save();
+        return true;
+    }
+
     private function processCampaign($total, $request, $job_id, $percent, $allowUpload, $priotize)
     {
         $user = auth()->user();
@@ -582,32 +604,6 @@ class CampaignService
         return response()->json(['status' => true, 'message' => 'Campaign Information', 'data' => $data], 200);
     }
 
-    public function removePendingCountAfterDenial($id)
-    {
-        $campaign = Campaign::where('id', $id)->first();
-        $campaign->pending_count -= 1;
-        $campaign->save();
-    }
-
-
-    public function calculateCampaignPrice($request)
-    {
-
-        $validated = $request->validate([
-            'staff_number' => 'required|numeric',
-            'unit_price' => 'required|string',
-        ]);
-
-        try {
-
-            $est_amount = $validated['staff_number'] * $validated['unit_price'];
-            $percent = (60 / 100) * $est_amount;
-            $total = $est_amount + $percent;
-        } catch (Throwable $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
-        }
-        return response()->json(['status' => true, 'message' => 'Campaign Price', 'data' => $total], 200);
-    }
 
     public function adminActivities($id)
     {

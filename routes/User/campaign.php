@@ -13,8 +13,8 @@ Route::middleware([
 
     Route::get('/campaign/activities-stat/{campaignId}', [CampaignController::class, 'campaignActivitiesStat']);
     Route::get('/campaign/activities-job/{campaignId}', [CampaignController::class, 'campaignActivitiesJob']);
+    Route::patch('/campaign/activities/job-details/{job_id}', [CampaignController::class, 'jobDetails']);
 
     Route::get('/campaign/categories', [CampaignController::class, 'getCategories']);
     Route::post('/campaign/pause/{campaignId}', [CampaignController::class, 'pauseCampaign']);
-    Route::patch('/campaign/add', [CampaignController::class, 'addWorkerToCampaign']);
 });
