@@ -178,6 +178,22 @@ class CampaignRepositoryModel
         return $amounts;
     }
 
+    public function getJobsByIdAndType($camId, $type){
+        $query = CampaignWorker::where(
+            'campaign_id',
+            $camId
+        );
+        if (!empty($type)) {
+            $query->where(
+                'status',
+                $type
+            );
+        }
+        return $query->orderBy(
+            'created_at',
+            'DESC'
+        )->paginate(10);
+    }
 
     public function logAdminTransaction($amount, $currency, $channel, $user)
     {

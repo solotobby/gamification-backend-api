@@ -12,6 +12,7 @@ Route::middleware([
     Route::patch('/campaign/add/worker', [CampaignController::class, 'addWorkerToCampaign']);
 
     Route::get('/campaign/activities-stat/{campaignId}', [CampaignController::class, 'campaignActivitiesStat']);
+    Route::get('/campaign/activities-job/{campaignId}', [CampaignController::class, 'campaignActivitiesJob']);
 
     Route::get('/campaign/categories', [CampaignController::class, 'getCategories']);
     Route::post('/campaign/pause/{campaignId}', [CampaignController::class, 'pauseCampaign']);

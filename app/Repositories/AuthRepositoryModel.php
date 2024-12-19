@@ -48,8 +48,20 @@ class AuthRepositoryModel
 
     public function findUser($email)
     {
-        $user = User::where('email', $email)->first();
+        $user = User::where(
+            'email',
+            $email
+        )->first();
         return $user;
+    }
+
+    public function findUserById($id)
+    {
+        return User::where(
+            'id',
+            $id
+        )->first();
+
     }
 
     public function findUserWithRole($email)
@@ -148,5 +160,4 @@ class AuthRepositoryModel
             'is_verified' => $user->is_verified ?? 0,  // False if user is not verified
         ];
     }
-
 }

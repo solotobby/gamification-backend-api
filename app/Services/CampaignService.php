@@ -20,21 +20,25 @@ use App\Models\PaymentTransaction;
 use App\Models\Rating;
 use App\Models\User;
 use App\Models\Wallet;
+use App\Repositories\AuthRepositoryModel;
 use Exception;
 
 class CampaignService
 {
-    protected $campaignModel, $validator, $currencyModel, $walletModel;
+    protected $campaignModel, $validator, $currencyModel,
+        $walletModel, $authModel;
     public function __construct(
         CampaignRepositoryModel $campaignModel,
         CampaignValidator $validator,
         CurrencyRepositoryModel $currencyModel,
-        WalletRepositoryModel $walletModel
+        WalletRepositoryModel $walletModel,
+        AuthRepositoryModel $authModel
     ) {
         $this->campaignModel = $campaignModel;
         $this->validator = $validator;
         $this->currencyModel = $currencyModel;
         $this->walletModel = $walletModel;
+        $this->authModel = $authModel;
     }
 
     public function getCampaigns($request)
@@ -372,9 +376,55 @@ class CampaignService
             $data['campaign_total_amount'] = $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
             $data['campaign_unit_amount'] = $campaign->campaign_amount;
             $data['campaign_currency'] = $campaign->currency;
-            $data['amount_ratio'] = $campaign->currency.''.$spentAmount.' / '.$campaign->currency.''.$campaignAmount;
+            $data['amount_ratio'] = $campaign->currency . '' . $spentAmount . ' / ' . $campaign->currency . '' . $campaignAmount;
             $data['status'] = $this->campaignModel->getCampaignStats($campaignId);
 
+            return response()->json([
+                'status' => true,
+                'message' => 'Campaign Activities Stat',
+                'data' => $data
+            ], 200);
+        } catch (Exception $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+    public function campaignJobList($request, $campaignId)
+    {
+        try {
+
+            $userId = auth()->user()->id;
+            $type = strtolower($request->query('type'));
+
+            $campaign = $this->campaignModel->getCampaignById($campaignId, $userId);
+
+            // Return error if campaign is not found
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign not found'
+                ], 404);
+            }
+            $jobs = $this->campaignModel->getJobsByIdAndType($campaign->id, $type);
+
+            $data['campaign_name'] = $campaign->post_title;
+            $data['campaign_id'] = $campaign->id;
+            $data['jobs'] = $jobs->getCollection()->map(function ($job) use ($campaign) {
+                return [
+                    'job_id' => $job->id,
+                    'worker_name' => $this->authModel->findUserById($job->user_id)->name ?? 'Unknown',
+                    'campaign_name' => $campaign->post_title,
+                    'amount' => $campaign->currency . ' ' . $job->amount,
+                    'status' => $job->status,
+                    'created_at' => $job->created_at,
+                    'updated_at' => $job->updated_at,
+
+                ];
+            });
         } catch (Exception $exception) {
             return response()->json([
                 'status' => false,
@@ -385,7 +435,7 @@ class CampaignService
 
         return response()->json([
             'status' => true,
-            'message' => 'Campaign Activities Stat',
+            'message' => 'Campaign Activities Jobs',
             'data' => $data
         ], 200);
     }
