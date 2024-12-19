@@ -42,9 +42,9 @@ class CampaignController extends Controller
     }
 
 
-    public function campaignActivities($campaignId)
+    public function campaignActivitiesStat($campaignId)
     {
-        return $this->campaign->activities($campaignId);
+        return $this->campaign->campaignActivitiesStat($campaignId);
     }
 
     public function pauseCampaign($campaignId)

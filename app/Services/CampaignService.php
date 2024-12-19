@@ -353,16 +353,41 @@ class CampaignService
         }
     }
 
-    public function activities($campaignId)
+    public function campaignActivitiesStat($campaignId)
     {
         try {
             $userId = auth()->user()->id;
-            $cam = $this->campaignModel->getCampaignActivities($campaignId, $userId);
+            $campaign = $this->campaignModel->getCampaignById($campaignId, $userId);
+
+            // Return error if campaign is not found
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign not found'
+                ], 404);
+            }
+            // Prepare Stat Response
+            $data['number_of_workers'] = $campaign->number_of_staff;
+            $data['spent_amount'] = $spentAmount = $this->campaignModel->getCampaignSpentAmount($campaignId);
+            $data['campaign_total_amount'] = $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
+            $data['campaign_unit_amount'] = $campaign->campaign_amount;
+            $data['campaign_currency'] = $campaign->currency;
+            $data['amount_ratio'] = $campaign->currency.''.$spentAmount.' / '.$campaign->currency.''.$campaignAmount;
+            $data['status'] = $this->campaignModel->getCampaignStats($campaignId);
+
         } catch (Exception $exception) {
-            return response()->json(['status' => false, 'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
 
-        return response()->json(['status' => true, 'message' => 'Campaign Activities', 'data' => $cam], 200);
+        return response()->json([
+            'status' => true,
+            'message' => 'Campaign Activities Stat',
+            'data' => $data
+        ], 200);
     }
 
     public function pauseCampaign($campaignId)
@@ -506,7 +531,7 @@ class CampaignService
         }
         return response()->json(['status' => true, 'message' => 'Campaign Information', 'data' => $data], 200);
     }
-    
+
     public function removePendingCountAfterDenial($id)
     {
         $campaign = Campaign::where('id', $id)->first();

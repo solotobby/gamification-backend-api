@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Campaign;
+use App\Models\CampaignWorker;
 use App\Models\Category;
 use App\Models\SubCategory;
 use App\Models\Wallet;
@@ -143,6 +144,41 @@ class CampaignRepositoryModel
             ->select(['id', 'job_id', 'post_title'])
             ->get();
     }
+
+    public function getCampaignStats($camId)
+    {
+        $counts = [
+            'Pending' => 0,
+            'Denied' => 0,
+            'Approved' => 0,
+        ];
+        $statusCounts = CampaignWorker::where('campaign_id', $camId)
+            ->whereIn('status', ['Pending', 'Denied', 'Approved'])
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('sta  tus')
+            ->get();
+
+        // Map the result into the counts array
+        foreach ($statusCounts as $statusCount) {
+            $counts[$statusCount->status] = $statusCount->count;
+        }
+
+        return $counts;
+    }
+
+    public function getCampaignSpentAmount($camId)
+    {
+        $amounts = CampaignWorker::where(
+            'campaign_id',
+            $camId
+        )->where(
+            'status',
+            'Approved'
+        )->sum('amount');
+        return $amounts;
+    }
+
+
     public function logAdminTransaction($amount, $currency, $channel, $user)
     {
         $ref = time();
