@@ -21,14 +21,14 @@ class CampaignController extends Controller
     }
 
 
-    public function getCampaigns()
+    public function getCampaigns(Request $request)
     {
-        return $this->campaign->getCampaigns();
+        return $this->campaign->getCampaigns($request);
     }
 
-    public function updateCampaign(Request $request)
+    public function addWorkerToCampaign(Request $request)
     {
-        return $this->campaign->updateCampaign($request);
+        return $this->campaign->updateCampaignWorker($request);
     }
 
     public function postCampaign(Request $request)
@@ -42,8 +42,23 @@ class CampaignController extends Controller
     }
 
 
-    public function activities($id)
+    public function campaignActivitiesStat($campaignId)
     {
-        return $this->campaign->activities($id);
+        return $this->campaign->campaignActivitiesStat($campaignId);
+    }
+
+    public function campaignActivitiesJob(Request $request, $campaignId)
+    {
+        return $this->campaign->campaignJobList($request, $campaignId);
+    }
+
+    public function pauseCampaign($campaignId)
+    {
+        return $this->campaign->pauseCampaign($campaignId);
+    }
+
+    public function jobDetails(Request $request)
+    {
+        return $this->campaign->jobDetails($request);
     }
 }
