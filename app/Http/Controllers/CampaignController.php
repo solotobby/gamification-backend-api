@@ -21,9 +21,9 @@ class CampaignController extends Controller
     }
 
 
-    public function getCampaigns()
+    public function getCampaigns(Request $request)
     {
-        return $this->campaign->getCampaigns();
+        return $this->campaign->getCampaigns($request);
     }
 
     public function addWorkerToCampaign(Request $request)
@@ -42,8 +42,13 @@ class CampaignController extends Controller
     }
 
 
-    public function activities($id)
+    public function campaignActivities($campaignId)
     {
-        return $this->campaign->activities($id);
+        return $this->campaign->activities($campaignId);
+    }
+
+    public function pauseCampaign($campaignId)
+    {
+        return $this->campaign->pauseCampaign($campaignId);
     }
 }

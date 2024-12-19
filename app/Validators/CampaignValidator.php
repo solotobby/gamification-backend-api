@@ -13,9 +13,9 @@ class CampaignValidator
             'proof' => 'required|string',
             'post_title' => 'required|string',
             'post_link' => 'required|string',
-            'number_of_staff' => 'required',
-            'campaign_amount' => 'required',
-            'validate' => 'required',
+            'number_of_staff' => 'required|string',
+            'campaign_amount' => 'required|string',
+            'validate' => 'required|boolean',
             'campaign_type' => 'required|numeric',
             'campaign_subcategory' => 'required|numeric',
             'priotize' => 'required|boolean',
@@ -30,8 +30,21 @@ class CampaignValidator
 
     public static function validateCampaignUpdating($request){
         $validationRules = [
-            'new_worker_number' => 'required',
-            'campaign_id' => 'required',
+            'new_worker_number' => 'required|string',
+            'campaign_id' => 'required|string|exists:campaigns,id',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function AdminDecisionOnCampaign($request){
+        $validationRules = [
+            'user_id' => 'required|string|exists:users,id',
+            'campaign_id' => 'required|string|exists:campaigns,id',
+            'decision' => 'required|string|in:approve,decline'
         ];
         $validator = Validator::make($request->all(), $validationRules);
 

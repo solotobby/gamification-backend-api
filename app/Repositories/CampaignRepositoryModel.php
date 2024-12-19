@@ -43,16 +43,24 @@ class CampaignRepositoryModel
         return Campaign::create($request->all());
     }
 
-    public function getCampaignsByPagination($id)
+    public function getCampaignsByPagination($id, $type)
     {
-        return Campaign::where(
+        $query = Campaign::where(
             'user_id',
             $id
-        )->orderBy(
+        );
+        if (!empty($type)) {
+            $query->where(
+                'status',
+                $type
+            );
+        }
+        return $query->orderBy(
             'created_at',
             'DESC'
-        )->paginate(5);
+        )->paginate(10);
     }
+
 
     public function getCampaignById($id, $userId)
     {
@@ -109,21 +117,32 @@ class CampaignRepositoryModel
     }
 
     public function createPaymentTransaction($userId, $campaignId, $amount)
-{
-    $ref = time();
+    {
+        $ref = time();
 
-    PaymentTransaction::create([
-        'user_id' => $userId,
-        'campaign_id' => $campaignId,
-        'reference' => $ref,
-        'amount' => $amount,
-        'status' => 'successful',
-        'currency' => 'NGN',
-        'channel' => 'paystack',
-        'type' => 'edit_campaign_payment',
-        'description' => 'Extend Campaign Payment'
-    ]);
-}
+        PaymentTransaction::create([
+            'user_id' => $userId,
+            'campaign_id' => $campaignId,
+            'reference' => $ref,
+            'amount' => $amount,
+            'status' => 'successful',
+            'currency' => 'NGN',
+            'channel' => 'paystack',
+            'type' => 'edit_campaign_payment',
+            'description' => 'Extend Campaign Payment'
+        ]);
+    }
+
+    public function getCampaignActivities($campaignId, $userId)
+    {
+        return Campaign::with(['completed' => function ($query) {
+            $query->where('status', 'Pending');
+        }])
+            ->where('job_id', $campaignId)
+            ->where('user_id', $userId)
+            ->select(['id', 'job_id', 'post_title'])
+            ->get();
+    }
     public function logAdminTransaction($amount, $currency, $channel, $user)
     {
         $ref = time();

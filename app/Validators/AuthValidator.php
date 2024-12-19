@@ -45,21 +45,29 @@ class AuthValidator
     public static function validateLogin($request)
     {
         $validationRules = [
-            'email' => 'required|email|max:255',
+            'email' => 'required|email|max:255|exists:users,email',
             'password' => 'required',
         ];
 
         $validator = Validator::make($request->all(), $validationRules);
 
         if ($validator->fails()) {
-            throw new ValidationException($validator);
+            $errors = array();
+            $validationErrors = json_decode(json_encode($validator->errors()), true);
+            foreach ($validationErrors as $key => $error) {
+                $errors[] = $error[0];
+            }
+            return response()->json([
+                'status' => false,
+                'message' => implode(',', $errors)
+            ], 400);
         }
     }
 
     public static function validateResendOTP($request)
     {
         $validationRules = [
-            'email' => 'required|email|max:255',
+            'email' => 'required|email|max:255|exists:users,email',
         ];
 
         $validator = Validator::make($request->all(), $validationRules);
@@ -82,9 +90,10 @@ class AuthValidator
         }
     }
 
-    public static function validateResetPasswordLink($request){
+    public static function validateResetPasswordLink($request)
+    {
         $validationRules = [
-            'email' => 'required|email|max:255',
+            'email' => 'required|email|max:255|exists:users,email',
         ];
         $validator = Validator::make($request->all(), $validationRules);
 
@@ -93,10 +102,11 @@ class AuthValidator
         }
     }
 
-    public static function validateResetPassword($request){
+    public static function validateResetPassword($request)
+    {
         $validationRules = [
-                'token' => 'required|string',
-                'password' => 'required|string|min:8|confirmed',
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
         ];
         $validator = Validator::make($request->all(), $validationRules);
 
