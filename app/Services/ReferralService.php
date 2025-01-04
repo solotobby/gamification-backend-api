@@ -4,19 +4,22 @@ namespace App\Services;
 
 use App\Http\Controllers\ReferralController;
 use App\Models\User;
+use App\Repositories\AuthRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
 
 
 class ReferralService
 {
-    protected $referralModel, $walletModel;
+    protected $referralModel, $walletModel, $authModel;
     public function __construct(
         ReferralRepositoryModel $referralModel,
         WalletRepositoryModel $walletModel,
+        AuthRepositoryModel $authModel,
     ) {
         $this->referralModel = $referralModel;
         $this->walletModel = $walletModel;
+        $this->authModel = $authModel;
     }
 
     public function referralStat()
@@ -60,7 +63,8 @@ class ReferralService
             'total_user_referred' => $totalReferral,
             'verified_user_referred' => $verifiedReferral,
             'pending_user_referred' => $pendingReferral,
-            'total_referral_income' => $totalSum + $emptyAmount,  // Add the empty amount to the total sum
+            'total_referral_income' => $totalSum + $emptyAmount,
+            'referral_link' => 'https://freebyz.com/register/' . $user->referral_code
         ];
 
         return response()->json([
@@ -73,11 +77,44 @@ class ReferralService
 
 
     public function referralList()
-    {
-        $user = auth()->user();
-         // Get all referrals for the authenticated user
-         return $referrals = $this->referralModel->getUserReferrals($user);
+{
+    $user = auth()->user();
+    $baseCurrency = $user->wallet->base_currency;
+    $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+    $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
 
+    // Get all referrals for the authenticated user with pagination (10 per page)
+    $referrals = $this->referralModel->getUserReferralsPaginated($user); // Ensure paginate() is used on query builder
 
+    $data = [];
+
+    foreach ($referrals as $referral) {
+        $referredUser = $this->authModel->findUserById($referral->user_id);
+
+        // Check if amount is not empty, otherwise set to referral commission
+        $amount = !empty($referral->amount) ? $referral->amount : $referralCommission;
+
+        $data[] = [
+            'id' => $referral->id,
+            'name' => $referredUser->name,
+            'is_paid' => $referral->is_paid ? false : true,
+            'income' => $amount,
+            'status' => $referredUser->is_verified ? 'Verified' : 'Pending',
+            'created_at' => $referral->created_at,
+        ];
     }
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Referrals Retrieved Successfully',
+        'data' => $data,
+        'pagination' => [
+            'current_page' => $referrals->currentPage(),
+            'last_page' => $referrals->lastPage(),
+            'per_page' => $referrals->perPage(),
+            'total' => $referrals->total(),
+        ]
+    ]);
+}
+
 }
