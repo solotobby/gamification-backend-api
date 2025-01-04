@@ -16,7 +16,7 @@ class CreateReferralTable extends Migration
         Schema::create('referral', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('referee_id');
+            $table->string('referee_id');
             $table->timestamps();
         });
     }

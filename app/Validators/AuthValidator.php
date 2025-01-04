@@ -8,39 +8,38 @@ use Illuminate\Validation\ValidationException;
 class AuthValidator
 {
     public static function validateRegistration($request)
-    {
-        // Get the current location, default to 'Nigeria' if in localenv
-        $curLocation = (env('APP_ENV') != 'localenv') ? currentLocation() : 'Nigeria';
+{
+    // Normalize the country input to lowercase
+    $country = strtolower($request->input('country'));
 
-        // Common validation rules for registration
-        $commonValidationRules = [
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'country' => ['required', 'string', 'max:255'],
-            'country_code' => ['required', 'string', 'max:255'],
-            'source' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'ref_id' => ['nullable', 'string', 'max:255'],
-        ];
+    // Common validation rules for registration
+    $validationRules = [
+        'first_name' => ['required', 'string', 'max:255'],
+        'last_name' => ['required', 'string', 'max:255'],
+        'country' => ['required', 'string', 'max:255'],
+        'country_code' => ['required', 'string', 'max:255'],
+        'source' => ['required', 'string', 'max:255'],
+        'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+        'password' => ['required', 'string', 'min:8', 'confirmed'],
+        'ref_id' => ['nullable', 'string', 'max:255'],
+    ];
 
-        // Phone validation rules based on the location
-        if ($curLocation == 'Nigeria') {
-            $phoneValidationRules = ['required', 'numeric', 'digits:11', 'unique:users'];
-        } else {
-            $phoneValidationRules = ['required', 'numeric', 'regex:/^([0-9\s\-\+\(\)]*)$/', 'unique:users'];
-        }
-
-        $validationRules = array_merge($commonValidationRules, [
-            'phone' => $phoneValidationRules,
-        ]);
-
-        $validator = Validator::make($request->all(), $validationRules);
-
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
+    // Phone validation rules based on the location
+    if ($country === 'nigeria') {
+        $validationRules['phone'] = ['required', 'numeric', 'digits:11', 'unique:users,phone'];
+    } else {
+        $validationRules['phone'] = ['required', 'numeric', 'regex:/^([0-9\s\-\+\(\)]*)$/', 'unique:users,phone'];
     }
+
+    // Perform validation
+    $validator = Validator::make($request->all(), $validationRules);
+
+    // Throw a validation exception if validation fails
+    if ($validator->fails()) {
+        throw new ValidationException($validator);
+    }
+}
+
 
     public static function validateLogin($request)
     {
