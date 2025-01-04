@@ -61,12 +61,16 @@ class WalletRepositoryModel
 
             case 'usd':
                 return $wallet->usd_balance >= $amount;
-                
+
             default:
                 return $wallet->bonus >= $amount;
         }
     }
 
+    public function checkReferralCommission($mapCurrency){
+        $currency = Currency::where('code', $mapCurrency)->first();
+        return $currency->referral_commission;
+    }
     public function mapCurrency($currency)
     {
         switch (strtolower($currency)) {

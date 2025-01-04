@@ -23,4 +23,13 @@ class ReferralRepositoryModel
         $user->referral_code = Str::random(7);
         $user->save();
     }
+
+    public function getUserReferrals($user)
+    {
+        return Referral::where(
+            'referee_id',
+            $user->referral_code
+        )->get();
+
+    }
 }
