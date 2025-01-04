@@ -14,7 +14,8 @@ class Referral extends Model
     protected $fillable = [
         'user_id',
         'referee_id',
-        'is_paid'
+        'is_paid',
+        'amount'
     ];
 
     public function referrer()

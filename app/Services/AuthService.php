@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
-    private $validator, $auth, $wallet, $refer, $log;
+    private $validator, $auth, $wallet, $refer, $log, $walletModel;
 
     public function __construct(
         AuthValidator $validator,
@@ -28,12 +28,14 @@ class AuthService
         WalletRepositoryModel $wallet,
         ReferralRepositoryModel $refer,
         LogRepositoryModel $log,
+        WalletRepositoryModel $walletModel,
     ) {
         $this->validator = $validator;
         $this->auth = $auth;
         $this->wallet = $wallet;
         $this->refer = $refer;
         $this->log = $log;
+        $this->walletModel = $walletModel;
     }
 
     public function registerUser($request)
@@ -274,7 +276,7 @@ class AuthService
         // Create user
         $user = $this->auth->createUser($payload);
 
-        //return $user;
+       // return $user;
         // Set wallet and currency
         $curLocation = $payload->country;
         $currency = $curLocation === 'Nigeria' ? 'NGN' : 'USD';
@@ -286,10 +288,19 @@ class AuthService
         $profile = [];
         $profile = $this->auth->setProfile($user, $payload->country_code);
 
+
         // Process referral if applicable
-       $ref_id = $payload['ref_id'] ?? null;
+        $ref_id = $payload['ref_id'] ?? null;
         if ($ref_id) {
-           $referral = $this->refer->createReferral($user, $ref_id);
+
+            $referrer = $this->refer->getReferrerDetails($ref_id);
+            if($referrer){
+                // add the referral commission amount
+                $baseCurrency = $referrer->wallet->base_currency;
+                $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+                $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
+                $this->refer->createReferral($user, $ref_id, $referralCommission);
+            }
         }
 
         // Activity logging for non-local environments

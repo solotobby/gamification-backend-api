@@ -75,8 +75,9 @@ class ReferralService
     public function referralList()
     {
         $user = auth()->user();
-        $list = $user->referees;
-        $verified = $user->referees()->where('is_verified', true)->count();
-        return view('user.referral.naira', ['lists' => $list, 'verified' => $verified]);
+         // Get all referrals for the authenticated user
+         return $referrals = $this->referralModel->getUserReferrals($user);
+
+
     }
 }
