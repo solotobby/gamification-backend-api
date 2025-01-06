@@ -104,7 +104,12 @@ class JobService
 
             $job = $this->jobModel->getJobById($jobId);
 
-
+            if (!$job) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Job not found.',
+                ], 404);
+            }
             // Retrieve campaign details
             $campaign = $this->campaignModel->getCampaignById($job->campaign_id, $user->id);
             if (!$campaign) {
@@ -113,7 +118,7 @@ class JobService
                     'message' => 'Campaign not found.',
                 ], 404);
             }
-               //return $job;
+            //return $job;
 
             // Prepare response data
             $data = [
@@ -137,6 +142,54 @@ class JobService
                 'status' => true,
                 'message' => 'Job details retrieved successfully',
                 'data' => $data
+            ], 200);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+    public function createDispute($request)
+    {
+        try {
+            $user = auth()->user();
+
+            $job = $this->jobModel->getJobById($request->job_id, $user->id);
+
+            if (!$job) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Job not found.',
+                ], 404);
+            }
+
+            // Prevent duplicate actions on already processed jobs
+            if ($job->status !== 'Denied') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Dispute action cannot be performed.',
+                ], 400);
+            }
+            if ($job->is_dispute === 1) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'A dispute has already been lodged for this job, so the action cannot be performed again.',
+                ], 400);
+            }
+
+            // return $request->reason;
+            //create dispute
+
+            $this->jobModel->createDisputeOnWorker($job->id);
+            $this->jobModel->createDispute($job, $request->reason, $request->job_proof);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Dispute created successfully',
+
             ], 200);
         } catch (Throwable $exception) {
             return response()->json([

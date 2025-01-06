@@ -3,12 +3,13 @@
 namespace App\Repositories;
 
 use App\Models\CampaignWorker;
+use App\Models\DisputedJobs;
 
 class JobRepositoryModel
 {
     public function getJobByType($user, $type)
     {
-       return CampaignWorker::where(
+        return CampaignWorker::where(
             'user_id',
             $user->id
         )->where(
@@ -22,7 +23,7 @@ class JobRepositoryModel
 
     public function getDisputedJobs($user)
     {
-       return CampaignWorker::where(
+        return CampaignWorker::where(
             'user_id',
             $user->id
         )->where(
@@ -96,15 +97,26 @@ class JobRepositoryModel
         )->first();
     }
 
-    public function getJobById($jobId)
+    public function getJobById($jobId, $userId = null)
     {
-        return CampaignWorker::where(
+        $query = CampaignWorker::where(
             'id',
             $jobId
-        )->first();
+        );
+
+        if ($userId) {
+            $query->where(
+                'user_id',
+                $userId
+            );
+        }
+
+        return $query->first();
     }
 
-    public function updateJobStatus($reason, $jobId, $status){
+
+    public function updateJobStatus($reason, $jobId, $status)
+    {
 
         $updateStatus = CampaignWorker::where(
             'id',
@@ -116,5 +128,31 @@ class JobRepositoryModel
         $updateStatus->save();
 
         return $updateStatus;
+    }
+
+    public function createDisputeOnWorker($jobId)
+    {
+        $updateStatus = CampaignWorker::where(
+            'id',
+            $jobId
+        )->first();
+
+        $updateStatus->is_dispute = true;
+        $updateStatus->save();
+
+        return $updateStatus;
+    }
+
+    public function createDispute($job, $reason, $proof)
+    {
+        $dispute = DisputedJobs::create([
+            'campaign_worker_id' => $job->id,
+            'campaign_id' => $job->campaign_id,
+            'user_id' =>    $job->user_id,
+            'reason' => $reason,
+            'url' => $proof,
+        ]);
+
+        return $dispute;
     }
 }
