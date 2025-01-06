@@ -3,20 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\CampaignWorker;
+use App\Services\JobService;
 use Illuminate\Http\Request;
 
 class JobsController extends Controller
 {
 
-    public function __construct()
+    protected $jobService;
+    public function __construct(JobService $jobService)
     {
         $this->middleware("isUser");
+        $this->jobService = $jobService;
     }
 
 
-    public function myJobs()
+    public function myJobs(Request $request)
     {
-        $joblist = CampaignWorker::where('user_id', auth()->user()->id)->where('status', 'Pending')->orderBy('created_at', 'ASC')->get();
-        return view('user.jobs.my_jobs', ['lists' => $joblist]);
+
+        return $this->jobService->myJobs($request);
     }
 }

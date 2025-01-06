@@ -77,44 +77,45 @@ class ReferralService
 
 
     public function referralList()
-{
-    $user = auth()->user();
-    $baseCurrency = $user->wallet->base_currency;
-    $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
-    $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
+    {
+        $user = auth()->user();
+        $baseCurrency = $user->wallet->base_currency;
+        $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+        $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
 
-    // Get all referrals for the authenticated user with pagination (10 per page)
-    $referrals = $this->referralModel->getUserReferralsPaginated($user); // Ensure paginate() is used on query builder
+        // Get all referrals for the authenticated user with pagination (10 per page)
+        $referrals = $this->referralModel->getUserReferralsPaginated($user); // Ensure paginate() is used on query builder
 
-    $data = [];
+        $data = [];
 
-    foreach ($referrals as $referral) {
-        $referredUser = $this->authModel->findUserById($referral->user_id);
+        foreach ($referrals as $referral) {
+            $referredUser = $this->authModel->findUserById($referral->user_id);
 
-        // Check if amount is not empty, otherwise set to referral commission
-        $amount = !empty($referral->amount) ? $referral->amount : $referralCommission;
+            // Check if amount is not empty, otherwise set to referral commission
+            $amount = !empty($referral->amount) ? $referral->amount : $referralCommission;
 
-        $data[] = [
-            'id' => $referral->id,
-            'name' => $referredUser->name,
-            'is_paid' => $referral->is_paid ? false : true,
-            'income' => $amount,
-            'status' => $referredUser->is_verified ? 'Verified' : 'Pending',
-            'created_at' => $referral->created_at,
-        ];
+            $data[] = [
+                'id' => $referral->id,
+                'name' => $referredUser->name,
+                'is_paid' => $referral->is_paid ? false : true,
+                'income' => $amount,
+                'status' => $referredUser->is_verified ? 'Verified' : 'Pending',
+                'created_at' => $referral->created_at,
+            ];
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Referrals Retrieved Successfully',
+            'data' => $data,
+            'pagination' => [
+                'current_page' => $referrals->currentPage(),
+                'last_page' => $referrals->lastPage(),
+                'per_page' => $referrals->perPage(),
+                'total' => $referrals->total(),
+                'from' => $referrals->firstItem(),
+                'to' => $referrals->lastItem(),
+            ]
+        ]);
     }
-
-    return response()->json([
-        'status' => true,
-        'message' => 'Referrals Retrieved Successfully',
-        'data' => $data,
-        'pagination' => [
-            'current_page' => $referrals->currentPage(),
-            'last_page' => $referrals->lastPage(),
-            'per_page' => $referrals->perPage(),
-            'total' => $referrals->total(),
-        ]
-    ]);
-}
-
 }

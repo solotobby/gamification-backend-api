@@ -14,24 +14,27 @@ use App\Models\Campaign;
 use App\Models\CampaignWorker;
 use App\Models\Rating;
 use App\Repositories\AuthRepositoryModel;
+use App\Repositories\JobRepositoryModel;
 use Exception;
 
 class CampaignService
 {
     protected $campaignModel, $validator, $currencyModel,
-        $walletModel, $authModel;
+        $walletModel, $authModel, $jobModel;
     public function __construct(
         CampaignRepositoryModel $campaignModel,
         CampaignValidator $validator,
         CurrencyRepositoryModel $currencyModel,
         WalletRepositoryModel $walletModel,
-        AuthRepositoryModel $authModel
+        AuthRepositoryModel $authModel,
+        JobRepositoryModel $jobModel
     ) {
         $this->campaignModel = $campaignModel;
         $this->validator = $validator;
         $this->currencyModel = $currencyModel;
         $this->walletModel = $walletModel;
         $this->authModel = $authModel;
+        $this->jobModel = $jobModel;
     }
 
     public function getCampaigns($request)
@@ -95,17 +98,15 @@ class CampaignService
                     'status' => $campaign->status,
                     'created' => $campaign->created_at,
                 ];
-                $pagination = [
-                    'total' => $campaigns->total(),
-                    'per_page' => $campaigns->perPage(),
-                    'current_page' => $campaigns->currentPage(),
-                    'last_page' => $campaigns->lastPage(),
-                    'from' => $campaigns->firstItem(),
-                    'to' => $campaigns->lastItem(),
-                    'next_page_url' => $campaigns->nextPageUrl(),
-                    'previous_page_url' => $campaigns->previousPageUrl(),
-                ];
             }
+            $pagination = [
+                'total' => $campaigns->total(),
+                'per_page' => $campaigns->perPage(),
+                'current_page' => $campaigns->currentPage(),
+                'last_page' => $campaigns->lastPage(),
+                'from' => $campaigns->firstItem(),
+                'to' => $campaigns->lastItem(),
+            ];
 
             return response()->json([
                 'status' => true,
@@ -365,12 +366,12 @@ class CampaignService
             }
             // Prepare Stat Response
             $data['number_of_workers'] = $campaign->number_of_staff;
-            $data['spent_amount'] = $spentAmount = $this->campaignModel->getCampaignSpentAmount($campaignId);
+            $data['spent_amount'] = $spentAmount = $this->jobModel->getCampaignSpentAmount($campaignId);
             $data['campaign_total_amount'] = $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
             $data['campaign_unit_amount'] = $campaign->campaign_amount;
             $data['campaign_currency'] = $campaign->currency;
             $data['amount_ratio'] = $campaign->currency . '' . $spentAmount . ' / ' . $campaign->currency . '' . $campaignAmount;
-            $data['status'] = $this->campaignModel->getCampaignStats($campaignId);
+            $data['status'] = $this->jobModel->getCampaignStats($campaignId);
 
             return response()->json([
                 'status' => true,
@@ -401,7 +402,7 @@ class CampaignService
                     'message' => 'Campaign not found'
                 ], 404);
             }
-            $jobs = $this->campaignModel->getJobsByIdAndType($campaign->id, $type);
+            $jobs = $this->jobModel->getJobsByIdAndType($campaign->id, $type);
 
             $data['campaign_name'] = $campaign->post_title;
             $data['campaign_id'] = $campaign->id;
@@ -499,7 +500,7 @@ class CampaignService
             ], 404);
         }
 
-        $job = $this->campaignModel->getJobByIdAndCampaignId($jobId, $campId);
+        $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campId);
        // return $job;
         $data = [
             'job_id' => $job->id,

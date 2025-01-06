@@ -23,7 +23,7 @@ class  UserService
             $data['wallet'] = $user->wallet;
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
             $data['profile'] = setProfile($user);
-            
+
         } catch (Throwable $e) {
             return response()->json([
                 'status' => false,

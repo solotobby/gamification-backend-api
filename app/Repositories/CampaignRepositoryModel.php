@@ -3,7 +3,6 @@
 namespace App\Repositories;
 
 use App\Models\Campaign;
-use App\Models\CampaignWorker;
 use App\Models\Category;
 use App\Models\SubCategory;
 use App\Models\Wallet;
@@ -72,6 +71,20 @@ class CampaignRepositoryModel
             'user_id',
             $userId
         )->first();
+    }
+
+    public function availableJobs()
+    {
+        Campaign::where(
+                'status',
+                'Live'
+            )->where(
+                'is_completed',
+                false
+            )->orderBy(
+                'created_at',
+                'ASC'
+            )->get();
     }
     public function processPaymentTransaction($user, $campaign, $amount, $currency, $channel)
     {
@@ -145,75 +158,6 @@ class CampaignRepositoryModel
             ->get();
     }
 
-    public function getCampaignStats($camId)
-    {
-        $counts = [
-            'Pending' => 0,
-            'Denied' => 0,
-            'Approved' => 0,
-        ];
-        $statusCounts = CampaignWorker::where('campaign_id', $camId)
-            ->whereIn('status', ['Pending', 'Denied', 'Approved'])
-            ->selectRaw('status, count(*) as count')
-            ->groupBy('sta  tus')
-            ->get();
-
-        // Map the result into the counts array
-        foreach ($statusCounts as $statusCount) {
-            $counts[$statusCount->status] = $statusCount->count;
-        }
-
-        return $counts;
-    }
-
-    public function getCampaignSpentAmount($camId)
-    {
-        $amounts = CampaignWorker::where(
-            'campaign_id',
-            $camId
-        )->where(
-            'status',
-            'Approved'
-        )->sum('amount');
-        return $amounts;
-    }
-
-    public function getJobsByIdAndType($camId, $type)
-    {
-        $query = CampaignWorker::where(
-            'campaign_id',
-            $camId
-        );
-        if (!empty($type)) {
-            $query->where(
-                'status',
-                $type
-            );
-        }
-        return $query->orderBy(
-            'created_at',
-            'DESC'
-        )->paginate(10);
-    }
-
-    public function getJobByIdAndCampaignId($jobId, $campaignId)
-    {
-        return CampaignWorker::where(
-            'id',
-            $jobId
-        )->where(
-            'campaign_id',
-            $campaignId
-        )->first();
-    }
-
-    public function getJobById($jobId)
-    {
-        return CampaignWorker::where(
-            'id',
-            $jobId
-        )->first();
-    }
 
     public function logAdminTransaction($amount, $currency, $channel, $user)
     {
