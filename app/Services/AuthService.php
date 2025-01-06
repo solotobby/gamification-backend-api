@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
-    private $validator, $auth, $wallet, $refer, $log;
+    private $validator, $auth, $wallet, $refer, $log, $walletModel;
 
     public function __construct(
         AuthValidator $validator,
@@ -28,18 +28,21 @@ class AuthService
         WalletRepositoryModel $wallet,
         ReferralRepositoryModel $refer,
         LogRepositoryModel $log,
+        WalletRepositoryModel $walletModel,
     ) {
         $this->validator = $validator;
         $this->auth = $auth;
         $this->wallet = $wallet;
         $this->refer = $refer;
         $this->log = $log;
+        $this->walletModel = $walletModel;
     }
 
     public function registerUser($request)
     {
         $this->validator->validateRegistration($request);
         try {
+
             // Create the user and related resources
             $result = $this->createUser($request);
 
@@ -57,9 +60,12 @@ class AuthService
                 'dashboard' => $dashboard,
             ];
 
-            return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
+            return response()->json([
+                'status' => true,
+                'message' => 'Registration successfully',
+                'data' => $data
+            ], 201);
         } catch (Throwable) {
-            // Handle exceptions gracefully
             throw new BadRequestException('Error processing request');
         }
     }
@@ -98,8 +104,8 @@ class AuthService
             $this->log->createLogForLogin($user);
 
             return response()->json([
-                'message' => 'Login successful',
                 'status' => true,
+                'message' => 'Login successful',
                 'data' => $data,
             ], 200);
         } catch (Throwable $e) {
@@ -138,7 +144,7 @@ class AuthService
 
         try {
             $user = auth()->user();
-           // $user = $this->auth->findUser($user->email);
+            // $user = $this->auth->findUser($user->email);
 
             if (!$user) {
                 return response()->json(['status' => false, 'message' => 'User not found'], 404);
@@ -152,7 +158,10 @@ class AuthService
                 Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
             }
 
-            return response()->json(['status' => true, 'message' => 'Email Verification code sent'], 200);
+            return response()->json([
+                'status' => true,
+                'message' => 'Email Verification code sent'
+            ], 200);
         } catch (Throwable) {
             throw new BadRequestException('Error processing request');
         }
@@ -174,7 +183,10 @@ class AuthService
             $expirationTime = $otp->created_at->addMinutes(config('auth.otp_expiration', 2));
             if (now()->greaterThan($expirationTime)) {
                 $this->auth->deleteOtp($otp);
-                return response()->json(['status' => false, 'message' => 'OTP expired, please request another one'], 401);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'OTP expired, please request another one'
+                ], 401);
             }
 
             // Update or create user profile
@@ -205,7 +217,10 @@ class AuthService
             $validateEmail = $this->auth->findUser($request->email);
             // return $validateEmail;
             if (!$validateEmail) {
-                return response()->json(['status' => false, 'message' => 'No account associated with this email'], 404);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No account associated with this email'
+                ], 404);
             }
 
             // Create URL token and store it in the password_resets table
@@ -219,7 +234,10 @@ class AuthService
             $content = 'Hi, ' . $validateEmail->name . '. Your Password Reset Link is: ' . $link;
             Mail::to($validateEmail->email)->send(new GeneralMail($validateEmail, $content, $subject, ''));
 
-            return response()->json(['status' => true, 'message' => 'Reset Password Link Sent'], 200);
+            return response()->json([
+                'status' => true,
+                'message' => 'Reset Password Link Sent'
+            ], 200);
         } catch (Throwable) {
             throw new BadRequestException('Error processing request');
         }
@@ -242,9 +260,15 @@ class AuthService
             // Delete Token
             $this->auth->deleteToken($request->token);
 
-            return response()->json(['status' => true, 'message' => 'Password Reset Successful'], 200);
+            return response()->json([
+                'status' => true,
+                'message' => 'Password Reset Successful'
+            ], 200);
         } catch (Throwable) {
-            return response()->json(['status' => false, 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request'
+            ], 500);
         }
     }
     protected function createUser($payload)
@@ -252,6 +276,7 @@ class AuthService
         // Create user
         $user = $this->auth->createUser($payload);
 
+       // return $user;
         // Set wallet and currency
         $curLocation = $payload->country;
         $currency = $curLocation === 'Nigeria' ? 'NGN' : 'USD';
@@ -263,15 +288,23 @@ class AuthService
         $profile = [];
         $profile = $this->auth->setProfile($user, $payload->country_code);
 
+
         // Process referral if applicable
         $ref_id = $payload['ref_id'] ?? null;
-        if (!empty($ref_id)) {
-            $referral = $this->refer->createReferral($user, $ref_id);
+        if ($ref_id) {
+
+            $referrer = $this->refer->getReferrerDetails($ref_id);
+            if($referrer){
+                // add the referral commission amount
+                $baseCurrency = $referrer->wallet->base_currency;
+                $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+                $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
+                $this->refer->createReferral($user, $ref_id, $referralCommission);
+            }
         }
 
         // Activity logging for non-local environments
-
-        activityLog($user, 'account_creation', $user->name . ' Registered ', 'regular');
+        $this->log->activityLogForRegistration($user);
 
 
         // Generate OTP
@@ -294,7 +327,7 @@ class AuthService
         ];
     }
 
-    // Reducdant apis
+
     public function emailVerification(Request $request)
     {
         $request->validate([
@@ -314,9 +347,16 @@ class AuthService
 
             // Mail::to($request->email)->send(new EmailVerification($request->email, $content, $subject, ''));
 
-            return response()->json(['status' => true, 'message' => 'Verification Email Sent Successfully'], 200);
+            return response()->json([
+                'status' => true,
+                'message' => 'Verification Email Sent Successfully'
+            ], 200);
         } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
     }
 
@@ -330,12 +370,22 @@ class AuthService
             $checkValidity = DB::table('password_resets')->where(['token' => $request->code])->first();
             if ($checkValidity) {
 
-                return response()->json(['status' => true, 'message' => 'Email verified, redirect to registration page'], 200);
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Email verified, redirect to registration page'
+                ], 200);
             } else {
-                return response()->json(['status' => false, 'message' => 'Invalid Code'], 401);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid Code'
+                ], 401);
             }
         } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
     }
 
@@ -354,7 +404,11 @@ class AuthService
             // }
 
         } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
     }
 
@@ -367,7 +421,11 @@ class AuthService
         try {
             return $response = OTPVerify($request->pinId, $request->otp);
         } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
     }
 
@@ -391,7 +449,11 @@ class AuthService
             }
             $res = $this->createUser($request);
         } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
         //  return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
     }

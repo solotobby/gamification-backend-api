@@ -2,22 +2,54 @@
 
 namespace App\Repositories;
 
+use App\Models\User;
 use App\Models\Referral;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Hash;
 
 
 class ReferralRepositoryModel
 {
-    public function createReferral($user, $ref_id)
+    public function createReferral($user, $ref_id, $amount)
     {
-        $referral = Referral::create(['user_id' => $user->id, 'referee_id' => $ref_id]);
-        return $referral;
+        Referral::create([
+            'user_id' => $user->id,
+            'referee_id' => $ref_id,
+            'amount' => $amount
+        ]);
+        return true;
     }
+
 
     public function addReferralCode($user)
     {
         $user->referral_code = Str::random(7);
         $user->save();
+    }
+
+    public function getUserReferrals($user)
+    {
+        return Referral::where(
+            'referee_id',
+            $user->referral_code
+        )->get();
+
+    }
+
+    public function getUserReferralsPaginated($user)
+    {
+        return Referral::where(
+            'referee_id',
+            $user->referral_code
+        )->paginate(10);
+
+    }
+
+    public function getReferrerDetails($ref_id)
+    {
+        return User::where(
+            'referral_code',
+            $ref_id
+        )->first();
+
     }
 }

@@ -14,6 +14,7 @@ Route::middleware([
     Route::get('/campaign/activities-stat/{campaignId}', [CampaignController::class, 'campaignActivitiesStat']);
     Route::get('/campaign/activities-job/{campaignId}', [CampaignController::class, 'campaignActivitiesJob']);
     Route::get('/campaign/activities/job-details', [CampaignController::class, 'jobDetails']);
+    Route::post('/campaign/activities/approve-or-deny', [CampaignController::class, 'approveOrDeclineJob']);
 
     Route::get('/campaign/categories', [CampaignController::class, 'getCategories']);
     Route::post('/campaign/pause/{campaignId}', [CampaignController::class, 'pauseCampaign']);

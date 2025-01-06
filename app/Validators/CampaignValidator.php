@@ -52,4 +52,18 @@ class CampaignValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function approveOrDenyReason($request){
+        $validationRules = [
+            'action' => 'required|string|in:approve,deny',
+            'reason' => 'required|string',
+            'campaign_id' => 'required|string',
+            'job_id' => 'required|string'
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }
