@@ -103,4 +103,18 @@ class JobRepositoryModel
             $jobId
         )->first();
     }
+
+    public function updateJobStatus($reason, $jobId, $status){
+
+        $updateStatus = CampaignWorker::where(
+            'id',
+            $jobId
+        )->first();
+
+        $updateStatus->reason = $reason;
+        $updateStatus->status = $status;
+        $updateStatus->save();
+
+        return $updateStatus;
+    }
 }

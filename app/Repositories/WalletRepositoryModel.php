@@ -67,7 +67,8 @@ class WalletRepositoryModel
         }
     }
 
-    public function checkReferralCommission($mapCurrency){
+    public function checkReferralCommission($mapCurrency)
+    {
         $currency = Currency::where('code', $mapCurrency)->first();
         return $currency->referral_commission;
     }
@@ -93,7 +94,7 @@ class WalletRepositoryModel
 
     public function getWalletBalance($user, $currency) {}
 
-    function debitWallet($user, $currency, $amount)
+    public function debitWallet($user, $currency, $amount)
     {
 
         $wallet = Wallet::where(
@@ -127,39 +128,37 @@ class WalletRepositoryModel
                 return false;
         }
         // Save the updated wallet
-        $wallet->save();
-        return true;
-    }
-}
-
-function creditWallet($user, $currency, $amount)
-{
-    $wallet = Wallet::where(
-        'user_id',
-        $user->id
-    )->first();
-
-    if (!$wallet) {
-        return false;
+        if($wallet->save()) return true;
     }
 
-    // Process credit based on the currency
-    switch (strtoupper($currency)) {
-        case 'NAIRA':
-        case 'NGN':
-            $wallet->balance += $amount;
-            break;
+    public function creditWallet($user, $currency, $amount)
+    {
+        $wallet = Wallet::where(
+            'user_id',
+            $user->id
+        )->first();
 
-        case 'DOLLAR':
-        case 'USD':
-            $wallet->usd_balance += $amount;
-            break;
-
-        default:
+        if (!$wallet) {
             return false;
-    }
+        }
 
-    // Save the updated wallet
-    $wallet->save();
-    return true;
+        // Process credit based on the currency
+        switch (strtoupper($currency)) {
+            case 'NAIRA':
+            case 'NGN':
+                $wallet->balance += $amount;
+                break;
+
+            case 'DOLLAR':
+            case 'USD':
+                $wallet->usd_balance += $amount;
+                break;
+
+            default:
+                return false;
+        }
+
+        // Save the updated wallet
+        if ($wallet->save())  return true;
+    }
 }

@@ -477,56 +477,64 @@ class CampaignService
         }
     }
 
-    public function jobDetails($request){
-        $userId = auth()->user()->id;
+    public function jobDetails($request)
+    {
 
-        $campId = $request->query('campaign_id');
-        $jobId = $request->query('job_id');
+        try {
+            $userId = auth()->user()->id;
 
-        if (empty($campId) || empty($jobId)) {
+            $campId = $request->query('campaign_id');
+            $jobId = $request->query('job_id');
+
+            if (empty($campId) || empty($jobId)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign Id and Job Id cannot be empty'
+                ], 400);
+            }
+
+            $campaign = $this->campaignModel->getCampaignById($campId, $userId);
+
+            // Return error if campaign is not found
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign not found'
+                ], 404);
+            }
+
+            $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campId);
+            // return $job;
+            $data = [
+                'job_id' => $job->id,
+                'campaign_id' => $campaign->id,
+                'campaign_name' => $campaign->post_title,
+                'campaign_description' => $campaign->description,
+                'proof_of_completion' => $campaign->proof,
+                'worker_name' => $this->authModel->findUserById($job->user_id)->name,
+                'worker_id' => $job->user_id,
+                'worker_proof' => $job->comment,
+                'worker_proof_url' => $job->proof_url,
+                'job_status' => $job->status,
+                'approval_or_denial_reason' => $job->reason,
+                'created_at' => $job->created_at,
+                'updated_at' => $job->updated_at,
+                'has_dispute' => $job->is_dispute,
+                'dispute_resolved' => $job->is_dispute_resolved,
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Job details retrieved successfully',
+                'data' => $data
+            ], 200);
+        } catch (Exception $exception) {
             return response()->json([
                 'status' => false,
-                'message' => 'Campaign Id and Job Id cannot be empty'
-            ], 400);
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
-
-        $campaign = $this->campaignModel->getCampaignById($campId, $userId);
-
-        // Return error if campaign is not found
-        if (!$campaign) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Campaign not found'
-            ], 404);
-        }
-
-        $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campId);
-       // return $job;
-        $data = [
-            'job_id' => $job->id,
-            'campaign_id' => $campaign->id,
-            'campaign_name' => $campaign->post_title,
-            'campaign_description' => $campaign->description,
-            'proof_of_completion' => $campaign->proof,
-            'worker_name' => $this->authModel->findUserById($job->user_id)->name,
-            'worker_id' => $job->user_id,
-            'worker_proof' => $job->comment,
-            'worker_proof_url' => $job->proof_url,
-            'job_status' => $job->status,
-            'approval_or_denial_reason' => $job->reason,
-            'created_at' => $job->created_at,
-            'updated_at' => $job->updated_at,
-            'has_dispute' => $job->is_dispute,
-            'dispute_resolved' => $job->is_dispute_resolved,
-
-
-        ];
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Job details retrieved successfully',
-            'data' => $data
-        ], 200);
     }
 
     public function decreasePendingCountAfterDenial($id)
@@ -585,6 +593,96 @@ class CampaignService
 
         return $campaign;
     }
+    public function approveOrDeclineJob($request)
+    {
+        $this->validator->approveOrDenyReason($request);
+
+        try {
+            $user = auth()->user();
+            $action = strtolower($request->query('action'));
+            $jobId = $request->query('job_id');
+            $campId = $request->query('campaign_id');
+            $reason = $request->reason;
+
+            // Retrieve job details
+            $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campId);
+            if (!$job) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Job not found.',
+                ], 404);
+            }
+
+            // Prevent duplicate actions on already processed jobs
+            if (in_array($job->status, ['Approved', 'Denied'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'This job has already been ' . strtolower($job->status) . '. Action cannot be performed.',
+                ], 400);
+            }
+
+            // Retrieve campaign details
+            $campaign = $this->campaignModel->getCampaignById($campId, $user->id);
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign not found.',
+                ], 404);
+            }
+
+            // Retrieve worker details
+            $worker = $this->authModel->findUserById($job->user_id);
+            $currency = $worker->wallet->base_currency;
+
+            // Perform action
+            if ($action === 'deny') {
+                $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Denied');
+                $this->decreasePendingCountAfterDenial($campId);
+            } elseif ($action === 'approve') {
+                $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Approved');
+                $this->increaseCompletedCountAfterApproval($campId);
+                $this->walletModel->creditWallet($worker, $currency, $job->amount);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid action. Only "approve" or "deny" are allowed.',
+                ], 400);
+            }
+
+            // Prepare response data
+            $data = [
+                'job_id' => $job->id,
+                'campaign_id' => $campaign->id,
+                'campaign_name' => $campaign->post_title,
+                'campaign_description' => $campaign->description,
+                'proof_of_completion' => $campaign->proof,
+                'worker_name' => $worker->name,
+                'worker_id' => $job->user_id,
+                'worker_proof' => $job->comment,
+                'worker_proof_url' => $job->proof_url,
+                'job_status' => $job->status,
+                'approval_or_denial_reason' => $job->reason,
+                'created_at' => $job->created_at,
+                'updated_at' => $job->updated_at,
+                'has_dispute' => (bool) $job->is_dispute,
+                'dispute_resolved' => (bool) $job->is_dispute_resolved,
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => ucfirst($action) . ' action completed successfully.',
+                'job' => $data,
+            ], 200);
+        } catch (Exception $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request.',
+            ], 500);
+        }
+    }
+
+
 
 
     public function viewCampaign($job_id)
@@ -640,9 +738,17 @@ class CampaignService
                 }
             }
         } catch (Exception $exception) {
-            return response()->json(['status' => false,  'error' => $exception->getMessage(), 'message' => 'Error processing request'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
-        return response()->json(['status' => true, 'message' => 'Campaign Information', 'data' => $data], 200);
+        return response()->json([
+            'status' => true,
+            'message' => 'Campaign Information',
+            'data' => $data
+        ], 200);
     }
 
 

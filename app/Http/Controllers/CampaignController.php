@@ -61,4 +61,11 @@ class CampaignController extends Controller
     {
         return $this->campaign->jobDetails($request);
     }
+
+    public function approveOrDeclineJob(Request $request)
+    {
+        return $this->campaign->approveOrDeclineJob($request);
+    }
+
+
 }

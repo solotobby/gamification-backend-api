@@ -58,12 +58,17 @@ class Handler extends ExceptionHandler
 
         // Handle ValidationException for failed validation
         if ($exception instanceof ValidationException) {
+            // Flatten the validation errors and join them into a single string
+            $errors = collect($exception->errors())
+                ->flatten()
+                ->implode('; ');
+
             return response()->json([
                 'status' => false,
-                'message' => 'Validation error',
-                'errors' => $exception->errors(), // Return the validation errors
+                'message' => $errors,
             ], 422); // HTTP status 422 for validation errors
         }
+
 
         // Handle HttpException (General HTTP Errors)
         if ($exception instanceof HttpException) {

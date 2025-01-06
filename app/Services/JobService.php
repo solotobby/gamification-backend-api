@@ -96,4 +96,20 @@ class JobService
             ], 500);
         }
     }
+
+    public function myJobDetails($jobId){
+        try {
+        $userId = auth()->user();
+
+        $jobs = $this->jobModel->getJobById($jobId);
+
+        return $jobs;
+    } catch (Throwable $exception) {
+        return response()->json([
+            'status' => false,
+            'error' => $exception->getMessage(),
+            'message' => 'Error processing request'
+        ], 500);
+    }
+    }
 }

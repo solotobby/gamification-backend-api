@@ -22,4 +22,10 @@ class JobsController extends Controller
 
         return $this->jobService->myJobs($request);
     }
+
+    public function jobDetails($jobId)
+    {
+
+        return $this->jobService->myJobDetails($jobId);
+    }
 }
