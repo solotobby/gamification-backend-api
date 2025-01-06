@@ -62,29 +62,35 @@ class CampaignRepositoryModel
     }
 
 
-    public function getCampaignById($id, $userId)
+    public function getCampaignById($id, $userId = null)
     {
-        return Campaign::where(
+        $query = Campaign::where(
             'id',
             $id
-        )->where(
-            'user_id',
-            $userId
-        )->first();
+        );
+        if ($userId) {
+            $query->where(
+                'user_id',
+                $userId
+            );
+        }
+
+        return $query->first();
     }
+
 
     public function availableJobs()
     {
         Campaign::where(
-                'status',
-                'Live'
-            )->where(
-                'is_completed',
-                false
-            )->orderBy(
-                'created_at',
-                'ASC'
-            )->get();
+            'status',
+            'Live'
+        )->where(
+            'is_completed',
+            false
+        )->orderBy(
+            'created_at',
+            'ASC'
+        )->get();
     }
     public function processPaymentTransaction($user, $campaign, $amount, $currency, $channel)
     {

@@ -97,19 +97,53 @@ class JobService
         }
     }
 
-    public function myJobDetails($jobId){
+    public function myJobDetails($jobId)
+    {
         try {
-        $userId = auth()->user();
+            $user = auth()->user();
 
-        $jobs = $this->jobModel->getJobById($jobId);
+            $job = $this->jobModel->getJobById($jobId);
 
-        return $jobs;
-    } catch (Throwable $exception) {
-        return response()->json([
-            'status' => false,
-            'error' => $exception->getMessage(),
-            'message' => 'Error processing request'
-        ], 500);
-    }
+
+            // Retrieve campaign details
+            $campaign = $this->campaignModel->getCampaignById($job->campaign_id, $user->id);
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign not found.',
+                ], 404);
+            }
+               //return $job;
+
+            // Prepare response data
+            $data = [
+                'job_id' => $job->id,
+                'campaign_id' => $campaign->id,
+                'campaign_name' => $campaign->post_title,
+                'campaign_description' => $campaign->description,
+                'proof_of_completion' => $campaign->proof,
+                'worker_name' => $user->name,
+                'worker_id' => $job->user_id,
+                'worker_proof' => $job->comment,
+                'worker_proof_url' => $job->proof_url,
+                'job_status' => $job->status,
+                'approval_or_denial_reason' => $job->reason,
+                'created_at' => $job->created_at,
+                'updated_at' => $job->updated_at,
+                'has_dispute' => (bool) $job->is_dispute,
+                'dispute_resolved' => (bool) $job->is_dispute_resolved,
+            ];
+            return response()->json([
+                'status' => true,
+                'message' => 'Job details retrieved successfully',
+                'data' => $data
+            ], 200);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
     }
 }
