@@ -2,28 +2,110 @@
 
 namespace App\Services;
 
+use App\Mail\GeneralMail;
+use App\Mail\SubmitJob;
 use App\Models\User;
+use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\JobRepositoryModel;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
+use App\Repositories\LogRepositoryModel;
+use App\Repositories\WalletRepositoryModel;
+use App\Validators\CampaignValidator;
+use Exception;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use League\Flysystem\StorageAttributes;
 use Throwable;
+use Illuminate\Support\Facades\DB;
 
 class JobService
 {
 
-    protected $jobModel, $authModel, $campaignModel;
+    protected $jobModel, $currencyModel, $walletModel, $log,
+        $authModel, $campaignModel, $campaignService, $validator;
     public function __construct(
         JobRepositoryModel $jobModel,
         AuthRepositoryModel $authModel,
-        CampaignRepositoryModel $campaignModel
+        CampaignRepositoryModel $campaignModel,
+        WalletRepositoryModel $walletModel,
+        CurrencyRepositoryModel $currencyModel,
+        CampaignService $campaignService,
+        CampaignValidator $validator,
+        LogRepositoryModel $log,
     ) {
         $this->jobModel = $jobModel;
         $this->authModel = $authModel;
         $this->campaignModel = $campaignModel;
+        $this->walletModel = $walletModel;
+        $this->currencyModel = $currencyModel;
+        $this->campaignService = $campaignService;
+        $this->validator = $validator;
+        $this->log = $log;
     }
 
+    public function availableJobs($request)
+    {
+        try {
+            $user = auth()->user();
+            $subCategory = strtolower($request->query('subcategory_id'));
+            $page = strtolower($request->query('page'));
+
+            $jobs = $this->jobModel->availableJobs($user->id, $subCategory, $page);
+            // return $jobs;
+            $data = [];
+            foreach ($jobs as $key => $value) {
+                $count = $value->pending_count + $value->completed_count;
+                $div = $count / $value->number_of_staff;
+                $progress = $div * 100;
+
+                $baseCurrency = $user->wallet->base_currency;
+                $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+                $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+                $unitPrice = $value->campaign_amount;
+                if ($currency->code !== $value->currency) {
+                    $rate = $this->campaignService->currencyConversion($value->currency, $currency->code);
+                    $unitPrice *= $rate;
+                }
+                $data[] = [
+                    'id' => $value->id,
+                    'job_id' => $value->job_id,
+                    'campaign_amount' => $unitPrice,
+                    'post_title' => $value->post_title,
+                    'number_of_staff' => $value->number_of_staff,
+                    'type' => $value->campaignType->name,
+                    'category' => $value->campaignCategory->name,
+                    'completed' => $count,
+                    'is_completed' => $count >= $value->number_of_staff ? true : false,
+                    'progress' => $progress,
+                    'currency' => $value->currency,
+                    'created_at' => $value->created_at
+                ];
+            }
+
+            $pagination = [
+                'current_page' => $jobs->currentPage(),
+                'last_page' => $jobs->lastPage(),
+                'per_page' => $jobs->perPage(),
+                'total' => $jobs->total(),
+                'from' => $jobs->firstItem(),
+                'to' => $jobs->lastItem(),
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Jobs retrieved successfully.',
+                'data' => $data,
+                'pagination' => $pagination,
+            ]);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
     public function myJobs($request)
     {
         try {
@@ -50,6 +132,7 @@ class JobService
                 $jobs = $this->jobModel->getJobByType($user, $type);
             }
 
+            // return $jobs;
             $data = [];
             foreach ($jobs as $job) {
                 $workerDetails = $this->authModel->findUserById($job->user_id);
@@ -97,10 +180,93 @@ class JobService
         }
     }
 
+    public function submitWork($request)
+    {
+        $this->validator->submitJob($request);
+        // return $request;
+
+        try {
+            $user = auth()->user();
+            $checkJob = $this->jobModel->checkIfJobIsDoneByUser($request->campaign_id);
+            if ($checkJob) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You have completed this campaign before'
+                ], 400);
+            }
+
+            $campaign = $this->campaignModel->getCampaignById($request->campaign_id);
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $unitPrice = $campaign->campaign_amount;
+            if ($currency->code !== $campaign->currency) {
+                $rate = $this->campaignService->currencyConversion($campaign->currency, $currency->code);
+                $unitPrice *= $rate;
+            }
+            $proofUrl = 'no image';
+            if ($request->hasFile('proof') && $campaign->allow_upload) {
+                $file = $request->file('proof');
+                $filePath = 'proofs/' . time() . '_' . $file->getClientOriginalName();
+                Storage::disk('s3')->put($filePath, file_get_contents($file), 'public');
+                $proofUrl = Storage::disk('s3')->url($filePath);
+            }
+
+            //return $proofUrl;
+            DB::beginTransaction();
+
+            $campaignWorker =  $this->jobModel->createJobs($user, $request, $currency, $proofUrl, $unitPrice);
+            $campaign->increment('pending_count');
+            $this->jobModel->setPendingCount($campaign->id);
+
+            // Activity log
+            $this->log->createLogForJobCreation($user, $currency, $unitPrice);
+
+            // Send emails
+            Mail::to(
+                $user->email
+            )->send(new SubmitJob(
+                $campaignWorker
+            ));
+            $subject = 'Job Submission';
+            $content = $user->name . ' submitted a response to your campaign - ' . $campaign->post_title . '. Please login to review.';
+            Mail::to(
+                $campaign->user->email
+            )->send(new GeneralMail(
+                $campaign->user,
+                $content,
+                $subject,
+                ''
+            ));
+
+            DB::commit();
+            return response()->json([
+                'status' => true,
+                'message' => 'Job Submitted Successfully',
+                'data' => $campaignWorker
+            ], 201);
+        } catch (Exception $exception) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
     public function myJobDetails($jobId)
     {
         try {
             $user = auth()->user();
+
+            if (!$user->is_verified) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User account yet to be verified',
+                ], 403);
+            }
 
             $job = $this->jobModel->getJobById($jobId);
 
@@ -110,33 +276,30 @@ class JobService
                     'message' => 'Job not found.',
                 ], 404);
             }
-            // Retrieve campaign details
-            $campaign = $this->campaignModel->getCampaignById($job->campaign_id, $user->id);
-            if (!$campaign) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Campaign not found.',
-                ], 404);
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $unitPrice = $job->campaign_amount;
+            if ($currency->code !== $job->currency) {
+                $rate = $this->campaignService->currencyConversion($job->currency, $currency->code);
+                $unitPrice *= $rate;
             }
-            //return $job;
 
             // Prepare response data
             $data = [
-                'job_id' => $job->id,
-                'campaign_id' => $campaign->id,
-                'campaign_name' => $campaign->post_title,
-                'campaign_description' => $campaign->description,
-                'proof_of_completion' => $campaign->proof,
-                'worker_name' => $user->name,
-                'worker_id' => $job->user_id,
-                'worker_proof' => $job->comment,
-                'worker_proof_url' => $job->proof_url,
-                'job_status' => $job->status,
-                'approval_or_denial_reason' => $job->reason,
+                'id' => $job->id,
+                'campaign_name' => $job->post_title,
+                'campaign_type' => $job->campaignType->name,
+                'campaign_category' => $job->campaignCategory->name,
+                'campaign_description' => $job->description,
+                'campaign_amount' => $unitPrice,
+                'campaign_currency' => $baseCurrency,
+                'campaign_number_of_worker' => $job->number_of_staff,
+                'campaign_url_link' => $job->post_link,
+                'campaign_allow_upload' => $job->allow_upload ? true : false,
+                'campaign_instruction' => $job->proof,
                 'created_at' => $job->created_at,
-                'updated_at' => $job->updated_at,
-                'has_dispute' => (bool) $job->is_dispute,
-                'dispute_resolved' => (bool) $job->is_dispute_resolved,
             ];
             return response()->json([
                 'status' => true,
@@ -154,10 +317,10 @@ class JobService
 
     public function createDispute($request)
     {
+        $this->validator->disputeCreation($request);
         try {
             $user = auth()->user();
-
-            $job = $this->jobModel->getJobById($request->job_id, $user->id);
+            $job = $this->jobModel->getMyJobById($request->job_id, $user->id);
 
             if (!$job) {
                 return response()->json([
@@ -179,9 +342,6 @@ class JobService
                     'message' => 'A dispute has already been lodged for this job, so the action cannot be performed again.',
                 ], 400);
             }
-
-            // return $request->reason;
-            //create dispute
 
             $this->jobModel->createDisputeOnWorker($job->id);
             $this->jobModel->createDispute($job, $request->reason, $request->job_proof);

@@ -11,6 +11,7 @@ use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Withrawal;
+use App\Services\WalletService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,86 +20,17 @@ use Illuminate\Support\Facades\Mail;
 
 class WalletController extends Controller
 {
-    public function __construct()
+    protected $walletService;
+    public function __construct(WalletService $walletService)
     {
         $this->middleware('auth');
-    }
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
-    {
-        //
+        $this->walletService = $walletService;
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
+   public function fundWallet(Request $request){
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Wallet  $wallet
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Wallet $wallet)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\Wallet  $wallet
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(Wallet $wallet)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Wallet  $wallet
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Wallet $wallet)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Wallet  $wallet
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Wallet $wallet)
-    {
-        //
-    }
-
+    return $this->walletService->fundWallet($request);
+   }
     public function fund()
     {
         // $balance = '';
@@ -141,20 +73,20 @@ class WalletController extends Controller
         //         'customizations'=>[
         //             'title'=> "Wallet Top Up",
         //             'logo'=> "http://www.piedpiper.com/app/themes/joystick-v27/images/logo.png"
-        //         ] 
+        //         ]
         //     ];
             // $url = flutterwavePaymentInitiation($payload)['data']['link'];
-    
+
             $url = PaystackHelpers::initiateTrasaction($ref, $amount, '/wallet/topup');
-            
+
             PaystackHelpers::paymentTrasanction(auth()->user()->id, '1', $ref, $request->balance, 'unsuccessful', 'wallet_topup', 'Wallet Topup', 'Payment_Initiation', 'regular');
-            
+
             return redirect($url);
-        
+
         }else{
 
             $curLocation = currentLocation();
-            
+
             if($curLocation == 'Nigeria'){
                 return back()->with('error', 'You are not allowed to use this feature. Kindly top up with your Virtual Account.');
             }
@@ -179,7 +111,7 @@ class WalletController extends Controller
                 'customizations'=>[
                     'title'=> "Wallet Top Up",
                     // 'logo'=> "http://www.piedpiper.com/app/themes/joystick-v27/images/logo.png"
-                ] 
+                ]
             ];
             $url = flutterwavePaymentInitiation($payload)['data']['link'];
 
@@ -200,7 +132,7 @@ class WalletController extends Controller
             ]);
 
             //PaystackHelpers::paymentTrasanction(auth()->user()->id, '1', $ref, $request->balance, 'unsuccessful', 'wallet_topup', 'Wallet Topup', 'Credit', 'Payment_Initiation', 'regular');
-            
+
             return redirect($url);
 
            // return redirect('https://flutterwave.com/pay/topuponfreebyz');
@@ -212,9 +144,9 @@ class WalletController extends Controller
             //     PaystackHelpers::paymentTrasanction(auth()->user()->id, '1', $result['id'], $request->balance, 'unsuccessful', 'wallet_topup', 'Wallet Topup', 'Payment_Initiation', 'regular');
             //     return redirect($url);
             //  }
-           
+
         }
-        
+
     }
 
     public function capturePaypal(){
@@ -230,7 +162,7 @@ class WalletController extends Controller
         if($response['status'] == 'COMPLETED'){
 
             //$ref = $response['purchase_units'][0]['reference_id'];
-         
+
             // $sellerReceivableBreakdown = $response['purchase_units'][0]['payments']['captures'][0]['seller_receivable_breakdown'];
 
             // Access individual values
@@ -273,28 +205,28 @@ class WalletController extends Controller
 
         $ref = $params['trxref']; //paystack
         $res = PaystackHelpers::verifyTransaction($ref); //
-   
+
         $amount = $res['data']['amount'];
 
         $percent = 2.90/100 * $amount;
         $formatedAm = $percent;
         $newamount = $amount - $formatedAm; //verify transaction
         $creditAmount = $newamount / 100;
-        
+
         $user = Auth::user();
 
        if($res['data']['status'] == 'success') //success - paystack
        {
 
             PaystackHelpers::paymentUpdate($ref, 'successful'); //update transaction
-            
+
             $wallet = Wallet::where('user_id', auth()->user()->id)->first();
             $wallet->balance += $creditAmount;
             $wallet->save();
-            
+
             $name = SystemActivities::getInitials(auth()->user()->name);
             SystemActivities::activityLog(auth()->user(), 'wallet_topup', $name .' topped up wallet ', 'regular');
-            
+
             systemNotification($user, 'success', 'Wallet Topup', 'NGN'.$creditAmount.' Wallet Topup Successful');
 
             return back()->with('success', 'Wallet Topup Successful'); //redirect('success');
@@ -304,7 +236,7 @@ class WalletController extends Controller
     }
 
     public function flutterwaveWalletTopUp(){
-       
+
         $url = request()->fullUrl();
         $url_components = parse_url($url);
         parse_str($url_components['query'], $params);
@@ -323,21 +255,21 @@ class WalletController extends Controller
             // $wallet->balance += $res['data']['amount_settled'];//->amount;
             // $wallet->save();
             creditWallet(auth()->user(), 'Dollar', $res['data']['amount_settled']);
-            
+
             $name = SystemActivities::getInitials(auth()->user()->name);
             SystemActivities::activityLog(auth()->user(), 'wallet_topup', $name .' topped up wallet ', 'regular');
-            
+
             systemNotification(auth()->user(), 'success', 'Wallet Topup', 'NGN'.$ver->amount.' Wallet Topup Successful');
 
-            return back()->with('success', 'Wallet Topup Successful'); 
+            return back()->with('success', 'Wallet Topup Successful');
         }
-       
+
 
     }
 
     public function storeWithdraw(Request $request)
     {
-       
+
         if(auth()->user()->wallet->base_currency == 'Naira' ){
             $request->validate([
                 'balance' => 'required',
@@ -359,7 +291,7 @@ class WalletController extends Controller
         }else{
 
             return $request;
-            
+
             $wallet = Wallet::where('user_id', auth()->user()->id)->first();
             if($wallet->usd_balance < $request->balance)
             {
@@ -369,7 +301,7 @@ class WalletController extends Controller
             return back()->with('success', 'Withdrawal Successfully queued');
 
         }
-      
+
     }
 
     public function processWithdrawals($request, $currency, $channel){
@@ -377,9 +309,9 @@ class WalletController extends Controller
         $percent = 5/100 * $amount;
         $formatedAm = $percent;
         $newamount_to_be_withdrawn = $amount - $formatedAm;
- 
+
         $ref = time();
-        
+
         if(Carbon::now()->format('l') == 'Friday'){
          $nextFriday = Carbon::now()->endOfDay();
         }else{
@@ -394,10 +326,10 @@ class WalletController extends Controller
             $wallet->balance -= $request->balance;
             $wallet->save();
          }
-        
- 
+
+
         $withdrawal = Withrawal::create([
-             'user_id' => auth()->user()->id, 
+             'user_id' => auth()->user()->id,
              'amount' => $newamount_to_be_withdrawn,
              'next_payment_date' => $nextFriday,
              'paypal_email' => $currency == 'USD' ? $request->paypal_email : null,
@@ -440,7 +372,7 @@ class WalletController extends Controller
             // $bankInformation = BankInformation::where('user_id', auth()->user()->id)->first();
             $cur = $currency == 'USD' ? '$' : 'NGN';
             systemNotification(Auth::user(), 'success', 'Withdrawal Request', $cur.$request->balance.' was debited from your wallet');
-        
+
         // $user = User::where('id', '1')->first();
         // $subject = 'Withdrawal Request Queued!!';
         // $content = 'A withdrwal request has been made and it being queued';
@@ -452,7 +384,7 @@ class WalletController extends Controller
     public function switchWallet(Request $request){
         auth()->user()->wallet()->update(['base_currency' => $request->currency]);
         systemNotification(Auth::user(), 'success', 'Currency Switch', 'Currency switched to '.$request->currency);
-        
+
         return back()->with('success', 'Currency switched successfully');
     }
 }

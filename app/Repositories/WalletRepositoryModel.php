@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Currency;
+use App\Models\PaymentTransaction;
 use App\Models\Wallet;
 
 
@@ -160,5 +161,22 @@ class WalletRepositoryModel
 
         // Save the updated wallet
         if ($wallet->save())  return true;
+    }
+
+    public function createTransaction($user, $amount, $ref, $campId, $baseCurrency){
+        $transaction = PaymentTransaction::create([
+            'user_id' => $user->id,
+            'campaign_id' => $campId,
+            'reference' => $ref,
+            'amount' => $amount,
+            'status' => 'successful',
+            'currency' => $baseCurrency,
+            'channel' => 'freebyz',
+            'type' => 'wallet_topup',
+            'description' => 'Wallet Top Up',
+            'tx_type' => 'Credit',
+            'user_type' => 'regular'
+        ]);
+        return $transaction;
     }
 }

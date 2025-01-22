@@ -11,17 +11,26 @@ class CurrencyRepositoryModel
 
     public function getCurrenciesList()
     {
-        return Currency::orderBy('created_at', 'DESC')->get();
+        return Currency::orderBy(
+            'created_at',
+            'DESC'
+        )->get();
     }
 
     public function getActiveCurrenciesList()
     {
-        return Currency::where('is_active', true)->orderBy('created_at', 'DESC')->get();
+        return Currency::where(
+            'is_active',
+            true
+        )->orderBy('created_at', 'DESC')->get();
     }
 
     public function getCurrencyById($id)
     {
-        return Currency::where('id', $id)->first();
+        return Currency::where(
+            'id',
+            $id
+        )->first();
     }
 
     public function getCurrencyByCode($code)
@@ -38,8 +47,6 @@ class CurrencyRepositoryModel
     public function convertCurrency($from, $to)
     {
 
-      // $mapFrom = $this->mapRateCurrency($from);
-      // $mapTo = $this->mapRateCurrency($to);
         return ConversionRate::where(
             'from',
             $from
@@ -63,5 +70,4 @@ class CurrencyRepositoryModel
                 return false;
         }
     }
-
 }

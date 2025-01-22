@@ -468,7 +468,7 @@ if (!function_exists('sendGridEmails')) {
 }
 
 
-///campaign handler
+//campaign handler
 
 if (!function_exists('setIsComplete')) {
     function setIsComplete($id)

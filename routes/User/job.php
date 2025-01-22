@@ -11,6 +11,7 @@ Route::middleware([
     Route::get('/my-job', [JobsController::class, 'myJobs']);
     Route::get('/job-details/{job_id}', [JobsController::class, 'jobDetails']);
 
-    Route::get('/available', [JobsController::class, 'referralStat']);
+    Route::get('/available-jobs', [JobsController::class, 'availableJobs']);
     Route::post('/create-dispute', [JobsController::class, 'createDispute']);
+    Route::post('/submit-job', [JobsController::class, 'submitJob']);
 });

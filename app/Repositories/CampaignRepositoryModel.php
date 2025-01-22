@@ -10,8 +10,6 @@ use App\Models\PaymentTransaction;
 
 class CampaignRepositoryModel
 {
-    public function __construct() {}
-
     public function listCategories()
     {
         return Category::orderBy(
@@ -31,6 +29,7 @@ class CampaignRepositoryModel
         )->get();
     }
 
+
     public function getSubCategoryAmount($subcategoryId, $categoryId)
     {
         return SubCategory::where('id', $subcategoryId)
@@ -43,7 +42,7 @@ class CampaignRepositoryModel
         return Campaign::create($request->all());
     }
 
-    public function getCampaignsByPagination($id, $type)
+    public function getCampaignsByPagination($id, $type, $page = 1)
     {
         $query = Campaign::where(
             'user_id',
@@ -58,7 +57,7 @@ class CampaignRepositoryModel
         return $query->orderBy(
             'created_at',
             'DESC'
-        )->paginate(10);
+        ) ->paginate(10, ['*'], 'page', $page);
     }
 
 
