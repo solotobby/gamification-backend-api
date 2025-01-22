@@ -10,8 +10,6 @@ use App\Models\PaymentTransaction;
 
 class CampaignRepositoryModel
 {
-    public function __construct() {}
-
     public function listCategories()
     {
         return Category::orderBy(
@@ -30,6 +28,7 @@ class CampaignRepositoryModel
             'DESC'
         )->get();
     }
+
 
     public function getSubCategoryAmount($subcategoryId, $categoryId)
     {

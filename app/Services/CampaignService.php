@@ -67,21 +67,10 @@ class CampaignService
                 $unitPrice = $campaign->campaign_amount;
                 $totalAmount = $campaign->total_amount;
 
-                //return $campaign->currency;
                 // Check if conversion is needed
                 if ($currency->code !== $campaign->currency) {
+                    $rate = $this->currencyConversion($campaign->currency, $currency->code);
 
-                    $currencyRate = $this->currencyModel->convertCurrency($campaign->currency, $currency->code);
-
-                    // return $currencyRate;
-                    if (!$currencyRate) {
-                        return response()->json([
-                            'status' => false,
-                            'message' => 'Currency conversion rate not found.'
-                        ], 404);
-                    }
-
-                    $rate = $currencyRate->rate;
                     $unitPrice *= $rate;
                     $totalAmount *= $rate;
                 }
@@ -123,6 +112,21 @@ class CampaignService
         }
     }
 
+    public function currencyConversion($from, $to){
+        $currencyRate = $this->currencyModel->convertCurrency($from, $to);
+
+        // return $currencyRate;
+        if (!$currencyRate) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Currency conversion rate not found.'
+            ], 404);
+        }
+
+        $rate = $currencyRate->rate;
+        return $rate;
+
+    }
     public function create($request)
     {
         $this->validator->validateCampaignCreation($request);

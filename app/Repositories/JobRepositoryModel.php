@@ -124,21 +124,14 @@ class JobRepositoryModel
             ) ->paginate(20, ['*'], 'page', $page);
     }
 
-    public function getJobById($jobId, $userId = null)
+    public function getJobById($jobId)
     {
-        $query = CampaignWorker::where(
+        $query = Campaign::where(
             'id',
             $jobId
-        );
+        )->first();
 
-        if ($userId) {
-            $query->where(
-                'user_id',
-                $userId
-            );
-        }
-
-        return $query->first();
+        return $query;
     }
 
 

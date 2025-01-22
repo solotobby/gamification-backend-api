@@ -47,8 +47,6 @@ class CurrencyRepositoryModel
     public function convertCurrency($from, $to)
     {
 
-        // $mapFrom = $this->mapRateCurrency($from);
-        // $mapTo = $this->mapRateCurrency($to);
         return ConversionRate::where(
             'from',
             $from

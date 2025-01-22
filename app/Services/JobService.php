@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\JobRepositoryModel;
+use App\Repositories\WalletRepositoryModel;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
@@ -13,15 +15,22 @@ use Throwable;
 class JobService
 {
 
-    protected $jobModel, $authModel, $campaignModel;
+    protected $jobModel, $currencyModel, $walletModel,
+        $authModel, $campaignModel, $campaignService;
     public function __construct(
         JobRepositoryModel $jobModel,
         AuthRepositoryModel $authModel,
-        CampaignRepositoryModel $campaignModel
+        CampaignRepositoryModel $campaignModel,
+        WalletRepositoryModel $walletModel,
+        CurrencyRepositoryModel $currencyModel,
+        CampaignService $campaignService,
     ) {
         $this->jobModel = $jobModel;
         $this->authModel = $authModel;
         $this->campaignModel = $campaignModel;
+        $this->walletModel = $walletModel;
+        $this->currencyModel = $currencyModel;
+        $this->campaignService = $campaignService;
     }
 
     public function availableJobs($request)
@@ -32,17 +41,25 @@ class JobService
             $page = strtolower($request->query('page'));
 
             $jobs = $this->jobModel->availableJobs($user->id, $subCategory, $page);
-           // return $jobs;
+            // return $jobs;
             $data = [];
             foreach ($jobs as $key => $value) {
                 $count = $value->pending_count + $value->completed_count;
                 $div = $count / $value->number_of_staff;
                 $progress = $div * 100;
 
+                $baseCurrency = $user->wallet->base_currency;
+                $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+                $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+                $unitPrice = $value->campaign_amount;
+                if ($currency->code !== $value->currency) {
+                    $rate = $this->campaignService->currencyConversion($value->currency, $currency->code);
+                    $unitPrice *= $rate;
+                }
                 $data[] = [
                     'id' => $value->id,
                     'job_id' => $value->job_id,
-                    'campaign_amount' => $value->campaign_amount,
+                    'campaign_amount' => $unitPrice,
                     'post_title' => $value->post_title,
                     'number_of_staff' => $value->number_of_staff,
                     'type' => $value->campaignType->name,
@@ -71,9 +88,12 @@ class JobService
                 'pagination' => $pagination,
             ]);
 
-            // if(empty )
-
-        } catch (Throwable $e) {
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
         }
     }
     public function myJobs($request)
@@ -154,42 +174,45 @@ class JobService
         try {
             $user = auth()->user();
 
+            if (!$user->is_verified) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User account yet to be verified',
+                ], 403);
+            }
+
             $job = $this->jobModel->getJobById($jobId);
 
-           // return $job;
             if (!$job) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Job not found.',
                 ], 404);
             }
-            // Retrieve campaign details
-            $campaign = $this->campaignModel->getCampaignById($job->campaign_id);
-            if (!$campaign) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Jobs not found.',
-                ], 404);
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $unitPrice = $job->campaign_amount;
+            if ($currency->code !== $job->currency) {
+                $rate = $this->campaignService->currencyConversion($job->currency, $currency->code);
+                $unitPrice *= $rate;
             }
-            //return $job;
 
             // Prepare response data
             $data = [
                 'job_id' => $job->id,
-                'campaign_id' => $campaign->id,
-                'campaign_name' => $campaign->post_title,
-                'campaign_description' => $campaign->description,
-                'proof_of_completion' => $campaign->proof,
-                'worker_name' => $user->name,
-                'worker_id' => $job->user_id,
-                'worker_proof' => $job->comment,
-                'worker_proof_url' => $job->proof_url,
-                'job_status' => $job->status,
-                'approval_or_denial_reason' => $job->reason,
+                'campaign_name' => $job->post_title,
+                'campaign_type' => $job->campaignType->name,
+                'campaign_category' => $job->campaignCategory->name,
+                'campaign_description' => $job->description,
+                'campaign_amount' => $unitPrice,
+                'campaign_currency' => $baseCurrency,
+                'campaign_number_of_worker' => $job->number_of_staff,
+                'campaign_url_link' => $job->post_link,
+                'campaign_allow_upload' => $job->allow_upload ? true : false,
+                'campaign_instruction' => $job->proof,
                 'created_at' => $job->created_at,
-                'updated_at' => $job->updated_at,
-                'has_dispute' => (bool) $job->is_dispute,
-                'dispute_resolved' => (bool) $job->is_dispute_resolved,
             ];
             return response()->json([
                 'status' => true,
