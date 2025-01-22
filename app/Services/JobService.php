@@ -132,7 +132,7 @@ class JobService
                 $jobs = $this->jobModel->getJobByType($user, $type);
             }
 
-           // return $jobs;
+            // return $jobs;
             $data = [];
             foreach ($jobs as $job) {
                 $workerDetails = $this->authModel->findUserById($job->user_id);
@@ -224,10 +224,21 @@ class JobService
             $this->log->createLogForJobCreation($user, $currency, $unitPrice);
 
             // Send emails
-            Mail::to(auth()->user()->email)->send(new SubmitJob($campaignWorker));
+            Mail::to(
+                $user->email
+            )->send(new SubmitJob(
+                $campaignWorker
+            ));
             $subject = 'Job Submission';
             $content = $user->name . ' submitted a response to your campaign - ' . $campaign->post_title . '. Please login to review.';
-            Mail::to($campaign->user->email)->send(new GeneralMail($campaign->user, $content, $subject, ''));
+            Mail::to(
+                $campaign->user->email
+            )->send(new GeneralMail(
+                $campaign->user,
+                $content,
+                $subject,
+                ''
+            ));
 
             DB::commit();
             return response()->json([

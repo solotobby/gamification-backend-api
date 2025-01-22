@@ -46,6 +46,14 @@ class AuthRepositoryModel
         return $user;
     }
 
+    public function updateUserVerification($user)
+    {
+        $user = User::find($user->id);
+        $user->is_verified = true;
+        $user->save();
+        return $user;
+    }
+
     public function findUser($email)
     {
         $user = User::where(
