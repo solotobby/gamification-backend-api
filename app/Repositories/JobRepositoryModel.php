@@ -22,7 +22,8 @@ class JobRepositoryModel
         )->paginate(10, ['*'], 'page', $page);
     }
 
-    public function createJobs($user, $request, $currency, $proofUrl, $unitPrice){
+    public function createJobs($user, $request, $currency, $proofUrl, $unitPrice)
+    {
         $campaignWorker = CampaignWorker::create([
             'user_id' => $user->id,
             'campaign_id' => $request->campaign_id,
@@ -124,6 +125,9 @@ class JobRepositoryModel
 
     public function availableJobs($userId, $subcategory = null, $page = 1)
     {
+        $completedCampaignIds = CampaignWorker::where('user_id', $userId)
+            ->pluck('campaign_id')
+            ->toArray();
         return Campaign::where(
             'status',
             'Live'
@@ -134,6 +138,9 @@ class JobRepositoryModel
             'user_id',
             '!=',
             $userId
+        )->whereNotIn(
+            'id',
+            $completedCampaignIds
         )->when($subcategory, function ($query) use ($subcategory) {
             $query->where(
                 'campaign_subcategory',

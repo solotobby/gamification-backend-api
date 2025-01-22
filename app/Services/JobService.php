@@ -132,6 +132,7 @@ class JobService
                 $jobs = $this->jobModel->getJobByType($user, $type);
             }
 
+           // return $jobs;
             $data = [];
             foreach ($jobs as $job) {
                 $workerDetails = $this->authModel->findUserById($job->user_id);
