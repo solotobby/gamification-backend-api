@@ -156,7 +156,7 @@ class JobService
 
             $job = $this->jobModel->getJobById($jobId);
 
-            return $job;
+           // return $job;
             if (!$job) {
                 return response()->json([
                     'status' => false,
