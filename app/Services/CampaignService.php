@@ -392,6 +392,7 @@ class CampaignService
         try {
             $userId = auth()->user()->id;
             $type = strtolower($request->query('type'));
+            $page = strtolower($request->query('page'));
 
             $campaign = $this->campaignModel->getCampaignById($campaignId, $userId);
 
@@ -402,7 +403,7 @@ class CampaignService
                     'message' => 'Campaign not found'
                 ], 404);
             }
-            $jobs = $this->jobModel->getJobsByIdAndType($campaign->id, $type);
+            $jobs = $this->jobModel->getJobsByIdAndType($campaign->id, $type, $page);
 
             $data['campaign_name'] = $campaign->post_title;
             $data['campaign_id'] = $campaign->id;

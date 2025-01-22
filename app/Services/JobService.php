@@ -24,6 +24,58 @@ class JobService
         $this->campaignModel = $campaignModel;
     }
 
+    public function availableJobs($request)
+    {
+        try {
+            $user = auth()->user();
+            $subCategory = strtolower($request->query('subcategory_id'));
+            $page = strtolower($request->query('page'));
+
+            $jobs = $this->jobModel->availableJobs($user->id, $subCategory, $page);
+           // return $jobs;
+            $data = [];
+            foreach ($jobs as $key => $value) {
+                $count = $value->pending_count + $value->completed_count;
+                $div = $count / $value->number_of_staff;
+                $progress = $div * 100;
+
+                $data[] = [
+                    'id' => $value->id,
+                    'job_id' => $value->job_id,
+                    'campaign_amount' => $value->campaign_amount,
+                    'post_title' => $value->post_title,
+                    'number_of_staff' => $value->number_of_staff,
+                    'type' => $value->campaignType->name,
+                    'category' => $value->campaignCategory->name,
+                    'completed' => $count,
+                    'is_completed' => $count >= $value->number_of_staff ? true : false,
+                    'progress' => $progress,
+                    'currency' => $value->currency,
+                    'created_at' => $value->created_at
+                ];
+            }
+
+            $pagination = [
+                'current_page' => $jobs->currentPage(),
+                'last_page' => $jobs->lastPage(),
+                'per_page' => $jobs->perPage(),
+                'total' => $jobs->total(),
+                'from' => $jobs->firstItem(),
+                'to' => $jobs->lastItem(),
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Jobs retrieved successfully.',
+                'data' => $data,
+                'pagination' => $pagination,
+            ]);
+
+            // if(empty )
+
+        } catch (Throwable $e) {
+        }
+    }
     public function myJobs($request)
     {
         try {
@@ -104,6 +156,7 @@ class JobService
 
             $job = $this->jobModel->getJobById($jobId);
 
+            return $job;
             if (!$job) {
                 return response()->json([
                     'status' => false,
@@ -111,11 +164,11 @@ class JobService
                 ], 404);
             }
             // Retrieve campaign details
-            $campaign = $this->campaignModel->getCampaignById($job->campaign_id, $user->id);
+            $campaign = $this->campaignModel->getCampaignById($job->campaign_id);
             if (!$campaign) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Campaign not found.',
+                    'message' => 'Jobs not found.',
                 ], 404);
             }
             //return $job;

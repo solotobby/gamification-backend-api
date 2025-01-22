@@ -19,10 +19,13 @@ class JobsController extends Controller
 
     public function myJobs(Request $request)
     {
-
         return $this->jobService->myJobs($request);
     }
 
+    public function availableJobs(Request $request)
+    {
+        return $this->jobService->availableJobs($request);
+    }
     public function jobDetails($jobId)
     {
 

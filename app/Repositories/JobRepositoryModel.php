@@ -2,12 +2,13 @@
 
 namespace App\Repositories;
 
+use App\Models\Campaign;
 use App\Models\CampaignWorker;
 use App\Models\DisputedJobs;
 
 class JobRepositoryModel
 {
-    public function getJobByType($user, $type)
+    public function getJobByType($user, $type, $page = 1)
     {
         return CampaignWorker::where(
             'user_id',
@@ -18,7 +19,7 @@ class JobRepositoryModel
         )->orderBy(
             'created_at',
             'ASC'
-        )->paginate(10);
+        )->paginate(10, ['*'], 'page', $page);
     }
 
     public function getDisputedJobs($user)
@@ -68,7 +69,7 @@ class JobRepositoryModel
         return $amounts;
     }
 
-    public function getJobsByIdAndType($camId, $type)
+    public function getJobsByIdAndType($camId, $type, $page = 1)
     {
         $query = CampaignWorker::where(
             'campaign_id',
@@ -83,7 +84,7 @@ class JobRepositoryModel
         return $query->orderBy(
             'created_at',
             'DESC'
-        )->paginate(10);
+        ) ->paginate(10, ['*'], 'page', $page);
     }
 
     public function getJobByIdAndCampaignId($jobId, $campaignId)
@@ -95,6 +96,32 @@ class JobRepositoryModel
             'campaign_id',
             $campaignId
         )->first();
+    }
+
+    public function availableJobs($userId, $subcategory = null, $page = 1)
+    {
+        return Campaign::where(
+            'status',
+            'Live'
+        )->where(
+            'is_completed',
+            false
+        )->where(
+            'user_id',
+            '!=',
+            $userId
+        )->when($subcategory, function ($query) use ($subcategory) {
+            $query->where(
+                'campaign_subcategory',
+                $subcategory
+            );
+        })->orderByRaw(
+            "CASE WHEN approved = 'prioritize' THEN 1 ELSE 2 END"
+        )
+            ->orderBy(
+                'created_at',
+                'DESC'
+            ) ->paginate(20, ['*'], 'page', $page);
     }
 
     public function getJobById($jobId, $userId = null)

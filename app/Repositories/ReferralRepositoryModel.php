@@ -35,12 +35,12 @@ class ReferralRepositoryModel
 
     }
 
-    public function getUserReferralsPaginated($user)
+    public function getUserReferralsPaginated($user, $page = 1)
     {
         return Referral::where(
             'referee_id',
             $user->referral_code
-        )->paginate(10);
+        ) ->paginate(10, ['*'], 'page', $page);
 
     }
 

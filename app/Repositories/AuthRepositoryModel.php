@@ -153,11 +153,15 @@ class AuthRepositoryModel
         $interest = DB::table('user_interest')->where([
             'user_id' => $user->id
         ])->first();
+
         // Return collected data with fallback for missing records
         return [
-            'is_survey' => $interest ? 1 : 0, // True if interest exists
-            'is_welcome' => $profile->is_welcome ?? 0, // False if profile or field is null
-            'is_verified' => $user->is_verified ?? 0,  // False if user is not verified
+            'is_survey' => $interest ? 1 : 0,
+            'is_welcome' => $profile->is_welcome ?? 0,
+            'is_verified' => $user->is_verified ?? 0,
+            'total_referral' => $user->referees()->count(),
+            'total_jobs_done' => $user->myJobs()->where('status', 'Approved')->count(),
+            'total_campaigns' => $user->myCampaigns()->count(),
         ];
     }
 }
