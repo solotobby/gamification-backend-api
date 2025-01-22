@@ -22,6 +22,30 @@ class JobRepositoryModel
         )->paginate(10, ['*'], 'page', $page);
     }
 
+    public function createJobs($user, $request, $currency, $proofUrl, $unitPrice){
+        $campaignWorker = CampaignWorker::create([
+            'user_id' => $user->id,
+            'campaign_id' => $request->campaign_id,
+            'comment' => $request->comment,
+            'amount' => $unitPrice,
+            'proof_url' => $proofUrl,
+            'currency' => $currency->code,
+        ]);
+        return $campaignWorker;
+    }
+
+    public function setPendingCount($id)
+    {
+        $campaign = Campaign::where('id', $id)->first();
+        $campaign->number_of_staff;
+        if ($campaign->pending_count == $campaign->number_of_staff) {
+            $campaign->is_completed = true;
+            $campaign->save();
+            return 'OK';
+        } else {
+            return 'NOT OK';
+        }
+    }
     public function getDisputedJobs($user)
     {
         return CampaignWorker::where(
@@ -84,7 +108,7 @@ class JobRepositoryModel
         return $query->orderBy(
             'created_at',
             'DESC'
-        ) ->paginate(10, ['*'], 'page', $page);
+        )->paginate(10, ['*'], 'page', $page);
     }
 
     public function getJobByIdAndCampaignId($jobId, $campaignId)
@@ -121,17 +145,29 @@ class JobRepositoryModel
             ->orderBy(
                 'created_at',
                 'DESC'
-            ) ->paginate(20, ['*'], 'page', $page);
+            )->paginate(20, ['*'], 'page', $page);
     }
 
     public function getJobById($jobId)
     {
-        $query = Campaign::where(
+        return Campaign::where(
             'id',
             $jobId
         )->first();
-
-        return $query;
+    }
+    public function getMyJobById($jobId, $userId)
+    {
+        $query = CampaignWorker::where(
+            'id',
+            $jobId
+        );
+        if ($userId) {
+            $query->where(
+                'user_id',
+                $userId
+            );
+        }
+        return $query->first();
     }
 
 
@@ -150,6 +186,16 @@ class JobRepositoryModel
         return $updateStatus;
     }
 
+    public function checkIfJobIsDoneByUser($id)
+    {
+        return CampaignWorker::where(
+            'user_id',
+            auth()->id()
+        )->where(
+            'campaign_id',
+            $id
+        )->exists();
+    }
     public function createDisputeOnWorker($jobId)
     {
         $updateStatus = CampaignWorker::where(

@@ -42,4 +42,16 @@ class LogRepositoryModel
         ]);
         return true;
     }
+
+    public function createLogForJobCreation($user, $currency, $unitPrice)
+    {
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'activity_type' => 'campaign_submission',
+            'description' =>  $user->name . ' submitted a campaign of '.$currency->code. number_format($unitPrice),
+            'user_type' => 'regular'
+        ]);
+       
+        return true;
+    }
 }

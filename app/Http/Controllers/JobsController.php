@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CampaignWorker;
 use App\Services\JobService;
 use Illuminate\Http\Request;
 
@@ -28,13 +27,16 @@ class JobsController extends Controller
     }
     public function jobDetails($jobId)
     {
-
         return $this->jobService->myJobDetails($jobId);
     }
 
     public function createDispute(Request $request)
     {
-
         return $this->jobService->createDispute($request);
+    }
+
+    public function submitJob(Request $request)
+    {
+        return $this->jobService->submitWork($request);
     }
 }

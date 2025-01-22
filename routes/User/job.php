@@ -13,4 +13,5 @@ Route::middleware([
 
     Route::get('/available-jobs', [JobsController::class, 'availableJobs']);
     Route::post('/create-dispute', [JobsController::class, 'createDispute']);
+    Route::post('/submit-job', [JobsController::class, 'submitJob']);
 });

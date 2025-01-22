@@ -2,21 +2,28 @@
 
 namespace App\Services;
 
+use App\Mail\GeneralMail;
+use App\Mail\SubmitJob;
 use App\Models\User;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\JobRepositoryModel;
+use App\Repositories\LogRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
+use App\Validators\CampaignValidator;
+use Exception;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use League\Flysystem\StorageAttributes;
 use Throwable;
+use Illuminate\Support\Facades\DB;
 
 class JobService
 {
 
-    protected $jobModel, $currencyModel, $walletModel,
-        $authModel, $campaignModel, $campaignService;
+    protected $jobModel, $currencyModel, $walletModel, $log,
+        $authModel, $campaignModel, $campaignService, $validator;
     public function __construct(
         JobRepositoryModel $jobModel,
         AuthRepositoryModel $authModel,
@@ -24,6 +31,8 @@ class JobService
         WalletRepositoryModel $walletModel,
         CurrencyRepositoryModel $currencyModel,
         CampaignService $campaignService,
+        CampaignValidator $validator,
+        LogRepositoryModel $log,
     ) {
         $this->jobModel = $jobModel;
         $this->authModel = $authModel;
@@ -31,6 +40,8 @@ class JobService
         $this->walletModel = $walletModel;
         $this->currencyModel = $currencyModel;
         $this->campaignService = $campaignService;
+        $this->validator = $validator;
+        $this->log = $log;
     }
 
     public function availableJobs($request)
@@ -87,7 +98,6 @@ class JobService
                 'data' => $data,
                 'pagination' => $pagination,
             ]);
-
         } catch (Throwable $exception) {
             return response()->json([
                 'status' => false,
@@ -169,6 +179,71 @@ class JobService
         }
     }
 
+    public function submitWork($request)
+    {
+        $this->validator->submitJob($request);
+        // return $request;
+
+        try {
+            $user = auth()->user();
+            $checkJob = $this->jobModel->checkIfJobIsDoneByUser($request->campaign_id);
+            if ($checkJob) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You have completed this campaign before'
+                ], 400);
+            }
+
+            $campaign = $this->campaignModel->getCampaignById($request->campaign_id);
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $unitPrice = $campaign->campaign_amount;
+            if ($currency->code !== $campaign->currency) {
+                $rate = $this->campaignService->currencyConversion($campaign->currency, $currency->code);
+                $unitPrice *= $rate;
+            }
+            $proofUrl = 'no image';
+            if ($request->hasFile('proof') && $campaign->allow_upload) {
+                $file = $request->file('proof');
+                $filePath = 'proofs/' . time() . '_' . $file->getClientOriginalName();
+                Storage::disk('s3')->put($filePath, file_get_contents($file), 'public');
+                $proofUrl = Storage::disk('s3')->url($filePath);
+            }
+
+            //return $proofUrl;
+            DB::beginTransaction();
+
+            $campaignWorker =  $this->jobModel->createJobs($user, $request, $currency, $proofUrl, $unitPrice);
+            $campaign->increment('pending_count');
+            $this->jobModel->setPendingCount($campaign->id);
+
+            // Activity log
+            $this->log->createLogForJobCreation($user, $currency, $unitPrice);
+
+            // Send emails
+            Mail::to(auth()->user()->email)->send(new SubmitJob($campaignWorker));
+            $subject = 'Job Submission';
+            $content = $user->name . ' submitted a response to your campaign - ' . $campaign->post_title . '. Please login to review.';
+            Mail::to($campaign->user->email)->send(new GeneralMail($campaign->user, $content, $subject, ''));
+
+            DB::commit();
+            return response()->json([
+                'status' => true,
+                'message' => 'Job Submitted Successfully',
+                'data' => $campaignWorker
+            ], 201);
+        } catch (Exception $exception) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
     public function myJobDetails($jobId)
     {
         try {
@@ -201,7 +276,7 @@ class JobService
 
             // Prepare response data
             $data = [
-                'job_id' => $job->id,
+                'id' => $job->id,
                 'campaign_name' => $job->post_title,
                 'campaign_type' => $job->campaignType->name,
                 'campaign_category' => $job->campaignCategory->name,
@@ -230,10 +305,10 @@ class JobService
 
     public function createDispute($request)
     {
+        $this->validator->disputeCreation($request);
         try {
             $user = auth()->user();
-
-            $job = $this->jobModel->getJobById($request->job_id, $user->id);
+            $job = $this->jobModel->getMyJobById($request->job_id, $user->id);
 
             if (!$job) {
                 return response()->json([
@@ -255,9 +330,6 @@ class JobService
                     'message' => 'A dispute has already been lodged for this job, so the action cannot be performed again.',
                 ], 400);
             }
-
-            // return $request->reason;
-            //create dispute
 
             $this->jobModel->createDisputeOnWorker($job->id);
             $this->jobModel->createDispute($job, $request->reason, $request->job_proof);
