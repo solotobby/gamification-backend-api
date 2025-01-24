@@ -89,7 +89,7 @@ class CampaignValidator
         $validationRules = [
             'proof' => 'sometimes|image|mimes:png,jpeg,gif,jpg',
             'comment' => 'required|string',
-            'campaign_id' => 'required|string|exists:campaigns,id',
+            'job_id' => 'required|string|exists:campaigns,job_id',
         ];
         $validator = Validator::make($request->all(), $validationRules);
 
