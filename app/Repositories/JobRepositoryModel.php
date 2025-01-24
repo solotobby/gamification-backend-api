@@ -22,11 +22,11 @@ class JobRepositoryModel
         )->paginate(10, ['*'], 'page', $page);
     }
 
-    public function createJobs($user, $request, $currency, $proofUrl, $unitPrice)
+    public function createJobs($user, $campaignId, $request, $currency, $proofUrl, $unitPrice)
     {
         $campaignWorker = CampaignWorker::create([
             'user_id' => $user->id,
-            'campaign_id' => $request->campaign_id,
+            'campaign_id' => $campaignId,
             'comment' => $request->comment,
             'amount' => $unitPrice,
             'proof_url' => $proofUrl,
@@ -158,11 +158,11 @@ class JobRepositoryModel
     public function getJobById($jobId)
     {
         return Campaign::where(
-            'id',
+            'job_id',
             $jobId
         )->first();
     }
-    public function getMyJobById($jobId, $userId)
+    public function     getMyJobById($jobId, $userId)
     {
         $query = CampaignWorker::where(
             'id',

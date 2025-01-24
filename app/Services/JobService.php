@@ -78,7 +78,7 @@ class JobService
                     'completed' => $count,
                     'is_completed' => $count >= $value->number_of_staff ? true : false,
                     'progress' => $progress,
-                    'currency' => $value->currency,
+                    'currency' => $currency->code,
                     'created_at' => $value->created_at
                 ];
             }
@@ -187,15 +187,21 @@ class JobService
 
         try {
             $user = auth()->user();
-            $checkJob = $this->jobModel->checkIfJobIsDoneByUser($request->campaign_id);
+
+            $campaign = $this->jobModel->getJobById($request->job_id);
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Job not found'
+                ], 400);
+            }
+            $checkJob = $this->jobModel->checkIfJobIsDoneByUser($campaign->job_id);
             if ($checkJob) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'You have completed this campaign before'
+                    'message' => 'You have already perform this job before'
                 ], 400);
             }
-
-            $campaign = $this->campaignModel->getCampaignById($request->campaign_id);
 
             $baseCurrency = $user->wallet->base_currency;
             $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
@@ -204,6 +210,14 @@ class JobService
             if ($currency->code !== $campaign->currency) {
                 $rate = $this->campaignService->currencyConversion($campaign->currency, $currency->code);
                 $unitPrice *= $rate;
+            }
+
+            $check = $this->checkVerification($user, $currency, $unitPrice);
+            if (!$check) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User account yet to be verified',
+                ], 403);
             }
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
@@ -216,12 +230,23 @@ class JobService
             //return $proofUrl;
             DB::beginTransaction();
 
-            $campaignWorker =  $this->jobModel->createJobs($user, $request, $currency, $proofUrl, $unitPrice);
+            $campaignWorker =  $this->jobModel->createJobs(
+                $user,
+                $campaign->id,
+                $request,
+                $currency,
+                $proofUrl,
+                $unitPrice
+            );
             $campaign->increment('pending_count');
             $this->jobModel->setPendingCount($campaign->id);
 
             // Activity log
-            $this->log->createLogForJobCreation($user, $currency, $unitPrice);
+            $this->log->createLogForJobCreation(
+                $user,
+                $currency,
+                $unitPrice
+            );
 
             // Send emails
             Mail::to(
@@ -261,12 +286,6 @@ class JobService
         try {
             $user = auth()->user();
 
-            if (!$user->is_verified) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User account yet to be verified',
-                ], 403);
-            }
 
             $job = $this->jobModel->getJobById($jobId);
 
@@ -286,6 +305,15 @@ class JobService
                 $unitPrice *= $rate;
             }
 
+
+            $check = $this->checkVerification($user, $currency, $unitPrice);
+            if (!$check) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User account yet to be verified',
+                    // 'data' => [$currency, $unitPrice, $user],
+                ], 403);
+            }
             // Prepare response data
             $data = [
                 'id' => $job->id,
@@ -314,6 +342,19 @@ class JobService
             ], 500);
         }
     }
+
+    public function checkVerification($user, $currency, $unitPrice)
+    {
+        if ($user->is_verified) {
+            return true;
+        }
+        if ((int) $currency->min_upgrade_amount > $unitPrice) {
+            return true;
+        }
+
+        return false;
+    }
+
 
     public function createDispute($request)
     {
