@@ -97,9 +97,9 @@ class ReferralService
             $data[] = [
                 'id' => $referral->id,
                 'name' => $referredUser->name,
-                'is_paid' => $referral->is_paid ? false : true,
+                'is_paid' => $referral->is_paid ? true : false,
                 'income' => $amount,
-                'status' => $referredUser->is_verified ? 'Verified' : 'Pending',
+                'status' => $referredUser->is_verified ? 'Verified' : 'Unverified',
                 'created_at' => $referral->created_at,
             ];
         }
