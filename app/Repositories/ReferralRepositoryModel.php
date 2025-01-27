@@ -32,16 +32,19 @@ class ReferralRepositoryModel
             'referee_id',
             $user->referral_code
         )->get();
-
     }
 
-    public function getUserReferralsPaginated($user, $page = 1)
+    public function getUserReferralsPaginated($user, $page = null)
     {
         return Referral::where(
             'referee_id',
             $user->referral_code
-        ) ->paginate(10, ['*'], 'page', $page);
-
+        )->paginate(
+            10,
+            ['*'],
+            'page',
+            $page
+        );
     }
 
     public function getReferrerDetails($ref_id)
@@ -50,6 +53,44 @@ class ReferralRepositoryModel
             'referral_code',
             $ref_id
         )->first();
+    }
 
+    public function getRefereeId($userId)
+    {
+        return Referral::where(
+            'user_id',
+            $userId
+        )->value('referee_id');
+    }
+
+    public function getReferralByUserId($userId)
+    {
+        return Referral::where(
+            'user_id',
+            $userId
+        )->first();
+    }
+
+    public function markAsPaid($referralId)
+    {
+        echo $referralId;
+        $referral = Referral::where(
+            'user_id',
+            $referralId
+        )->firstOrFail();
+        $referral->is_paid = true;
+        $referral->save();
+
+        return $referral;
+    }
+
+    public function updateReferralAmount($referralId, $amount)
+    {
+        echo $referralId;
+        $referral = Referral::where('user_id', $referralId)->firstOrFail();
+        $referral->amount = $amount;
+        $referral->save();
+
+        return true;
     }
 }

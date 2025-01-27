@@ -69,8 +69,17 @@ class AuthRepositoryModel
             'id',
             $id
         )->first();
-
     }
+
+    public function findUserByReferralCode($id)
+    {
+        return User::where(
+            'referral_code',
+            $id
+        )->first();
+    }
+
+
 
     public function findUserWithRole($email)
     {
@@ -109,6 +118,11 @@ class AuthRepositoryModel
         return $profile;
     }
 
+
+    public function isCelebrity($userId)
+    {
+        return Profile::where('user_id', $userId)->value('is_celebrity');
+    }
 
     public function deleteOtp(OTP $otp)
     {

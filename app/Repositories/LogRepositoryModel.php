@@ -51,7 +51,20 @@ class LogRepositoryModel
             'description' =>  $user->name . ' submitted a campaign of '.$currency->code. number_format($unitPrice),
             'user_type' => 'regular'
         ]);
-       
+
         return true;
     }
+
+    public function createLogForReferral($user)
+    {
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'activity_type' => 'account_verification',
+            'description' =>  $user->name . ' account verification',
+            'user_type' => 'regular'
+        ]);
+
+        return true;
+    }
+
 }

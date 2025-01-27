@@ -42,7 +42,7 @@ class CampaignRepositoryModel
         return Campaign::create($request->all());
     }
 
-    public function getCampaignsByPagination($id, $type, $page = 1)
+    public function getCampaignsByPagination($id, $type, $page = null)
     {
         $query = Campaign::where(
             'user_id',
@@ -57,7 +57,12 @@ class CampaignRepositoryModel
         return $query->orderBy(
             'created_at',
             'DESC'
-        ) ->paginate(10, ['*'], 'page', $page);
+        )->paginate(
+            10,
+            ['*'],
+            'page',
+            $page
+        );
     }
 
 

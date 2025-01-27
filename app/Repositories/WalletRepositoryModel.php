@@ -129,7 +129,7 @@ class WalletRepositoryModel
                 return false;
         }
         // Save the updated wallet
-        if($wallet->save()) return true;
+        if ($wallet->save()) return true;
     }
 
     public function creditWallet($user, $currency, $amount)
@@ -163,7 +163,25 @@ class WalletRepositoryModel
         if ($wallet->save())  return true;
     }
 
-    public function createTransaction($user, $amount, $ref, $campId, $baseCurrency){
+    public function creditAdminWallet($userId, $amount)
+    {
+        $wallet = Wallet::where('user_id', $userId)->first();
+        $wallet->balance += $amount;
+        $wallet->save();
+    }
+
+    public function createTransaction($user, $amount, $ref, $campId, $baseCurrency, $referral = null, $username = null)
+    {
+        // Check if this is the user's first transaction
+        $isFirstTransaction = !PaymentTransaction::where('user_id', $user->id)->exists();
+
+        if ($referral) {
+            $transactionType = 'referer_bonus';
+            $transactionDescription = 'Referrer Bonus from ' . $username;
+        }
+        $transactionType = $isFirstTransaction ? 'upgrade_payment' : 'wallet_topup';
+        $transactionDescription = $isFirstTransaction ? 'Upgrade Payment' : 'Wallet Top Up';
+
         $transaction = PaymentTransaction::create([
             'user_id' => $user->id,
             'campaign_id' => $campId,
@@ -172,11 +190,18 @@ class WalletRepositoryModel
             'status' => 'successful',
             'currency' => $baseCurrency,
             'channel' => 'freebyz',
-            'type' => 'wallet_topup',
-            'description' => 'Wallet Top Up',
+            'type' => $transactionType,
+            'description' => $transactionDescription,
             'tx_type' => 'Credit',
             'user_type' => 'regular'
         ]);
+
         return $transaction;
+    }
+
+
+    public function createAdminTransaction($data)
+    {
+        return PaymentTransaction::create($data);
     }
 }

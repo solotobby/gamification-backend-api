@@ -8,7 +8,7 @@ use App\Models\DisputedJobs;
 
 class JobRepositoryModel
 {
-    public function getJobByType($user, $type, $page = 1)
+    public function getJobByType($user, $type, $page = null)
     {
         return CampaignWorker::where(
             'user_id',
@@ -94,7 +94,7 @@ class JobRepositoryModel
         return $amounts;
     }
 
-    public function getJobsByIdAndType($camId, $type, $page = 1)
+    public function getJobsByIdAndType($camId, $type, $page = null)
     {
         $query = CampaignWorker::where(
             'campaign_id',
@@ -123,7 +123,7 @@ class JobRepositoryModel
         )->first();
     }
 
-    public function availableJobs($userId, $subcategory = null, $page = 1)
+    public function availableJobs($userId, $subcategory = null, $page = null)
     {
         $completedCampaignIds = CampaignWorker::where('user_id', $userId)
             ->pluck('campaign_id')
