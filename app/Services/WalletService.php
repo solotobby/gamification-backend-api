@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 class WalletService
 {
-    protected  $validator, $logModel, $currencyModel, $walletModel, $authModel, $referralModel;
+    protected  $validator, $logModel, $campaign,
+        $currencyModel, $walletModel, $authModel, $referralModel;
     public function __construct(
         AuthRepositoryModel $authModel,
         WalletRepositoryModel $walletModel,
@@ -23,6 +24,7 @@ class WalletService
         WalletValidator $validator,
         ReferralRepositoryModel $referralModel,
         LogRepositoryModel $logModel,
+        CampaignService $campaign,
     ) {
         $this->logModel = $logModel;
         $this->authModel = $authModel;
@@ -30,6 +32,7 @@ class WalletService
         $this->currencyModel = $currencyModel;
         $this->validator = $validator;
         $this->referralModel = $referralModel;
+        $this->campaign = $campaign;
     }
     public function fundWallet($request)
     {
@@ -102,7 +105,6 @@ class WalletService
                 'status' => true,
                 'message' => $baseCurrency . ' Wallet Verified Successfully',
             ], 201);
-
         } catch (Throwable $exception) {
             DB::rollBack();
             return response()->json([
@@ -122,24 +124,42 @@ class WalletService
 
         $referrer = $this->authModel->findUserByReferralCode($user->referredBy->referee_id);
 
-        $baseCurrency = $referrer->wallet->base_currency;
-        $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+        $referral = $this->setReferralAmountTopPay($user, $referrer);
 
-        $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
-        $amount = empty($user->referredBy->amount) ? $referralCommission : $user->referredBy->amount;
-
-        if(empty($user->referredBy->amount)){
-            $this->referralModel->updateReferralAmount($user->id, $amount);
-        }
         //To be returned too later
         // $isCelebrity = $this->authModel->isCelebrity($referrer->id);
         // $amount = $isCelebrity ? 920 : 1050;
 
-        $this->processReferrerBonus($user, $referrer, $amount, $mapCurrency);
+        $this->processReferrerBonus($user, $referrer, $referral['amount'], $referral['referralCurrency']);
 
         return true;
     }
 
+    public function setReferralAmountTopPay($user, $referrer)
+    {
+        $referrerCurrency = $this->walletModel->mapCurrency($referrer->wallet->base_currency);
+        $userCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
+        $referralCommission = $this->walletModel->checkReferralCommission($userCurrency);
+
+        // Initialize amount and rate
+        $amount = $user->referredBy?->amount ?? $referralCommission;
+        $rate = 1;
+
+        // Apply currency conversion if currencies differ
+        if (empty($user->referredBy?->amount) && $userCurrency !== $referrerCurrency) {
+            $rate = $this->campaign->currencyConversion($userCurrency, $referrerCurrency);
+            $amount *= $rate;
+        }
+
+        // Update referral amount in the database
+        $this->referralModel->updateReferralAmount($user->id, $amount);
+
+        $data = [
+            'amount' => $amount,
+            'referralCurrency' => $referrerCurrency,
+        ];
+        return $data;
+    }
     private function processReferrerBonus($user, $referrer, $amount, $currency)
     {
         $this->walletModel->creditWallet($referrer, $currency, $amount);
