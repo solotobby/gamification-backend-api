@@ -14,7 +14,7 @@ class ReferralRepositoryModel
         Referral::create([
             'user_id' => $user->id,
             'referee_id' => $ref_id,
-            'amount' => $amount
+            //'amount' => $amount
         ]);
         return true;
     }
@@ -73,7 +73,7 @@ class ReferralRepositoryModel
 
     public function markAsPaid($referralId)
     {
-        echo $referralId;
+       // echo $referralId;
         $referral = Referral::where(
             'user_id',
             $referralId
@@ -86,7 +86,6 @@ class ReferralRepositoryModel
 
     public function updateReferralAmount($referralId, $amount)
     {
-        echo $referralId;
         $referral = Referral::where('user_id', $referralId)->firstOrFail();
         $referral->amount = $amount;
         $referral->save();

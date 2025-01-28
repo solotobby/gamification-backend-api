@@ -13,7 +13,8 @@ use Throwable;
 
 class SurveyService
 {
-    private  $validator, $survey, $auth, $log, $currency, $wallet;
+    private  $validator, $walletService, $survey,
+        $auth, $log, $currency, $wallet;
 
     public function __construct(
         SurveyValidator $validator,
@@ -22,6 +23,8 @@ class SurveyService
         LogRepositoryModel $log,
         CurrencyRepositoryModel $currency,
         WalletRepositoryModel $wallet,
+        WalletService $walletService,
+
 
     ) {
         $this->validator = $validator;
@@ -30,6 +33,7 @@ class SurveyService
         $this->log = $log;
         $this->currency = $currency;
         $this->wallet = $wallet;
+        $this->walletService = $walletService;
     }
 
     public function getLists()
@@ -80,10 +84,10 @@ class SurveyService
         $this->validator->validateSurveyCreation($request);
 
         try {
-            $user = $this->auth->findUser(Auth::user()->email);
+            $user = Auth::user();
 
             // check if survey already done
-            $check = $this->auth->dashboardStat($user->id);
+            //   $check = $this->auth->dashboardStat($user->id);
 
             $this->survey->updateUserAgeAndGender($user);
             // Save User Interest
@@ -91,6 +95,12 @@ class SurveyService
 
             // Update user Profile base currency
             $this->wallet->updateWalletBaseCurrency($user, $request->currency);
+            // Check if user is referred and update the referral amount of the currency
+            if ($user->referredBy) {
+                $referrer = $this->auth->findUserByReferralCode($user->referredBy->referee_id);
+
+                $this->walletService->setReferralAmountTopPay($user, $referrer);
+            }
             //    Log Activities
             $this->log->createLogForSurvey($user);
 
