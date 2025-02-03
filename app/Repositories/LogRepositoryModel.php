@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\User;
 use App\Models\ActivityLog;
+use App\Models\Notification;
 
 class LogRepositoryModel
 {
@@ -67,4 +68,28 @@ class LogRepositoryModel
         return true;
     }
 
+    public function createLogForWithdrawal($user, $currency, $amount)
+    {
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'activity_type' => 'withdrawal_request',
+            'description' =>  $user->name . ' sent a withdrawal request of '.$currency.'' . number_format($amount),
+            'user_type' => 'regular'
+        ]);
+
+        return true;
+    }
+
+    function systemNotification($user, $category, $title, $message)
+    {
+
+        $notification = Notification::create([
+            'user_id' => $user->id,
+            'category' => $category,
+            'title' => $title,
+            'message' => $message
+        ]);
+
+        return $notification;
+    }
 }

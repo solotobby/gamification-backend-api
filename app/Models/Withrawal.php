@@ -9,8 +9,18 @@ class Withrawal extends Model
 {
     use HasFactory;
 
-    protected $table = "withrawals"; 
-    protected $fillable = ['user_id', 'amount', 'next_payment_date', 'status', 'currency', 'channel', 'paypal_email', 'is_usd'];
+    protected $table = "withrawals";
+    protected $fillable = [
+        'user_id',
+        'amount',
+        'next_payment_date',
+        'status',
+        'currency',
+        'channel',
+        'paypal_email',
+        'is_usd',
+        'base_currency'
+    ];
 
     public function user()
     {
@@ -21,5 +31,4 @@ class Withrawal extends Model
     {
         return $this->belongsTo(BankInformation::class);
     }
-
 }
