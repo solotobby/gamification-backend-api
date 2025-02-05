@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateWithrawalsTable extends Migration
+class CreateWithdrawalsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class CreateWithrawalsTable extends Migration
      */
     public function up()
     {
-        Schema::create('withrawals', function (Blueprint $table) {
+        Schema::create('Withdrawals', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('amount');
@@ -30,6 +30,6 @@ class CreateWithrawalsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('withrawals');
+        Schema::dropIfExists('Withdrawals');
     }
 }

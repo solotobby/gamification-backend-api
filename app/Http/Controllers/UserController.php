@@ -15,7 +15,7 @@ use App\Models\Referral;
 use App\Models\Usdverified;
 use App\Models\User;
 use App\Models\Wallet;
-use App\Models\Withrawal;
+use App\Models\Withdrawal;
 use App\Notifications\NewNotification;
 use Carbon\Carbon;
 use Exception;
@@ -502,7 +502,7 @@ class UserController extends Controller
 
     public function withdrawal_requests()
     {
-        $list = Withrawal::where('user_id', auth()->user()->id)->orderBy('created_at', 'desc')->get();
+        $list = Withdrawal::where('user_id', auth()->user()->id)->orderBy('created_at', 'desc')->get();
         return view('user.wallet.withdrawal_requests', ['lists' => $list]);
     }
 

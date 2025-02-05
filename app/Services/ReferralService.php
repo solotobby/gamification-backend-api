@@ -83,8 +83,7 @@ class ReferralService
         $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
         $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
 
-        // Get all referrals for the authenticated user with pagination (10 per page)
-        $referrals = $this->referralModel->getUserReferralsPaginated($user); // Ensure paginate() is used on query builder
+        $referrals = $this->referralModel->getUserReferralsPaginated($user);
 
         $data = [];
 

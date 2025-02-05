@@ -10,7 +10,7 @@ use App\Models\BankInformation;
 use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Models\Wallet;
-use App\Models\Withrawal;
+use App\Models\Withdrawal;
 use App\Services\WalletService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -37,7 +37,17 @@ class WalletController extends Controller
     {
         return $this->walletService->processWithdrawals($request);
     }
-    
+
+    public function getUserWithdrawals()
+    {
+        return $this->walletService->getWithdrawals();
+    }
+
+    public function getUserTransactions()
+    {
+        return $this->walletService->getTransactions();
+    }
+
     public function fund()
     {
         // $balance = '';

@@ -8,15 +8,15 @@ use App\Repositories\AuthRepositoryModel;
 use App\Repositories\LogRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
+use App\Repositories\WithdrawalRepositoryModel;
 use App\Validators\WalletValidator;
 use Carbon\Carbon;
-use Illuminate\Support\Str;
 use Throwable;
 use Illuminate\Support\Facades\DB;
 
 class WalletService
 {
-    protected  $validator, $logModel, $campaign,
+    protected  $validator, $logModel, $campaign, $withdrawalModel,
         $currencyModel, $walletModel, $authModel, $referralModel;
     public function __construct(
         AuthRepositoryModel $authModel,
@@ -26,6 +26,7 @@ class WalletService
         ReferralRepositoryModel $referralModel,
         LogRepositoryModel $logModel,
         CampaignService $campaign,
+        WithdrawalRepositoryModel $withdrawalModel,
     ) {
         $this->logModel = $logModel;
         $this->authModel = $authModel;
@@ -34,6 +35,7 @@ class WalletService
         $this->validator = $validator;
         $this->referralModel = $referralModel;
         $this->campaign = $campaign;
+        $this->withdrawalModel = $withdrawalModel;
     }
     public function fundWallet($request)
     {
@@ -152,7 +154,7 @@ class WalletService
                 ], 401);
             }
 
-            $percent = 5 / 100 * $amount;
+            $percent = ($currency->withdrawal_percent / 100) * $amount;
             $withdrawalAmount = $amount - $percent;
 
             $ref = time();
@@ -176,7 +178,7 @@ class WalletService
 
 
             //Create Withdrawal in withdrawal table
-            $this->walletModel->createWithdrawal(
+            $this->withdrawalModel->createWithdrawal(
                 $user,
                 $withdrawalAmount,
                 $nextFriday,
@@ -274,6 +276,92 @@ class WalletService
         return true;
     }
 
+    public function getWithdrawals()
+    {
+        try {
+            $user = auth()->user();
+            $withdrawals = $this->withdrawalModel->withdrawalLists($user);
+
+            // Map through each withdrawal record
+            $data = $withdrawals->map(function ($withdrawal) use ($user) {
+                return [
+                    'id' => $withdrawal->id,
+                    'amount' => $withdrawal->amount,
+                    'currency' => $withdrawal->base_currency ?? $user->wallet->base_currency,
+                    'payment_date' => $withdrawal->next_payment_date,
+                    'withdrawal_created_at' => $withdrawal->created_at,
+                    'status' => $withdrawal->status ? 'Paid' : 'Pending',
+                ];
+            });
+
+            // Pagination details
+            $pagination = [
+                'current_page' => $withdrawals->currentPage(),
+                'last_page' => $withdrawals->lastPage(),
+                'per_page' => $withdrawals->perPage(),
+                'total' => $withdrawals->total(),
+                'from' => $withdrawals->firstItem(),
+                'to' => $withdrawals->lastItem(),
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Withdrawals retrieved successfully.',
+                'data' => $data,
+                'pagination' => $pagination,
+            ]);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+
+    public function getTransactions(){
+        try {
+            $user = auth()->user();
+            $transactions = $this->walletModel->getUserTransactions($user);
+
+            // Map through each withdrawal record
+            $data = $transactions->map(function ($transaction) use ($user) {
+                return [
+                    'id' => $transaction->reference,
+                    'amount' => $transaction->amount,
+                    'currency' => $transaction->currency ?? $user->wallet->base_currency,
+                    'status' => $transaction->status,
+                    'description' => $transaction->description,
+                    'type' => $transaction->tx_type,
+                    'created_at' => $transaction->created_at,
+                ];
+            });
+
+            // Pagination details
+            $pagination = [
+                'current_page' => $transactions->currentPage(),
+                'last_page' => $transactions->lastPage(),
+                'per_page' => $transactions->perPage(),
+                'total' => $transactions->total(),
+                'from' => $transactions->firstItem(),
+                'to' => $transactions->lastItem(),
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Transactions retrieved successfully.',
+                'data' => $data,
+                'pagination' => $pagination,
+            ]);
+    } catch (Throwable $exception) {
+        return response()->json([
+            'status' => false,
+            'error' => $exception->getMessage(),
+            'message' => 'Error processing request'
+        ], 500);
+    }
+    }
     public function setReferralAmountTopPay($user, $referrer)
     {
         $referrerCurrency = $this->walletModel->mapCurrency($referrer->wallet->base_currency);

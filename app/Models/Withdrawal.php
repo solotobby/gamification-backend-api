@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Withrawal extends Model
+class Withdrawal extends Model
 {
     use HasFactory;
 
-    protected $table = "withrawals";
+    protected $table = "Withrawals";
     protected $fillable = [
         'user_id',
         'amount',

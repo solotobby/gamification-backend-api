@@ -5,7 +5,6 @@ namespace App\Repositories;
 use App\Models\Currency;
 use App\Models\PaymentTransaction;
 use App\Models\Wallet;
-use App\Models\Withrawal;
 
 class WalletRepositoryModel
 {
@@ -68,17 +67,7 @@ class WalletRepositoryModel
         }
     }
 
-    public function createWithdrawal($user, $withdrawalAmount, $nextFriday, $currency, $payPal)
-    {
-        $withdrawal = Withrawal::create([
-            'user_id' => $user->id,
-            'amount' => $withdrawalAmount,
-            'next_payment_date' => $nextFriday,
-            'paypal_email' => $currency->code == 'USD' ? $payPal : null,
-            'is_usd' => $currency->code == 'USD' ? true : false,
-            'base_currency' => $currency->code
-        ]);
-    }
+
     public function checkReferralCommission($mapCurrency)
     {
         $currency = Currency::where('code', $mapCurrency)->first();
@@ -143,6 +132,27 @@ class WalletRepositoryModel
         if ($wallet->save()) return true;
     }
 
+    public function getUserTransactions($user, $page = null)
+    {
+        return PaymentTransaction::where(
+            'user_id',
+            $user->id
+        )->where(
+            'status',
+            'successful'
+        )->where(
+            'user_type',
+            'regular'
+        )->orderBy(
+            'created_at',
+            'DESC'
+        )->paginate(
+            10,
+            ['*'],
+            'page',
+            $page
+        );
+    }
     public function creditWallet($user, $currency, $amount)
     {
         $wallet = Wallet::where(
