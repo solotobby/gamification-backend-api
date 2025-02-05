@@ -80,6 +80,17 @@ class LogRepositoryModel
         return true;
     }
 
+    public function createLogForWithdrawalPayment($user, $currency, $amount)
+    {
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'activity_type' => 'withdrawal_sent',
+            'description' =>  $currency . number_format($amount) . ' cash withdrawal by ' .$user->name,
+            'user_type' => 'regular'
+        ]);
+
+        return true;
+    }
     function systemNotification($user, $category, $title, $message)
     {
 

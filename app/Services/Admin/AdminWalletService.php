@@ -2,24 +2,32 @@
 
 namespace App\Services\Admin;
 
+use App\Mail\GeneralMail;
+use App\Repositories\BankRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
+use App\Repositories\LogRepositoryModel;
 use App\Services\CampaignService;
 use App\Repositories\WalletRepositoryModel;
 use App\Validators\WalletValidator;
 use App\Repositories\WithdrawalRepositoryModel;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class AdminWalletService
 {
-    protected $withdrawalModel, $validator, $walletModel;
+    protected $withdrawalModel, $bankModel, $validator, $logModel, $walletModel;
     public function __construct(
         WalletRepositoryModel $walletModel,
         WithdrawalRepositoryModel $withdrawalModel,
         WalletValidator $validator,
+        BankRepositoryModel $bankModel,
+        LogRepositoryModel $logModel,
     ) {
         $this->validator = $validator;
         $this->walletModel = $walletModel;
         $this->withdrawalModel = $withdrawalModel;
+        $this->bankModel = $bankModel;
+        $this->logModel = $logModel;
     }
 
 
@@ -78,32 +86,71 @@ class AdminWalletService
     }
 
 
-    public function approveOrDeclineWithdrawal($request)
+    public function approveWithdrawal($request)
     {
         $this->validator->AdminDecisionOnWithdrawal($request);
 
         try {
-            $campaign = $this->campaignModel->getCampaignById($request->campaign_id, $request->user_id);
-            if (!$campaign) {
+            $withdrawal = $this->withdrawalModel->getWithdrawalById($request->withdrawal_id, $request->user_id);
+            if (!$withdrawal) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Campaign not found'
+                    'message' => 'Withdrawal not found'
                 ], 404);
             }
 
-            if($request->decision === 'approve'){
-                $decision = 'Live';
+            if ($withdrawal->status) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Payment has already been processed'
+                ], 400);
             }
-            else{
-                $decision = 'Declined';
+
+            $user = $withdrawal->user;
+            $bankInformation = $this->bankModel->getUserBank($request->user_id);
+
+            if (!$bankInformation) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User bank information not found'
+                ], 400);
             }
-            $campaign->status = $decision;
-            $campaign->save();
+
+            // Process Transfer
+            // $transfer = $this->transferFund(
+            //     $withdrawal->amount * 100,
+            //     $bankInformation->recipient_code,
+            //     'Freebyz Withdrawal'
+            // );
+
+            //response if transfer fail
+            // if (!isset($transfer['data']['status']) || !in_array($transfer['data']['status'], ['success', 'pending'])) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'Withdrawal processing failed'
+            //     ], 500);
+            // }
+
+            // Update Withdrawal Status
+            $withdrawal->status = true;
+            $withdrawal->save();
+
+            // Log activity
+            $this->logModel->createLogForWithdrawalPayment($user, $withdrawal->base_currency, $withdrawal->amount);
+            // Send email notification
+            $content = 'Your withdrawal request has been approved and your account credited successfully. Thank you for choosing Freebyz.com.';
+            $subject = 'Withdrawal Request Approved';
+            Mail::to($user->email)->send(new GeneralMail(
+                $user,
+                $content,
+                $subject,
+                ''
+            ));
 
             return response()->json([
                 'status' => true,
-                'message' => 'Campaign status updated successfully to ' . $campaign->status,
-                'data' => $campaign
+                'message' => 'Withdrawal approved successfully',
+                'data' => $withdrawal
             ], 200);
         } catch (Throwable $e) {
             return response()->json([

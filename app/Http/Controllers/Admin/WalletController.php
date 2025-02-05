@@ -15,9 +15,9 @@ class WalletController extends Controller
         $this->wallet = $wallet;
     }
 
-    public function withdrawalDecision(Request $request)
+    public function approveWithdrawal(Request $request)
     {
-        return $this->wallet->approveOrDeclineWithdrawal($request);
+        return $this->wallet->approveWithdrawal($request);
     }
 
     public function withdrawalLists(Request $request)

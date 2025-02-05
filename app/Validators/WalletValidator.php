@@ -38,7 +38,6 @@ class WalletValidator
         $validationRules = [
             'user_id' => 'required|string|exists:users,id',
             'withdrawal_id' => 'required|string|exists:campaigns,id',
-            'decision' => 'required|string|in:approve,decline'
         ];
         $validator = Validator::make($request->all(), $validationRules);
 

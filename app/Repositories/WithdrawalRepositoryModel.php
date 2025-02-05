@@ -54,4 +54,16 @@ class WithdrawalRepositoryModel
             $page
         );
     }
+
+    public function getWithdrawalById($withdrawalId, $userId)
+    {
+        return Withdrawal::where(
+            'user_id',
+            $userId
+        )->where(
+            'id',
+            $withdrawalId
+        )->first();
+    }
+    
 }

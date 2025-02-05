@@ -11,5 +11,6 @@ Route::middleware([
     'admin/wallet'
 )->group(function () {
         Route::get('/withdrawal-requests', [WalletController::class, 'withdrawalLists']);
+        Route::post('/approve-withdrawal', [WalletController::class, 'approveWithdrawal']);
     }
 );
