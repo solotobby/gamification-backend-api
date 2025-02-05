@@ -37,6 +37,7 @@ class WalletController extends Controller
     {
         return $this->walletService->processWithdrawals($request);
     }
+    
     public function fund()
     {
         // $balance = '';

@@ -199,7 +199,7 @@ class WalletService
 
             //fund admin wallet with withdrawal commission
             $admin = $this->authModel->findUserById('1');
-            $adminWallet = $this->walletModel->createWallet(
+            $this->walletModel->createWallet(
                 $admin,
                 $baseCurrency
             );

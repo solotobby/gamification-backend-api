@@ -19,6 +19,7 @@ class Currency extends Model
         'priotize',
         'referral_commission',
         'base_rate',
-        'min_withdrawal_amount'
+        'min_withdrawal_amount',
+        'withdrawal_percent'
     ];
 }
