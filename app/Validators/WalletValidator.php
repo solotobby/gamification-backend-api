@@ -32,4 +32,18 @@ class WalletValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function AdminDecisionOnWithdrawal($request)
+    {
+        $validationRules = [
+            'user_id' => 'required|string|exists:users,id',
+            'withdrawal_id' => 'required|string|exists:campaigns,id',
+            'decision' => 'required|string|in:approve,decline'
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }

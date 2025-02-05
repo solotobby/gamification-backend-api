@@ -35,15 +35,19 @@ class WithdrawalRepositoryModel
         );
     }
 
-    public function adminWithdrawalRequestLists($user, $page = null)
+    public function adminWithdrawalRequestLists($status = null, $page = null)
     {
-        return Withdrawal::where(
-            'status',
-            false
-        )->orderBy(
+        $query = Withdrawal::orderBy(
             'created_at',
             'desc'
-        )->paginate(
+        );
+        if (!is_null($status)) {
+            $query->where(
+                'status',
+                $status
+            );
+        }
+        return $query->paginate(
             10,
             ['*'],
             'page',
