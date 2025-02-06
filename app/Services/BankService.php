@@ -154,4 +154,23 @@ class BankService
         }
     }
 
+    public function getUserBankDetails(){
+        $user = auth()->user();
+
+        $bank = $this->bank->getUserBank($user->id);
+
+        if (!$bank) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Bank details not Found'
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Bank details not Found',
+            'data' => $bank,
+        ], 200);
+    }
+
 }

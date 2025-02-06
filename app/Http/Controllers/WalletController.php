@@ -55,6 +55,10 @@ class WalletController extends Controller
         return $this->bankService->getBankList();
     }
 
+    public function getUserBankDetails(){
+        return $this->bankService->getUserBankDetails();
+    }
+
     public function getAccountName(Request $request){
         return $this->bankService->getAccountDetails($request);
     }
