@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Http\Controllers\ReferralController;
-use App\Models\User;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
@@ -29,19 +27,20 @@ class ReferralService
         // Get all referrals for the authenticated user
         $referrals = $this->referralModel->getUserReferrals($user);
 
+       // return $referrals;
         // Total referrals
         $totalReferral = $referrals->count();
 
         // Count verified referrals
-        $verifiedReferral = $referrals->where('user.is_verified', true)->count();
+        $verifiedReferral = $referrals->where('is_paid', true)->count();
 
         // Count pending referrals
-        $pendingReferral = $referrals->where('user.is_verified', false)->count();
+        $pendingReferral = $referrals->where('is_paid', false)->count();
 
         // Count how many referrals have null or empty amount and calculate the total empty amount
         $emptyAmount = 0;
         $emptyCount = $referrals->filter(function ($referral) {
-            return empty($referral->amount);  // Check if amount is empty or null
+            return empty($referral->amount);
         })->count();
 
         // Calculate the referral commission for empty referrals
@@ -83,8 +82,7 @@ class ReferralService
         $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
         $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
 
-        // Get all referrals for the authenticated user with pagination (10 per page)
-        $referrals = $this->referralModel->getUserReferralsPaginated($user); // Ensure paginate() is used on query builder
+        $referrals = $this->referralModel->getUserReferralsPaginated($user);
 
         $data = [];
 

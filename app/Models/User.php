@@ -75,6 +75,11 @@ class User extends Authenticatable
         return $this->hasOne(Wallet::class);
     }
 
+    public function accountDetails()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
     public function referees()
     {
         return $this->hasMany(Referral::class, 'referee_id', 'referral_code');
@@ -116,11 +121,6 @@ class User extends Authenticatable
         return $this->hasMany(Campaign::class);
     }
 
-    public function accountDetails()
-    {
-        return $this->hasOne(BankInformation::class,  'user_id');
-    }
-
     public function myFeedBackList()
     {
         return $this->hasMany(Feedback::class,  'user_id');
@@ -141,6 +141,10 @@ class User extends Authenticatable
         return $this->hasOne(AccountInformation::class, 'user_id');
     }
 
+    public function bankDetails()
+    {
+        return $this->hasOne(BankInformation::class, 'user_id');
+    }
     public function notifications()
     {
         return $this->hasMany(Notification::class);

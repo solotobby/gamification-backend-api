@@ -29,7 +29,7 @@ use App\Models\Statistics;
 use App\Models\UserLocation;
 use App\Models\VirtualAccount;
 use App\Models\Wallet;
-use App\Models\Withrawal;
+use App\Models\Withdrawal;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -55,7 +55,7 @@ class HomeController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
+
         if($user->hasRole('admin')){
             // return 'admin';
             return redirect()->route('admin.home');
@@ -65,7 +65,7 @@ class HomeController extends Controller
         }else{
             // return 'user';
             return redirect()->route('user.home');
-        } 
+        }
     }
 
     public function dashboard(){
@@ -93,7 +93,7 @@ class HomeController extends Controller
         if(env('APP_ENV') == 'production'){
             setProfile(auth()->user());
         }
-       
+
         if(auth()->user()->phone == '' || auth()->user()->country == ''){
             return view('phone');
         }
@@ -101,7 +101,7 @@ class HomeController extends Controller
         if(auth()->user()->age_range == '' || auth()->user()->gender == ''){ //compell people to take survey
             return redirect('survey');
         }
-        
+
         $balance = '';
         // if(walletHandler() == 'sendmonny' && auth()->user()->is_wallet_transfere == true){
         //     $balance = Sendmonny::getUserBalance(GetSendmonnyUserId(), accessToken());
@@ -110,15 +110,15 @@ class HomeController extends Controller
         //$activity_log = SystemActivities::showActivityLog();
 
         $badgeCount = SystemActivities::badgeCount();
-        
+
         $available_jobs = SystemActivities::availableJobs();
-        
+
         $completed = CampaignWorker::where('user_id', auth()->user()->id)->where('status', 'Approved')->count();
-        
+
         $announcement = Announcement::where('status', true)->first();
-        
+
         $ads = adBanner();
-        
+
         return view('user.home', ['badgeCount' => $badgeCount, 'available_jobs' => $available_jobs, 'completed' => $completed,  'user'=>auth()->user(), 'balance' => $balance, 'announcement' => $announcement, 'ads' => $ads]);
     }
 
@@ -137,7 +137,7 @@ class HomeController extends Controller
         //this wwee
         $start_week = Carbon::now()->startOfWeek();//->format('Y-m-d h:i:s');//next('Friday')->format('Y-m-d h:i:s');
         $end_week = Carbon::now()->endOfWeek();
-        $withdrawal = Withrawal::get(['status', 'amount', 'is_usd', 'created_at']);//Date('')
+        $withdrawal = Withdrawal::get(['status', 'amount', 'is_usd', 'created_at']);//Date('')
         $thisWeekPayment = $withdrawal->where('status', false)->whereBetween('created_at', [$start_week, $end_week])->sum('amount');
         $totalPayout = $withdrawal->where('is_usd', false)->sum('amount');
         $transactions = PaymentTransaction::where('status', 'successful')->sum('amount');
@@ -147,7 +147,7 @@ class HomeController extends Controller
         //$transactions = PaymentTransaction::where('user_type', 'admin')->get();
         //$Wal = Wallet::where('user_id', auth()->user()->id)->first();
 
-    
+
         // return $campaignMetric = Analytics::campaignMetrics();
         //users registered
 
@@ -175,11 +175,11 @@ class HomeController extends Controller
         $ageDistribution = Analytics::ageDistribution();
 
         $christmas = Profile::where('is_xmas', true)->count();
-        
+
         return view('admin.index', [
-            'wallet' => $wallet, 
-            'weekPayment' => $thisWeekPayment, 
-            'totalPayout' => $totalPayout, 
+            'wallet' => $wallet,
+            'weekPayment' => $thisWeekPayment,
+            'totalPayout' => $totalPayout,
             'transactions' => $transactions,
             'xmas' => $christmas,
             'av_count' => $available_jobsCount]) // ['users' => $user, 'campaigns' => $campaigns, 'workers' => $campaignWorker, 'loginPoints' => $loginPoints]) // 'wallet' => $wallet, 'ref_rev' => $ref_rev, 'tx' => $transactions, 'wal'=>$Wal])
@@ -208,15 +208,15 @@ class HomeController extends Controller
             $data['verifiedUser'] = User::where('role', 'regular')->where('is_verified', true)->whereBetween('created_at',[$request->start_date, $request->end_date])->count();
             // $data['loginPoints'] = LoginPoints::where('is_redeemed', false)->whereBetween('created_at',[$request->start_date, $request->end_date])->sum('point');
             // $data['loginPointsValue'] = $data['loginPoints']/5;
-        
+
         return $data;
     }
 
     public function adminApiDefault(Request $request){
         $period = $request->period;
-        
+
          $data = [];
-        
+
         $date = \Carbon\Carbon::today()->subDays($period);
         $start_date = \Carbon\Carbon::today()->subDays($period);
         $end_date = \Carbon\Carbon::now()->format('Y-m-d');
@@ -229,11 +229,11 @@ class HomeController extends Controller
         $data['verifiedUser'] = User::where('role', 'regular')->where('is_verified', true)->where('created_at','>=',$date)->count();
         // $data['loginPoints'] = LoginPoints::where('is_redeemed', false)->where('created_at','>=',$date)->sum('point');
         // $data['loginPointsValue'] = $data['loginPoints']/5;
-       
+
         // $data['monthlyVisits'] = Analytics::monthlyVisits();
         return $data;
     }
-        
+
 
     public function staffHome(){
 
@@ -270,7 +270,7 @@ class HomeController extends Controller
         // $this->validate($request, [
         //     'phone' => 'numeric|required|digits:11|unique:users'
         // ]);
-        
+
         $user = User::where('id', auth()->user()->id)->first();
         $user->phone = $request->phone_number;
         $user->source = $request->source;
@@ -418,12 +418,12 @@ class HomeController extends Controller
             }
         }elseif($reward_type->reward_type == 'AIRTIME' && $reward_type->is_redeem == '0')
         {
-            
+
             $parameters = Reward::where('name', 'AIRTIME')->first();
             //$phone = '+234'.substr(auth()->user()->phone, 1);
             $amount = $parameters->amount;
             $phone = auth()->user()->phone;
-            return $airtime = $this->sendAirtime($phone, $amount);//['data'];              
+            return $airtime = $this->sendAirtime($phone, $amount);//['data'];
             // if($airtime->errorMessage == "None")
             // {
 
@@ -439,12 +439,12 @@ class HomeController extends Controller
             //             'reference' => time(), //$transfer['data']['reference'],
             //             'transfer_code' => time(),//$transfer['data']['transfer_code'],
             //             'recipient' => time(), //$airtime->responses['phoneNumber']
-            //             'status' => 'success', //$airtime->responses['status'], 
+            //             'status' => 'success', //$airtime->responses['status'],
             //             'currency' => "NGN"
             //         ]);
             //         return redirect('score/list')->with('status', 'Airtime Successfully Sent to your Number');
             // }else{
-            //    return redirect('score/list')->with('error', 'There was an error while sending airtime, please try again later'); 
+            //    return redirect('score/list')->with('error', 'There was an error while sending airtime, please try again later');
             // }
 
         }else{
@@ -485,12 +485,12 @@ class HomeController extends Controller
             if(auth()->user()->profile->phone_verified == true && $bankInfor){
                 generateVirtualAccount($accountInformation['data']['account_name'], auth()->user()->phone);
             }
-               
+
             return back()->with('success', 'Account Details Added');
                 //return redirect('wallet/withdraw')->with('success', 'Withdrawal Successfully queued');
         }else{
             return back()->with('error', 'Your bank account is not valid');
-        }  
+        }
     }
 
     public function transferFund($amount, $recipient)

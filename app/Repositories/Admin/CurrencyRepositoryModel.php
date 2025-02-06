@@ -46,7 +46,6 @@ class CurrencyRepositoryModel
 
     public function convertCurrency($from, $to)
     {
-
         return ConversionRate::where(
             'from',
             $from

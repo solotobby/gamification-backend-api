@@ -6,7 +6,6 @@ use App\Models\Currency;
 use App\Models\PaymentTransaction;
 use App\Models\Wallet;
 
-
 class WalletRepositoryModel
 {
     public function createWallet($user, $currency)
@@ -67,6 +66,7 @@ class WalletRepositoryModel
                 return $wallet->bonus >= $amount;
         }
     }
+
 
     public function checkReferralCommission($mapCurrency)
     {
@@ -132,6 +132,27 @@ class WalletRepositoryModel
         if ($wallet->save()) return true;
     }
 
+    public function getUserTransactions($user, $page = null)
+    {
+        return PaymentTransaction::where(
+            'user_id',
+            $user->id
+        )->where(
+            'status',
+            'successful'
+        )->where(
+            'user_type',
+            'regular'
+        )->orderBy(
+            'created_at',
+            'DESC'
+        )->paginate(
+            10,
+            ['*'],
+            'page',
+            $page
+        );
+    }
     public function creditWallet($user, $currency, $amount)
     {
         $wallet = Wallet::where(
@@ -170,17 +191,26 @@ class WalletRepositoryModel
         $wallet->save();
     }
 
-    public function createTransaction($user, $amount, $ref, $campId, $baseCurrency, $referral = null, $username = null)
-    {
+    public function createTransaction(
+        $user,
+        $amount,
+        $ref,
+        $campId,
+        $baseCurrency,
+        $type,
+        $description,
+        $txType,
+        $referral = null,
+    ) {
         // Check if this is the user's first transaction
         $isFirstTransaction = !PaymentTransaction::where('user_id', $user->id)->exists();
 
         if ($referral) {
             $transactionType = 'referer_bonus';
-            $transactionDescription = 'Referrer Bonus from ' . $username;
+            $transactionDescription = 'Referrer Bonus from ' . $description;
         }
-        $transactionType = $isFirstTransaction ? 'upgrade_payment' : 'wallet_topup';
-        $transactionDescription = $isFirstTransaction ? 'Upgrade Payment' : 'Wallet Top Up';
+        $transactionType = $isFirstTransaction ? 'upgrade_payment' : $type;
+        $transactionDescription = $isFirstTransaction ? 'Upgrade Payment' : $description;
 
         $transaction = PaymentTransaction::create([
             'user_id' => $user->id,
@@ -192,7 +222,7 @@ class WalletRepositoryModel
             'channel' => 'freebyz',
             'type' => $transactionType,
             'description' => $transactionDescription,
-            'tx_type' => 'Credit',
+            'tx_type' => $txType,
             'user_type' => 'regular'
         ]);
 

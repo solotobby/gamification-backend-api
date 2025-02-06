@@ -35,7 +35,7 @@ use App\Models\UserLocation;
 use App\Models\UserScore;
 use App\Models\VirtualAccount;
 use App\Models\Wallet;
-use App\Models\Withrawal;
+use App\Models\Withdrawal;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -70,7 +70,7 @@ class AdminController extends Controller
     }
 
     publiC function storeQuestion(Request $request)
-    {   
+    {
         $question = Question::create($request->all());
         $question->save();
 
@@ -97,7 +97,7 @@ class AdminController extends Controller
         $question->save();
 
         return back()->with('status', 'Question Updated Successfully');
-        
+
     }
 
     public function gameStatus($id)
@@ -131,11 +131,11 @@ class AdminController extends Controller
     {
         $slug = Str::slug($request->name);
         $game = Games::create([
-            'name' => $request->name, 
-            'type' => $request->type, 
-            'number_of_winners' => $request->number_of_winners, 
-            'slug' => $slug, 
-            'time_allowed' => 0.25,//$request->time_allowed, 
+            'name' => $request->name,
+            'type' => $request->type,
+            'number_of_winners' => $request->number_of_winners,
+            'slug' => $slug,
+            'time_allowed' => 0.25,//$request->time_allowed,
             'number_of_questions'=>$request->number_of_questions,
             'status' => 1
         ]);
@@ -207,7 +207,7 @@ class AdminController extends Controller
 
     public function campaignDisputesView($id){
         $workdisputed = CampaignWorker::where('id', $id)->first();
-         
+
         // return $disputedJobInfo = DisputedJobs::where('campaign_worker_id', $workdisputed->id)->first();
         return view('admin.campaign_mgt.view_dispute', ['campaign' => $workdisputed]);
     }
@@ -226,7 +226,7 @@ class AdminController extends Controller
           $disputeJob->save();
 
         if($request->status == 'Approved'){
-            
+
             // $approvedJob = $campaign->completed()->where('status', 'Approved')->count();
 
             // if($approvedJob >= $campaign->number_of_staff){
@@ -278,13 +278,13 @@ class AdminController extends Controller
 
            return back()->with('success', 'Dispute resolved Successfully');
 
-            
+
 
         }else{
 
             $workDone->status = 'Denied';
             $workDone->save();
-          
+
             $this->removePendingCountAfterDenial($workDone->campaign_id);
 
             $campaingOwner = User::where('id', $campaign->user_id)->first();
@@ -321,12 +321,12 @@ class AdminController extends Controller
             $subject = 'Disputed Job '.$request->status;
             $status = $request->status;
             Mail::to($workDone->user->email)->send(new ApproveCampaign($workDone, $subject, $status));
-           
+
             return back()->with('success', 'Dispute resolved Successfully');
 
         }
 
-       
+
     }
 
     public function removePendingCountAfterDenial($id){
@@ -391,19 +391,19 @@ class AdminController extends Controller
     }
 
     public function withdrawalRequest(){
-        $withdrawal = Withrawal::where('status', '1')->orderBy('created_at', 'DESC')->paginate(50);
+        $withdrawal = Withdrawal::where('status', '1')->orderBy('created_at', 'DESC')->paginate(50);
         return view('admin.withdrawals.sent', ['withdrawals' => $withdrawal]);
     }
     public function withdrawalRequestQueued(){
-        $withdrawal = Withrawal::where('status', '0')->orderBy('created_at', 'DESC')->paginate(50);
+        $withdrawal = Withdrawal::where('status', '0')->orderBy('created_at', 'DESC')->paginate(50);
         return view('admin.withdrawals.queued', ['withdrawals' => $withdrawal]);
     }
 
     public function upgradeUserNaira($id){
-        
+
         if(auth()->user()->hasRole('admin')){
 
-            
+
             $getUser = User::where('id', $id)->first();
             $getUser->is_verified = 1;
             $getUser->save();
@@ -422,13 +422,13 @@ class AdminController extends Controller
             ]);
 
             $referee = Referral::where('user_id',  $getUser->id)->first();
-            
+
             if($referee){
 
                 $refereeInfo = Profile::where('user_id', $referee->referee_id)->first()->is_celebrity;
 
                 if(!$refereeInfo){
-                
+
                     $wallet = Wallet::where('user_id', $referee->referee_id)->first();
                     $wallet->balance += 500;
                     $wallet->save();
@@ -495,16 +495,16 @@ class AdminController extends Controller
                     'tx_type' => 'Credit',
                     'user_type' => 'admin'
                 ]);
-            
+
             }
             systemNotification(Auth::user(), 'success', 'User Verification',  $getUser->name.' was manually verified');
-            
+
             $name = SystemActivities::getInitials($getUser->name);
             SystemActivities::activityLog($getUser, 'account_verification', $name .' account verification', 'regular');
             Mail::to($getUser->email)->send(new UpgradeUser($getUser));
             return back()->with('success', 'Upgrade Successful');
 
-            
+
         }else{
              return back()->with('error', 'Unathorised user, only admin can upgrade people');
         }
@@ -560,7 +560,7 @@ class AdminController extends Controller
             systemNotification(Auth::user(), 'success', 'User Verification',  $getUser->name.' was manually verified');
             $name = SystemActivities::getInitials($getUser->name);
             SystemActivities::activityLog($getUser, 'dollar_account_verification', $name .' account verification', 'regular');
-             
+
             Mail::to($getUser->email)->send(new UpgradeUser($getUser));
             return back()->with('success', 'Upgrade Successful');
         }else{
@@ -574,7 +574,7 @@ class AdminController extends Controller
     }
 
     public function unapprovedJobs(){
-        
+
         $currentTime = Carbon::now();
         $twentyFourHoursAgo = $currentTime->subHours(24);
 
@@ -584,7 +584,7 @@ class AdminController extends Controller
 
         //  $list = SystemActivities::availableJobs();
 
-        return view('admin.unapproved_list', ['campaigns' => $list]); 
+        return view('admin.unapproved_list', ['campaigns' => $list]);
     }
 
     public function campaignInfo($id){
@@ -596,19 +596,19 @@ class AdminController extends Controller
     public function campaignDelete($id){
         Campaign::where('id', $id)->delete();
         return redirect('campaigns/pending'); //redirect()->with('success', 'Campaign Deleted Successfully');
-        
+
        // return view('admin.campaign_mgt.info', ['campaign' => $campaign, 'activities' => $activities]);
     }
 
 
     public function approvedJobs(){
         $list = CampaignWorker::where('status', 'Approved')->orderBy('created_at', 'DESC')->paginate(200);
-        return view('admin.approved_list', ['campaigns' => $list]); 
+        return view('admin.approved_list', ['campaigns' => $list]);
     }
 
     public function deniedCampaigns(){
         $list = Campaign::where('status', 'Decline')->orderBy('created_at', 'DESC')->get();
-        return view('admin.denied_list', ['campaigns' => $list]); 
+        return view('admin.denied_list', ['campaigns' => $list]);
     }
 
     public function jobReversal($id){
@@ -693,7 +693,7 @@ class AdminController extends Controller
         $camp->completed_count += 1;
         $camp->pending_count -= 1;
         $camp->save();
-        
+
         if($camp->currency == 'NGN'){
             $currency = 'NGN';
             $channel = 'paystack';
@@ -708,7 +708,7 @@ class AdminController extends Controller
             $wallet->save();
         }
 
-       
+
         $ref = time();
 
         setIsComplete($ca->campaign_id);
@@ -768,7 +768,7 @@ class AdminController extends Controller
             return back()->with('success', 'SMS Sent Successful');
         }else{
             return back()->with('error', 'There was an error in transit');
-        } 
+        }
     }
 
     public function campaignPending(){
@@ -777,7 +777,7 @@ class AdminController extends Controller
     }
 
     public function campaignStatus(Request $request){
-        
+
          $camp = Campaign::where('id', $request->id)->first();//find($request->id);
 
         if($request->status == 'Decline'){
@@ -789,7 +789,7 @@ class AdminController extends Controller
             //reverse the money
             $userWallet = Wallet::where('user_id', $camp->user_id)->first();
             $userWallet->balance += $amount;
-            $userWallet->save(); 
+            $userWallet->save();
 
             $est_amount = $camp->number_of_staff * $camp->campaign_amount;
             $percent = (50 / 100) * $est_amount;
@@ -797,8 +797,8 @@ class AdminController extends Controller
 
             $adminWallet = Wallet::where('user_id', '1')->first();
             $adminWallet->balance -= $adminCom;
-            $adminWallet->save(); 
-            
+            $adminWallet->save();
+
             PaymentTransaction::create([
                 'user_id' => $camp->user_id,
                 'campaign_id' => $camp->id,
@@ -811,11 +811,11 @@ class AdminController extends Controller
                 'description' => 'Campaign Reversal for '.$camp->post_title,
                 'tx_type' => 'Credit',
                 'user_type' => 'regular'
-            ]); 
+            ]);
             $user = User::where('id', $camp->user_id)->first();
             $content = 'Reason: '.$request->reason.'.';
             $subject = 'Campaign Declined';
-            Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));     
+            Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
         }else{
             $camp->status = $request->status;
             $camp->post_title = $request->post_title;
@@ -847,7 +847,7 @@ class AdminController extends Controller
 
         //&& $request->hasFile('product')
         if($request->hasFile('banner')){
-         
+
             $fileBanner = $request->file('banner');
             // $fileProduct = $request->file('product');
 
@@ -879,7 +879,7 @@ class AdminController extends Controller
             $data['description'] = $request->description;
             MarketPlaceProduct::create($data);
             return back()->with('success', 'Product Successfully created');
-            
+
         }else{
             return back()->with('error', 'Please upload an image');
         }
@@ -891,8 +891,8 @@ class AdminController extends Controller
     }
 
     public function updateWithdrawalRequest($id){
-       $withdrawals = Withrawal::where('id', $id)->first();
-       
+       $withdrawals = Withdrawal::where('id', $id)->first();
+
        if($withdrawals->status == '0'){
             $user = User::where('id', $withdrawals->user->id)->first();
             $bankInformation = BankInformation::where('user_id', $withdrawals->user->id)->first();
@@ -902,7 +902,7 @@ class AdminController extends Controller
                 $withdrawals->save();
                 //set activity log
                 $am = number_format($withdrawals->amount*100);
-                
+
                 $name = SystemActivities::getInitials($user->name);
                 SystemActivities::activityLog($user, 'withdrawal_sent', 'NGN'.$am.' cash withdrawal by '.$name, 'regular');
                 //send mail
@@ -916,11 +916,11 @@ class AdminController extends Controller
        }else{
             return back()->with('error', 'Payment has already been processed');
        }
-       
+
     }
 
     public function updateWithdrawalRequestManual($id){
-        $withdrawals = Withrawal::where('id', $id)->first();
+        $withdrawals = Withdrawal::where('id', $id)->first();
         $withdrawals->status = true;
         $withdrawals->save();
         $user = User::where('id', $withdrawals->user->id)->first();
@@ -972,17 +972,17 @@ class AdminController extends Controller
                     if($request->currency == 'NGN'){
                         $currency = 'NGN';
                         $channel = 'paystack';
-                        $wallet = Wallet::where('user_id', $request->user_id)->first(); 
+                        $wallet = Wallet::where('user_id', $request->user_id)->first();
                         $wallet->balance += $request->amount;
                         $wallet->save();
                     }else{
                         $currency = 'USD';
                         $channel = 'paypal';
-                        $wallet = Wallet::where('user_id', $request->user_id)->first(); 
+                        $wallet = Wallet::where('user_id', $request->user_id)->first();
                         $wallet->usd_balance += $request->amount;
                         $wallet->save();
                     }
-                
+
                     PaymentTransaction::create([
                         'user_id' => $request->user_id,
                         'campaign_id' => '1',
@@ -1009,17 +1009,17 @@ class AdminController extends Controller
                     if($request->currency == 'NGN'){
                         $currency = 'NGN';
                         $channel = 'paystack';
-                        $wallet = Wallet::where('user_id', $request->user_id)->first(); 
+                        $wallet = Wallet::where('user_id', $request->user_id)->first();
                         $wallet->balance -= $request->amount;
                         $wallet->save();
                     }else{
                         $currency = 'USD';
                         $channel = 'paypal';
-                        $wallet = Wallet::where('user_id', $request->user_id)->first(); 
+                        $wallet = Wallet::where('user_id', $request->user_id)->first();
                         $wallet->usd_balance -= $request->amount;
                         $wallet->save();
                     }
-                
+
                     PaymentTransaction::create([
                         'user_id' => $request->user_id,
                         'campaign_id' => '1',
@@ -1034,15 +1034,15 @@ class AdminController extends Controller
                         'user_type' => 'regular'
                     ]);
                     return back()->with('success', 'Wallet Successfully Debitted');
-            } 
+            }
         }else{
             echo "You are not suppose to be doing this!";
         }
-        
+
     }
 
     public function adminCelebrity(Request $request){
-        
+
         $userInfor = User::where('id', $request->user_id)->first();
         $userInfor->referral_code = $request->referral_code;
         $userInfor->save();
@@ -1115,7 +1115,7 @@ class AdminController extends Controller
     public function test(){
         return totalVirtualAccount();
         // $bankList = PaystackHelpers::bankList();
-        
+
 
 
         //CREATE CARD
@@ -1144,7 +1144,7 @@ class AdminController extends Controller
         //     'customerEmail' => 'solo@email.com',
         //     'description' => 'Payout Initiation',
         //     'beneficiaryId' => '01b753c1-b664-47f0-b311-608e7f0d5034',
-        //     'sourceWalletCurrency' => 'USD' 
+        //     'sourceWalletCurrency' => 'USD'
         // ];
         // return initiateBrailsPayout($payload);
         // "data": {
@@ -1224,7 +1224,7 @@ class AdminController extends Controller
 
         //return getCountriesSupported();
         // return listWellaHealthScriptions();
-       
+
 
         // return view('welcome', ['html' => $html]);
     }

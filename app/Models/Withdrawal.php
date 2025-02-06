@@ -5,12 +5,22 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Withrawal extends Model
+class Withdrawal extends Model
 {
     use HasFactory;
 
-    protected $table = "withrawals"; 
-    protected $fillable = ['user_id', 'amount', 'next_payment_date', 'status', 'currency', 'channel', 'paypal_email', 'is_usd'];
+    protected $table = "Withrawals";
+    protected $fillable = [
+        'user_id',
+        'amount',
+        'next_payment_date',
+        'status',
+        'currency',
+        'channel',
+        'paypal_email',
+        'is_usd',
+        'base_currency'
+    ];
 
     public function user()
     {
@@ -21,5 +31,4 @@ class Withrawal extends Model
     {
         return $this->belongsTo(BankInformation::class);
     }
-
 }

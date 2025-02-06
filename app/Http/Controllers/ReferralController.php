@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 
 class ReferralController extends Controller
 {
-
     protected $referral;
     public function __construct(ReferralService $referral)
     {
