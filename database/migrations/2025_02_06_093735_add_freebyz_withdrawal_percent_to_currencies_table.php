@@ -23,7 +23,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('currencies', function (Blueprint $table) {
-            //
+            $table->dropColumn('freebyz_withdrawal_percent');
+            $table->dropColumn('referral_withdrawal_percent');
         });
     }
 };
