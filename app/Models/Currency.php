@@ -20,6 +20,8 @@ class Currency extends Model
         'referral_commission',
         'base_rate',
         'min_withdrawal_amount',
-        'withdrawal_percent'
+        'withdrawal_percent',
+        'freebyz_withdrawal_percent',
+        'referral_withdrawal_percent'
     ];
 }

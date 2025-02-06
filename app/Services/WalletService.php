@@ -124,127 +124,206 @@ class WalletService
         }
     }
 
+    // public function processWithdrawals($request)
+    // {
+
+    //     $this->validator->processWithdrawalValidation($request);
+    //     try {
+
+    //         $user = auth()->user();
+    //         $baseCurrency = $user->wallet->base_currency;
+    //         $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+    //         $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+    //         $amount = $request->amount;
+    //         if (!$this->walletModel->checkWalletBalance(
+    //             $user,
+    //             $baseCurrency,
+    //             $amount
+    //         )) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => 'You do not have sufficient funds in your wallet',
+    //             ], 401);
+    //         }
+
+    //         if ($amount < $currency->min_withdrawal_amount) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => 'Amount less than the minimum withdrawal amount by Freebyz',
+    //             ], 401);
+    //         }
+
+    //         if($user->referredBy){
+
+    //             $this->processForReferredUser($user, $currency, $amount);
+    //         }
+
+    //         $percent = ($currency->withdrawal_percent / 100) * $amount;
+    //         $withdrawalAmount = $amount - $percent;
+
+    //         $ref = time();
+
+    //         $nextFriday = Carbon::now()->isFriday()
+    //         ? Carbon::now()->endOfDay()
+    //         : Carbon::now()->next('Friday')->endOfDay();
+
+    //         DB::beginTransaction();
+    //         //Debit User Wallet
+    //         if (!$this->walletModel->debitWallet(
+    //             $user,
+    //             $baseCurrency,
+    //             $amount
+    //         )) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => 'Wallet debit failed. Please try again.',
+    //             ], 500);
+    //         }
+
+
+    //         //Create Withdrawal in withdrawal table
+    //         $this->withdrawalModel->createWithdrawal(
+    //             $user,
+    //             $withdrawalAmount,
+    //             $nextFriday,
+    //             $currency,
+    //             $request->paypal_email,
+    //         );
+
+    //         //create Transaction for withdrawal
+    //         $this->walletModel->createTransaction(
+    //             $user,
+    //             $amount,
+    //             $ref,
+    //             '1',
+    //             $baseCurrency,
+    //             'cash_withdrawal',
+    //             'Cash Withdrawal from ' . $user->name,
+    //             'debit',
+    //         );
+
+
+    //         //fund admin wallet with withdrawal commission
+    //         $admin = $this->authModel->findUserById('1');
+    //         $this->walletModel->createWallet(
+    //             $admin,
+    //             $baseCurrency
+    //         );
+
+    //         //Admin Transaction Table
+    //         $this->walletModel->createAdminTransaction([
+    //             'user_id' => 1,
+    //             'campaign_id' => '1',
+    //             'reference' => $ref,
+    //             'amount' => $percent,
+    //             'status' => 'successful',
+    //             'currency' => $baseCurrency,
+    //             'channel' => 'freebyz',
+    //             'type' => 'withdrawal_commission',
+    //             'description' => 'Withdrawal Commission from ' . $user->name,
+    //             'tx_type' => 'Credit',
+    //             'user_type' => 'admin'
+    //         ]);
+
+    //         $this->logModel->createLogForWithdrawal(
+    //             $user,
+    //             $baseCurrency,
+    //             $amount
+    //         );
+
+    //         $this->logModel->systemNotification(
+    //             $user,
+    //             'success',
+    //             'Withdrawal Request',
+    //             $baseCurrency . '' . $amount . ' was debited from your wallet'
+    //         );
+
+    //         //Redundant Code
+    //         // $user = User::where('id', '1')->first();
+    //         // $subject = 'Withdrawal Request Queued!!';
+    //         // $content = 'A withdrwal request has been made and it being queued';
+    //         // Mail::to('freebyzcom@gmail.com')->send(new GeneralMail($user, $content, $subject, ''));
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'status' => true,
+    //             'message' => 'Withdrawal of ' . $baseCurrency . '' . $amount . ' Successfully done',
+    //         ], 201);
+    //     } catch (Throwable $exception) {
+    //         DB::rollBack();
+    //         return response()->json([
+    //             'status' => false,
+    //             'error' => $exception->getMessage(),
+    //             'message' => 'Error processing request'
+    //         ], 500);
+    //     }
+    // }
+
+    // public function processForReferredUser($user, $currency, $amount){
+    //     $referrer = $this->authModel->findUserByReferralCode($user->referredBy->referee_id);
+
+    //     $freebyzPercent = ($currency->freebyz_withdrawal_percent / 100) * $amount;
+    //     $referrerPercent = ($currency->referral_withdrawal_percent / 100) * $amount;
+
+    //     $totalPercent = $freebyzPercent + $referrerPercent;
+    //     $withdrawalAmount = $amount - $totalPercent;
+
+    // }
+
+
+
     public function processWithdrawals($request)
     {
-
         $this->validator->processWithdrawalValidation($request);
-        try {
 
+        try {
             $user = auth()->user();
             $baseCurrency = $user->wallet->base_currency;
             $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
             $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
 
             $amount = $request->amount;
-            if (!$this->walletModel->checkWalletBalance(
-                $user,
-                $baseCurrency,
-                $amount
-            )) {
+            if (!$this->walletModel->checkWalletBalance($user, $baseCurrency, $amount)) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'You do not have sufficient funds in your wallet',
+                    'message' => 'Insufficient wallet balance.',
                 ], 401);
             }
 
             if ($amount < $currency->min_withdrawal_amount) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Amount less than the minimum withdrawal amount by Freebyz',
+                    'message' => 'Amount is below the minimum withdrawal limit.',
                 ], 401);
             }
 
-            $percent = ($currency->withdrawal_percent / 100) * $amount;
-            $withdrawalAmount = $amount - $percent;
-
             $ref = time();
-
-            $nextFriday = Carbon::now()->isFriday()
-            ? Carbon::now()->endOfDay()
-            : Carbon::now()->next('Friday')->endOfDay();
+            $nextFriday = Carbon::now()->isFriday() ? Carbon::now()->endOfDay() : Carbon::now()->next('Friday')->endOfDay();
 
             DB::beginTransaction();
-            //Debit User Wallet
-            if (!$this->walletModel->debitWallet(
-                $user,
-                $baseCurrency,
-                $amount
-            )) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Wallet debit failed. Please try again.',
-                ], 500);
+
+            // Handle referral commission if applicable
+            if ($user->referredBy) {
+                // Process user withdrawal and get actual withdrawal amount
+                $this->debitUserWallet($user, $currency, $amount, $ref, $nextFriday, $request->paypal_email);
+                $this->handleReferralCommission($user, $currency, $amount, $ref);
+
+            } else {
+                // Process user withdrawal and get actual withdrawal amount
+                $this->debitUserWallet($user, $currency, $amount, $ref, $nextFriday, $request->paypal_email);
+
+                // Handle admin commission
+                $this->handleAdminCommission($user, $currency, $amount, $ref);
             }
 
-
-            //Create Withdrawal in withdrawal table
-            $this->withdrawalModel->createWithdrawal(
-                $user,
-                $withdrawalAmount,
-                $nextFriday,
-                $currency,
-                $request->paypal_email,
-            );
-
-            //create Transaction for withdrawal
-            $this->walletModel->createTransaction(
-                $user,
-                $amount,
-                $ref,
-                '1',
-                $baseCurrency,
-                'cash_withdrawal',
-                'Cash Withdrawal from ' . $user->name,
-                'debit',
-            );
-
-
-            //fund admin wallet with withdrawal commission
-            $admin = $this->authModel->findUserById('1');
-            $this->walletModel->createWallet(
-                $admin,
-                $baseCurrency
-            );
-
-            //Admin Transaction Table
-            $this->walletModel->createAdminTransaction([
-                'user_id' => 1,
-                'campaign_id' => '1',
-                'reference' => $ref,
-                'amount' => $percent,
-                'status' => 'successful',
-                'currency' => $baseCurrency,
-                'channel' => 'freebyz',
-                'type' => 'withdrawal_commission',
-                'description' => 'Withdrawal Commission from ' . $user->name,
-                'tx_type' => 'Credit',
-                'user_type' => 'admin'
-            ]);
-
-            $this->logModel->createLogForWithdrawal(
-                $user,
-                $baseCurrency,
-                $amount
-            );
-
-            $this->logModel->systemNotification(
-                $user,
-                'success',
-                'Withdrawal Request',
-                $baseCurrency . '' . $amount . ' was debited from your wallet'
-            );
-
-            //Redundant Code
-            // $user = User::where('id', '1')->first();
-            // $subject = 'Withdrawal Request Queued!!';
-            // $content = 'A withdrwal request has been made and it being queued';
-            // Mail::to('freebyzcom@gmail.com')->send(new GeneralMail($user, $content, $subject, ''));
 
             DB::commit();
 
             return response()->json([
                 'status' => true,
-                'message' => 'Withdrawal of ' . $baseCurrency . '' . $amount . ' Successfully done',
+                'message' => 'Withdrawal of ' . $baseCurrency . ' ' . $amount . ' processed successfully.',
             ], 201);
         } catch (Throwable $exception) {
             DB::rollBack();
@@ -254,6 +333,130 @@ class WalletService
                 'message' => 'Error processing request'
             ], 500);
         }
+    }
+
+    private function handleReferralCommission($user, $currency, $amount, $ref)
+    {
+        $referrer = $this->authModel->findUserByReferralCode($user->referredBy->referee_id);
+
+        if (!$referrer) {
+            return;
+        }
+
+        // Calculate referral commissions
+        $freebyzPercent = ($currency->freebyz_withdrawal_percent / 100) * $amount;
+        $referrerPercent = ($currency->referral_withdrawal_percent / 100) * $amount;
+
+
+        if ($user->wallet->base_currency !== $referrer->wallet->base_currency) {
+            $currencyRate = $this->currencyModel->convertCurrency(
+                $user->wallet->base_currency,
+                $referrer->wallet->base_currency
+            );
+
+            if (!$currencyRate) {
+                return;
+            }
+
+            $rate = $currencyRate->rate;
+            $referrerPercent *= $rate; // Convert the amount based on the rate
+        }
+
+        // Credit referrer
+        $this->walletModel->creditWallet($referrer, $referrer->wallet->base_currency, $referrerPercent);
+        $this->walletModel->createTransaction(
+            $referrer,
+            $referrerPercent,
+            $ref,
+            '1',
+            $referrer->wallet->base_currency,
+            'withdrawal_commission',
+            'Withdrawal commission from ' . $user->name . ' withdrawal',
+            'credit'
+        );
+
+        // Credit Freebyz platform commission
+        $admin = $this->authModel->findUserById('1');
+        $this->walletModel->creditWallet($admin, $user->wallet->base_currency, $freebyzPercent);
+        $this->walletModel->createAdminTransaction([
+            'user_id' => 1,
+            'campaign_id' => '1',
+            'reference' => $ref,
+            'amount' => $freebyzPercent,
+            'status' => 'successful',
+            'currency' => $user->wallet->base_currency,
+            'channel' => 'freebyz',
+            'type' => 'withdrawal_commission',
+            'description' => 'Withdrawal commission from ' . $user->name,
+            'tx_type' => 'Credit',
+            'user_type' => 'admin'
+        ]);
+    }
+
+    private function debitUserWallet($user, $currency, $amount, $ref, $nextFriday, $paypalEmail)
+    {
+        // Calculate withdrawal fee
+        $withdrawalFee = ($currency->withdrawal_percent / 100) * $amount;
+        $withdrawalAmount = $amount - $withdrawalFee;
+
+        // Debit user wallet
+        if (!$this->walletModel->debitWallet($user, $user->wallet->base_currency, $amount)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Wallet debit failed. Please try again.',
+            ], 500);
+        }
+
+        // Create withdrawal entry
+        $this->withdrawalModel->createWithdrawal($user, $withdrawalAmount, $nextFriday, $currency, $paypalEmail);
+
+        // Create withdrawal transaction
+        $this->walletModel->createTransaction(
+            $user,
+            $amount,
+            $ref,
+            '1',
+            $user->wallet->base_currency,
+            'cash_withdrawal',
+            'Cash Withdrawal from ' . $user->name,
+            'debit'
+        );
+
+        return $withdrawalAmount;
+    }
+
+    private function handleAdminCommission($user, $currency, $amount, $ref)
+    {
+        // Calculate withdrawal fee
+        $withdrawalFee = ($currency->withdrawal_percent / 100) * $amount;
+
+        // Credit admin wallet
+        $admin = $this->authModel->findUserById('1');
+        $this->walletModel->createWallet($admin, $user->wallet->base_currency);
+
+        // Create admin transaction for withdrawal fee
+        $this->walletModel->createAdminTransaction([
+            'user_id' => 1,
+            'campaign_id' => '1',
+            'reference' => $ref,
+            'amount' => $withdrawalFee,
+            'status' => 'successful',
+            'currency' => $user->wallet->base_currency,
+            'channel' => 'freebyz',
+            'type' => 'withdrawal_commission',
+            'description' => 'Withdrawal Commission from ' . $user->name,
+            'tx_type' => 'Credit',
+            'user_type' => 'admin'
+        ]);
+
+        // Log the withdrawal
+        $this->logModel->createLogForWithdrawal($user, $user->wallet->base_currency, $amount);
+        $this->logModel->systemNotification(
+            $user,
+            'success',
+            'Withdrawal Request',
+            $user->wallet->base_currency . ' ' . $amount . ' was debited from your wallet'
+        );
     }
 
     public function referralInUpgradeUser($user)
@@ -320,7 +523,8 @@ class WalletService
     }
 
 
-    public function getTransactions(){
+    public function getTransactions()
+    {
         try {
             $user = auth()->user();
             $transactions = $this->walletModel->getUserTransactions($user);
@@ -354,13 +558,13 @@ class WalletService
                 'data' => $data,
                 'pagination' => $pagination,
             ]);
-    } catch (Throwable $exception) {
-        return response()->json([
-            'status' => false,
-            'error' => $exception->getMessage(),
-            'message' => 'Error processing request'
-        ], 500);
-    }
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
     }
     public function setReferralAmountTopPay($user, $referrer)
     {
@@ -387,6 +591,7 @@ class WalletService
         ];
         return $data;
     }
+
     private function processReferrerBonus($user, $referrer, $amount, $currency)
     {
         $this->walletModel->creditWallet($referrer, $currency, $amount);
