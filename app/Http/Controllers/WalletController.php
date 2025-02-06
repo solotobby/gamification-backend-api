@@ -11,6 +11,7 @@ use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Withdrawal;
+use App\Services\BankService;
 use App\Services\WalletService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -21,10 +22,12 @@ use Illuminate\Support\Facades\Mail;
 class WalletController extends Controller
 {
     protected $walletService;
-    public function __construct(WalletService $walletService)
+    protected $bankService;
+    public function __construct(WalletService $walletService, BankService $bankService)
     {
         $this->middleware('auth');
         $this->walletService = $walletService;
+        $this->bankService = $bankService;
     }
 
     public function fundWallet(Request $request)
@@ -48,20 +51,17 @@ class WalletController extends Controller
         return $this->walletService->getTransactions();
     }
 
-    public function fund()
-    {
-        // $balance = '';
-        // if(walletHandler() == 'sendmonny'){
-        //     $balance = Sendmonny::getUserBalance(GetSendmonnyUserId(), accessToken());
-        // }
-        // $location = PaystackHelpers::getLocation();
-        return  view('user.wallet.fund');
+    public function getBankLists(){
+        return $this->bankService->getBankList();
     }
 
+    public function getAccountName(Request $request){
+        return $this->bankService->getAccountDetails($request);
+    }
 
-    public function withdraw()
+    public function createBankDetails(Request $request)
     {
-        return  view('user.wallet.withdraw');
+        return $this->bankService->saveUserAccountDetails($request);
     }
 
     public function storeFund(Request $request)

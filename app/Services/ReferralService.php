@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Http\Controllers\ReferralController;
-use App\Models\User;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;

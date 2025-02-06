@@ -45,4 +45,31 @@ class WalletValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function getAccountNameValidator($request)
+    {
+        $validationRules = [
+            'account_number' => 'required|numeric',
+            'bank_code' => 'required|string'
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function createBankDetailsValidator($request)
+    {
+        $validationRules = [
+            'account_number' => 'required|numeric',
+            'bank_code' => 'required|string',
+            'account_name' => 'required|string',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }
