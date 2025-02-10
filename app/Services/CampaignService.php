@@ -80,7 +80,7 @@ class CampaignService
                     'user_id' => $campaign->user_id,
                     'job_id' => $campaign->job_id,
                     'title' => $campaign->post_title,
-                    'approved' => $campaign->pending_count . '/' . $campaign->completed_count,
+                    'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
                     'unit_price' => round($unitPrice, 5),
                     'total_amount' => round($totalAmount, 5),
                     'currency' => $currency->code,
