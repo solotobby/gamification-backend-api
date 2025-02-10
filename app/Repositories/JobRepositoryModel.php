@@ -47,7 +47,7 @@ class JobRepositoryModel
             return 'NOT OK';
         }
     }
-    public function getDisputedJobs($user)
+    public function getDisputedJobs($user, $page = null)
     {
         return CampaignWorker::where(
             'user_id',
@@ -58,7 +58,7 @@ class JobRepositoryModel
         )->orderBy(
             'created_at',
             'ASC'
-        )->get();
+        )->paginate(10, ['*'], 'page', $page);
     }
 
     public function getCampaignStats($camId)
@@ -152,7 +152,7 @@ class JobRepositoryModel
             ->orderBy(
                 'created_at',
                 'DESC'
-            )->paginate(20, ['*'], 'page', $page);
+            )->paginate(10, ['*'], 'page', $page);
     }
 
     public function getJobById($jobId)
