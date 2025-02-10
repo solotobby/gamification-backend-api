@@ -77,7 +77,7 @@ class JobService
                     'category' => $value->campaignCategory->name,
                     'completed' => $count,
                     'is_completed' => $count >= $value->number_of_staff ? true : false,
-                    'progress' => $progress,
+                    'progress' => round($progress, 2),
                     'currency' => $currency->code,
                     'created_at' => $value->created_at
                 ];
@@ -136,7 +136,7 @@ class JobService
             $data = [];
             foreach ($jobs as $job) {
                 $workerDetails = $this->authModel->findUserById($job->user_id);
-                $campaignDetails = $this->campaignModel->getCampaignById($job->campaign_id, $user->id);
+                $campaignDetails = $this->campaignModel->getCampaignById($job->campaign_id);
 
                 $data[] = [
                     'id' => $job->id,

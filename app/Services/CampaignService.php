@@ -563,8 +563,8 @@ class CampaignService
     private function processCampaign($total, $request, $job_id, $percent, $allowUpload, $priotize)
     {
         $user = auth()->user();
-        $currency = $user->wallet->base_currency == "Naira" ? 'NGN' : 'USD';
-        $channel = $user->wallet->base_currency == "Naira" ? 'paystack' : 'paypal';
+        $currency = $this->walletModel->mapCurrency($user->wallet->base_currency);
+        $channel = $user->wallet->base_currency == "NGN" ? 'paystack' : 'paypal';
 
         $request->merge([
             'user_id' => $user->id,
