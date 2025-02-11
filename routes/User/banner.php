@@ -10,6 +10,7 @@ Route::middleware([
     'banner'
 )->group(function () {
     Route::post('/create-ad', [BannerController::class, 'createBanner']);
+    Route::post('/click-ad/{bannerId}', [BannerController::class, 'clickAdCount']);
     Route::get('/list', [BannerController::class, 'getUserBanner']);
     Route::get('/preference-list', [BannerController::class, 'getBannerPreference']);
 });

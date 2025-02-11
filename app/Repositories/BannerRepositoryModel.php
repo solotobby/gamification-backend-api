@@ -53,7 +53,8 @@ class BannerRepositoryModel
     }
 
 
-    public function createBannerInterest($audience, $banner){
+    public function createBannerInterest($audience, $banner)
+    {
         foreach ($audience as $id) {
             DB::table(
                 'banner_interests'
@@ -65,5 +66,18 @@ class BannerRepositoryModel
                 'updated_at' => now()
             ]);
         }
+    }
+
+    public function findBanner($bannerId)
+    {
+        return Banner::where('banner_id', $bannerId)->first();
+    }
+
+    public function logBannerClicks($user, $bannerId)
+    {
+        BannerClick::create([
+            'user_id' => $user->id,
+            'banner_id' => $bannerId
+        ]);
     }
 }

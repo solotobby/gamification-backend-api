@@ -122,7 +122,7 @@ class BannerService
                 return response()->json([
                     'status' => false,
                     'message' => 'Wallet debit failed. Please try again.',
-                ], 401);    
+                ], 401);
             }
 
             //s3 bucket processing
@@ -202,19 +202,49 @@ class BannerService
 
     public function adView($bannerId)
     {
-        $ban = Banner::where('banner_id', $bannerId)->first();
-        // $ban->impression += 1;
-        // $ban->clicks -= 1;
-        $ban->click_count += 1;
-        $ban->save();
+        DB::beginTransaction();
 
-        if ($ban->click_count >= $ban->clicks) {
-            $ban->live_state = 'Ended';
-            $ban->banner_end_date = Carbon::now();
+        try {
+            $user = auth()->user();
+            $ban = $this->bannerModel->findBanner($bannerId);
+            // Check if banner exists
+            if (!$ban) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Banner not found.'
+                ], 404);
+            }
+
+            // Update click count
+            $ban->click_count += 1;
             $ban->save();
-        }
 
-        BannerClick::create(['user_id' => auth()->user()->id, 'banner_id' => $ban->id]);
-        return redirect($ban->external_link);
+            // Check if the banner has reached the maximum click count
+            if ($ban->click_count >= $ban->clicks) {
+                $ban->live_state = 'Ended';
+                $ban->banner_end_date = Carbon::now();
+                $ban->save();
+            }
+
+            // Log the click for the banner
+            $this->bannerModel->logBannerClicks($user, $ban->id);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Banner clicked successfully',
+                'data' => [
+                    'link' => $ban->external_link
+                ]
+            ], 200);
+        } catch (Exception $exception) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing banner view.'
+            ], 500);
+        }
     }
 }

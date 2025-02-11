@@ -28,4 +28,9 @@ class BannerController extends Controller
     {
         return $this->bannerService->createBanner($request);
     }
+
+    public function clickAdCount($bannerId)
+    {
+        return $this->bannerService->adView($bannerId);
+    }
 }
