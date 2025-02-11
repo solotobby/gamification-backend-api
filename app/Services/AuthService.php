@@ -20,7 +20,12 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthService
 {
-    private $validator, $auth, $wallet, $refer, $log, $walletModel;
+    protected $validator;
+    protected $auth;
+    protected $wallet;
+    protected $refer;
+    protected $log;
+    protected $walletModel;
 
     public function __construct(
         AuthValidator $validator,
@@ -276,7 +281,7 @@ class AuthService
         // Create user
         $user = $this->auth->createUser($payload);
 
-       // return $user;
+        // return $user;
         // Set wallet and currency
         $curLocation = $payload->country;
         $currency = $curLocation === 'Nigeria' ? 'NGN' : 'USD';
@@ -294,7 +299,7 @@ class AuthService
         if ($ref_id) {
 
             $referrer = $this->refer->getReferrerDetails($ref_id);
-            if($referrer){
+            if ($referrer) {
                 // add the referral commission amount
                 $baseCurrency = $referrer->wallet->base_currency;
                 $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);

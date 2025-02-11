@@ -13,8 +13,13 @@ use Throwable;
 
 class SurveyService
 {
-    private  $validator, $walletService, $survey,
-        $auth, $log, $currency, $wallet;
+    protected $validator;
+    protected $walletService;
+    protected $survey;
+    protected $auth;
+    protected $log;
+    protected $currency;
+    protected $wallet;
 
     public function __construct(
         SurveyValidator $validator,

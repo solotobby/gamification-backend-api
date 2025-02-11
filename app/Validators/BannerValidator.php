@@ -10,9 +10,9 @@ class BannerValidator
     public function createBannerValidator($request)
     {
         $validationRules = [
-            'banner_url' => 'required|image|mimes:png,jpeg,gif,jpg',
-            'count' => 'required|array|min:5',
+            'banner_image' => 'required|image|mimes:png,jpeg,gif,jpg',
             'external_link' => 'required|string',
+            'audience' => 'required|array|min:5',
             'budget' => 'required|numeric',
         ];
         $validator = Validator::make($request->all(), $validationRules);

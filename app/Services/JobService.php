@@ -4,26 +4,33 @@ namespace App\Services;
 
 use App\Mail\GeneralMail;
 use App\Mail\SubmitJob;
-use App\Models\User;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\JobRepositoryModel;
 use App\Repositories\LogRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
+use App\Services\Providers\AWSServiceProvider;
 use App\Validators\CampaignValidator;
 use Exception;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
-use League\Flysystem\StorageAttributes;
 use Throwable;
 use Illuminate\Support\Facades\DB;
 
 class JobService
 {
 
-    protected $jobModel, $currencyModel, $walletModel, $log,
-        $authModel, $campaignModel, $campaignService, $validator;
+    protected $jobModel;
+
+    protected $currencyModel;
+    protected $walletModel;
+    protected $log;
+    protected $authModel;
+    protected $campaignModel;
+    protected $campaignService;
+    protected $validator;
+    protected $awsService;
+
     public function __construct(
         JobRepositoryModel $jobModel,
         AuthRepositoryModel $authModel,
@@ -33,6 +40,7 @@ class JobService
         CampaignService $campaignService,
         CampaignValidator $validator,
         LogRepositoryModel $log,
+        AWSServiceProvider $awsService,
     ) {
         $this->jobModel = $jobModel;
         $this->authModel = $authModel;
@@ -42,6 +50,7 @@ class JobService
         $this->campaignService = $campaignService;
         $this->validator = $validator;
         $this->log = $log;
+        $this->awsService = $awsService;
     }
 
     public function availableJobs($request)
@@ -221,10 +230,10 @@ class JobService
             }
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
-                $file = $request->file('proof');
-                $filePath = 'proofs/' . time() . '_' . $file->getClientOriginalName();
-                Storage::disk('s3')->put($filePath, file_get_contents($file), 'public');
-                $proofUrl = Storage::disk('s3')->url($filePath);
+              $file = $request->hasFile('proof');
+                $filePath = 'proofs/' . time() . '_' . $file->extension();
+                $proofUrl = $this->awsService->uploadImage($file, $filePath);
+
             }
 
             //return $proofUrl;

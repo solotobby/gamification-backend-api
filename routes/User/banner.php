@@ -9,7 +9,7 @@ Route::middleware([
 ])->prefix(
     'banner'
 )->group(function () {
-    Route::post('/create', [BannerController::class, 'createBanner']);
+    Route::post('/create-ad', [BannerController::class, 'createBanner']);
     Route::get('/list', [BannerController::class, 'getUserBanner']);
     Route::get('/preference-list', [BannerController::class, 'getBannerPreference']);
 });

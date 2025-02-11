@@ -9,7 +9,9 @@ use App\Repositories\WalletRepositoryModel;
 
 class ReferralService
 {
-    protected $referralModel, $walletModel, $authModel;
+    protected $referralModel;
+    protected $walletModel;
+    protected $authModel;
     public function __construct(
         ReferralRepositoryModel $referralModel,
         WalletRepositoryModel $walletModel,
@@ -27,7 +29,7 @@ class ReferralService
         // Get all referrals for the authenticated user
         $referrals = $this->referralModel->getUserReferrals($user);
 
-       // return $referrals;
+        // return $referrals;
         // Total referrals
         $totalReferral = $referrals->count();
 

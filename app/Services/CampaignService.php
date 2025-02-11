@@ -19,8 +19,12 @@ use Exception;
 
 class CampaignService
 {
-    protected $campaignModel, $validator, $currencyModel,
-        $walletModel, $authModel, $jobModel;
+    protected $jobModel;
+    protected $currencyModel;
+    protected $walletModel;
+    protected $authModel;
+    protected $campaignModel;
+    protected $validator;
     public function __construct(
         CampaignRepositoryModel $campaignModel,
         CampaignValidator $validator,
@@ -112,7 +116,8 @@ class CampaignService
         }
     }
 
-    public function currencyConversion($from, $to){
+    public function currencyConversion($from, $to)
+    {
         $currencyRate = $this->currencyModel->convertCurrency($from, $to);
 
         // return $currencyRate;
@@ -125,7 +130,6 @@ class CampaignService
 
         $rate = $currencyRate->rate;
         return $rate;
-
     }
     public function create($request)
     {
@@ -183,7 +187,7 @@ class CampaignService
                 return response()->json([
                     'status' => false,
                     'message' => 'Wallet debit failed. Please try again.',
-                ], 500);
+                ], 401);
             }
 
             // Process the campaign
