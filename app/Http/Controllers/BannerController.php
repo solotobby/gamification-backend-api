@@ -24,8 +24,9 @@ class BannerController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function getUserBanner()
     {
+
         $banners = Banner::where('user_id', auth()->user()->id)->orderBy('created_at', 'DESC')->get();
         return view('user.banner.index', ['banners' => $banners]);
     }
@@ -35,7 +36,7 @@ class BannerController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function create()
+    public function createBanner()
     {
         // $countryList = countryList();
         $preferences = listPreferences();
@@ -51,7 +52,7 @@ class BannerController extends Controller
      */
     public function store(Request $request)
     {
-        
+
         $request->validate([
             'banner_url' => 'required|image|mimes:png,jpeg,gif,jpg',
             'count' => 'required|array|min:5',
@@ -93,10 +94,10 @@ class BannerController extends Controller
             $fileBanner = $request->file('banner_url');
             $Bannername = time();// . $fileBanner->getClientOriginalName();
             $filePathBanner = 'ad/' . $Bannername.'.'.$fileBanner->extension();
-            
+
             Storage::disk('s3')->put($filePathBanner, file_get_contents($fileBanner), 'public');
             $bannerUrl = Storage::disk('s3')->url($filePathBanner);
-            
+
 
             // $fileBanner = $request->file('banner_url');
             // //process local storage
@@ -104,14 +105,14 @@ class BannerController extends Controller
             // $Bannername =  $imgName.'.'.$request->banner_url->extension();//time();// . $fileBanner->getClientOriginalName();
             // $request->banner_url->move(public_path('banners'), $Bannername); //store in local storage
 
-        
-            $banner['user_id'] = auth()->user()->id; 
+
+            $banner['user_id'] = auth()->user()->id;
             $banner['banner_id'] = Str::random(7);
-            $banner['external_link'] = $request->external_link; 
+            $banner['external_link'] = $request->external_link;
             $banner['ad_placement_point'] = 0; //$request->ad_placement;
             $banner['adplacement_position'] = 'top'; //$request->adplacement;
             $banner['age_bracket'] = '18'; //$request->age_bracket;
-            $banner['duration'] = '1';//$request->duration; 
+            $banner['duration'] = '1';//$request->duration;
             $banner['country'] = 'all';//$request->country;
             $banner['status'] = false;
             $banner['amount'] = $request->budget; //$finalTotal;
@@ -125,7 +126,7 @@ class BannerController extends Controller
 
             if($createdBanner){
                 debitWallet(auth()->user(),'Naira', $request->budget);
-                //transaction log 
+                //transaction log
                 PaymentTransaction::create([
                     'user_id' => auth()->user()->id,
                     'campaign_id' => $createdBanner->id,
@@ -145,11 +146,11 @@ class BannerController extends Controller
                     \DB::table('banner_interests')->insert(['banner_id' => $createdBanner->id, 'interest_id' => $id['id'], 'unit' => $id['unit'], 'created_at' => now(), 'updated_at' => now()]);
                 }
             }
-          
+
             // $content = 'Your ad banner placement is successfully created. It is currenctly under review, you will get a notification when it goes live!';
             // $subject = 'Ad Banner Placement - Under Review';
 
-            // Mail::to(auth()->user()->email)->send(new GeneralMail(auth()->user(), $content, $subject, ''));  
+            // Mail::to(auth()->user()->email)->send(new GeneralMail(auth()->user(), $content, $subject, ''));
             return back()->with('success', 'Banner Ad Created Successfully');
 
         }else{
