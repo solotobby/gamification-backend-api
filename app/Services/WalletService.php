@@ -59,27 +59,27 @@ class WalletService
             DB::beginTransaction();
 
             // Check if the user has made a transaction before, if it's exist fund wallet
-            if ($user->firstTransaction()) {
+            if ($user->transactions) {
                 $this->walletModel->createTransaction(
                     $user,
                     $amount,
                     $ref,
                     '1',
-                    $baseCurrency,
+                    $currency->code,
                     'wallet_topup',
                     'Wallet Topup',
                     'credit',
                 );
                 $this->walletModel->creditWallet(
                     $user,
-                    $baseCurrency,
+                    $currency->code,
                     $amount
                 );
                 DB::commit();
 
                 return response()->json([
                     'status' => true,
-                    'message' => $baseCurrency . ' Wallet Funded Successfully',
+                    'message' => $currency->code . ' Wallet Funded Successfully',
                     // 'data' => $user
                 ], 201);
             }
@@ -98,14 +98,14 @@ class WalletService
                 $amount,
                 $ref,
                 '1', // campaign_id or some constant
-                $baseCurrency,
+                $currency->code,
                 'upgrade_payment',
                 'Upgrade Payment',
                 'credit',
             );
             $this->walletModel->creditWallet(
                 $user,
-                $baseCurrency,
+                $currency->code,
                 $amount
             );
 
@@ -118,7 +118,7 @@ class WalletService
 
             return response()->json([
                 'status' => true,
-                'message' => $baseCurrency . ' Wallet Verified Successfully',
+                'message' => $currency->code . ' Wallet Verified Successfully',
             ], 201);
         } catch (Throwable $exception) {
             DB::rollBack();

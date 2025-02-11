@@ -311,7 +311,7 @@ class CampaignService
 
             $data['category'] = $categories->map(function ($category) use ($mapCurrency) {
                 // Fetch subcategories for this category
-                $subCategories = $this->campaignModel->listSubCategories($category->id);
+                $subCategories = $this->campaignModel->listSubCategories($category['id']);
 
                 // Transform the subcategories
                 $subCategoryData = $subCategories->map(function ($sub) use ($mapCurrency) {
@@ -339,8 +339,8 @@ class CampaignService
 
                 // Add subcategories under the category
                 return [
-                    'id' => $category->id,
-                    'name' => $category->name,
+                    'id' => $category['id'],
+                    'name' => $category['name'],
                     'subcategories' => $subCategoryData
                 ];
             });
