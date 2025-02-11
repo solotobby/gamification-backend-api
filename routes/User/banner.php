@@ -11,5 +11,5 @@ Route::middleware([
 )->group(function () {
     Route::post('/create', [BannerController::class, 'createBanner']);
     Route::get('/list', [BannerController::class, 'getUserBanner']);
-    Route::patch('/campaign/add/worker', [BannerController::class, 'addWorkerToCampaign']);
+    Route::get('/preference-list', [BannerController::class, 'getBannerPreference']);
 });

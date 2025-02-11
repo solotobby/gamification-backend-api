@@ -51,8 +51,21 @@ class SurveyService
 
             // Fetch interests sorted by name
             $data['interests'] = $this->survey->listAllInterest();
-            $data['currency'] = $this->currency->getActiveCurrenciesList();
+            $currency = $this->currency->getActiveCurrenciesList();
 
+            $data['currency'] = [];
+
+            foreach ($currency as $cur) {
+
+                $data['currency'][] = [
+                    'id' => $cur->id,
+                    'code' => $cur->code,
+                    'country' => $cur->country,
+                    'is_active' => $cur->is_active,
+                    'created_at' => $cur->created_at,
+                    'updated_at' => $cur->updated_at
+                ];
+            }
             return response()->json([
                 'status' => true,
                 'message' => 'List of interests retrieved successfully',
