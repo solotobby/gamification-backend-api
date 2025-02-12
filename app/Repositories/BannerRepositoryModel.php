@@ -80,4 +80,16 @@ class BannerRepositoryModel
             'banner_id' => $bannerId
         ]);
     }
+
+    public function getRandomActiveBanners()
+    {
+        return Banner::where('status', true)
+            ->inRandomOrder()
+            ->limit(2)
+            ->get();
+    }
+
+    public function increaseImpression($bannerId){
+        
+    }
 }

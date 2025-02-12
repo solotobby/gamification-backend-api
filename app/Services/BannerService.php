@@ -222,6 +222,7 @@ class BannerService
             // Check if the banner has reached the maximum click count
             if ($ban->click_count >= $ban->clicks) {
                 $ban->live_state = 'Ended';
+                $ban->status = false;
                 $ban->banner_end_date = Carbon::now();
                 $ban->save();
             }
@@ -233,7 +234,7 @@ class BannerService
 
             return response()->json([
                 'status' => true,
-                'message' => 'Banner clicked successfully',
+                'message' => 'Banner click recorded successfully',
                 'data' => [
                     'link' => $ban->external_link
                 ]
