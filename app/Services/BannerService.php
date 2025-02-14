@@ -13,6 +13,8 @@ use App\Validators\BannerValidator;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class BannerService
 {
@@ -125,7 +127,7 @@ class BannerService
                 ], 401);
             }
 
-            //s3 bucket processing
+           // s3 bucket processing
             $file = $request->file('banner_image');
             $filePath = 'ad/' . time() . '.' . $file->extension();
             $bannerUrl = $this->awsService->uploadImage($file, $filePath);
@@ -168,6 +170,7 @@ class BannerService
             ], 201);
         } catch (Exception $exception) {
             DB::rollBack();
+            Log::error($exception->getMessage());
             return response()->json([
                 'status' => false,
                 'error' => $exception->getMessage(),
