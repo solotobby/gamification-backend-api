@@ -19,8 +19,12 @@ use Exception;
 
 class CampaignService
 {
-    protected $campaignModel, $validator, $currencyModel,
-        $walletModel, $authModel, $jobModel;
+    protected $jobModel;
+    protected $currencyModel;
+    protected $walletModel;
+    protected $authModel;
+    protected $campaignModel;
+    protected $validator;
     public function __construct(
         CampaignRepositoryModel $campaignModel,
         CampaignValidator $validator,
@@ -112,7 +116,8 @@ class CampaignService
         }
     }
 
-    public function currencyConversion($from, $to){
+    public function currencyConversion($from, $to)
+    {
         $currencyRate = $this->currencyModel->convertCurrency($from, $to);
 
         // return $currencyRate;
@@ -125,7 +130,6 @@ class CampaignService
 
         $rate = $currencyRate->rate;
         return $rate;
-
     }
     public function create($request)
     {
@@ -183,7 +187,7 @@ class CampaignService
                 return response()->json([
                     'status' => false,
                     'message' => 'Wallet debit failed. Please try again.',
-                ], 500);
+                ], 401);
             }
 
             // Process the campaign
@@ -307,7 +311,7 @@ class CampaignService
 
             $data['category'] = $categories->map(function ($category) use ($mapCurrency) {
                 // Fetch subcategories for this category
-                $subCategories = $this->campaignModel->listSubCategories($category->id);
+                $subCategories = $this->campaignModel->listSubCategories($category['id']);
 
                 // Transform the subcategories
                 $subCategoryData = $subCategories->map(function ($sub) use ($mapCurrency) {
@@ -335,8 +339,8 @@ class CampaignService
 
                 // Add subcategories under the category
                 return [
-                    'id' => $category->id,
-                    'name' => $category->name,
+                    'id' => $category['id'],
+                    'name' => $category['name'],
                     'subcategories' => $subCategoryData
                 ];
             });

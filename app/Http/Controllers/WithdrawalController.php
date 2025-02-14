@@ -2,39 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\WalletService;
 use Illuminate\Http\Request;
 
 class WithdrawalController extends Controller
 {
-    public function __construct()
+    protected $walletService;
+    public function __construct(WalletService $walletService)
     {
         $this->middleware('auth');
+        $this->walletService = $walletService;
     }
 
-    public function listBanks($countryCode){
-        if($countryCode == 'GH'){
-            $data = [
-                ['code' => 'MTN', 'name' => 'MTN Mobile Money', 'currency' => 'GHS'],
-                ['code' => 'AIRTELTIGO', 'name' => 'AIRTELTIGO Mobile Money', 'currency' => 'GHS'],
-                ['code' => 'VODAFONE', 'name' => 'VODAFONE Mobile Money', 'currency' => 'GHS']
-            ];
-        }elseif($countryCode == 'KE'){
-            $data = [
-                ['code' => 'MPS', 'name' => 'M-Pesa', 'currency' => 'KES'],
-                ['code' => 'MPX', 'name' => 'Airtel Kenya', 'currency' => 'KES'], 
-            ];
-        }else{
-            $data = [
-                ['code' => 'MPS', 'name' => 'M-Pesa']
-            ];
-        }
 
-        return response()->json(['data'=>$data, 'message' => 'Bank List'], 200);
-
-        // return flutterwaveListBanks($countryCode);
+    public function processWithdrawals(Request $request)
+    {
+        return $this->walletService->processWithdrawals($request);
     }
 
-    public function rates(){
-        return brailRates();
+    public function getUserWithdrawals()
+    {
+        return $this->walletService->getWithdrawals();
     }
 }

@@ -10,17 +10,34 @@ class JobRepositoryModel
 {
     public function getJobByType($user, $type, $page = null)
     {
-        return CampaignWorker::where(
+        $query = CampaignWorker::where(
             'user_id',
             $user->id
-        )->where(
-            'status',
-            $type
-        )->orderBy(
+        );
+
+        if ($type === 'approved') {
+            $query->whereIn(
+                'status',
+                ['approved', 'denied']
+            );
+        } else {
+            $query->where(
+                'status',
+                $type
+            );
+        }
+
+        return $query->orderBy(
             'created_at',
             'ASC'
-        )->paginate(10, ['*'], 'page', $page);
+        )->paginate(
+                10,
+                ['*'],
+                'page',
+                $page
+            );
     }
+
 
     public function createJobs($user, $campaignId, $request, $currency, $proofUrl, $unitPrice)
     {

@@ -12,6 +12,7 @@
         "laravel/passport": "^11.10",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
+        "league/flysystem-aws-s3-v3": "^3.29",
         "spatie/laravel-permission": "^6.4",
         "stevebauman/location": "^7.1"
     },

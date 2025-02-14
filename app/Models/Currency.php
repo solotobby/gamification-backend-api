@@ -22,6 +22,7 @@ class Currency extends Model
         'min_withdrawal_amount',
         'withdrawal_percent',
         'freebyz_withdrawal_percent',
-        'referral_withdrawal_percent'
+        'referral_withdrawal_percent',
+        'banner_clicks_amount'
     ];
 }

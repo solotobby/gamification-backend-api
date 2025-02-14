@@ -4,26 +4,35 @@ namespace App\Services;
 
 use App\Mail\GeneralMail;
 use App\Mail\SubmitJob;
-use App\Models\User;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
+use App\Repositories\BannerRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\JobRepositoryModel;
 use App\Repositories\LogRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
+use App\Services\Providers\AWSServiceProvider;
 use App\Validators\CampaignValidator;
 use Exception;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
-use League\Flysystem\StorageAttributes;
 use Throwable;
 use Illuminate\Support\Facades\DB;
 
 class JobService
 {
 
-    protected $jobModel, $currencyModel, $walletModel, $log,
-        $authModel, $campaignModel, $campaignService, $validator;
+    protected $jobModel;
+
+    protected $currencyModel;
+    protected $walletModel;
+    protected $log;
+    protected $authModel;
+    protected $campaignModel;
+    protected $campaignService;
+    protected $validator;
+    protected $awsService;
+    protected $bannerModel;
+
     public function __construct(
         JobRepositoryModel $jobModel,
         AuthRepositoryModel $authModel,
@@ -33,6 +42,8 @@ class JobService
         CampaignService $campaignService,
         CampaignValidator $validator,
         LogRepositoryModel $log,
+        AWSServiceProvider $awsService,
+        BannerRepositoryModel $bannerModel,
     ) {
         $this->jobModel = $jobModel;
         $this->authModel = $authModel;
@@ -42,6 +53,8 @@ class JobService
         $this->campaignService = $campaignService;
         $this->validator = $validator;
         $this->log = $log;
+        $this->awsService = $awsService;
+        $this->bannerModel = $bannerModel;
     }
 
     public function availableJobs($request)
@@ -51,9 +64,10 @@ class JobService
             $subCategory = strtolower($request->query('subcategory_id'));
             $page = strtolower($request->query('page'));
 
+            // Fetching available jobs
             $jobs = $this->jobModel->availableJobs($user->id, $subCategory, $page);
-            // return $jobs;
             $data = [];
+
             foreach ($jobs as $key => $value) {
                 $count = $value->pending_count + $value->completed_count;
                 $div = $count / $value->number_of_staff;
@@ -63,10 +77,12 @@ class JobService
                 $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
                 $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
                 $unitPrice = $value->campaign_amount;
+
                 if ($currency->code !== $value->currency) {
                     $rate = $this->campaignService->currencyConversion($value->currency, $currency->code);
                     $unitPrice *= $rate;
                 }
+
                 $data[] = [
                     'id' => $value->id,
                     'job_id' => $value->job_id,
@@ -83,6 +99,29 @@ class JobService
                 ];
             }
 
+            // Fetching 2 random active banners
+            $banners = $this->bannerModel->getRandomActiveBanners();
+
+            $bannerData = [];
+
+            foreach ($banners as $bannerItem) {
+
+                //Increase impression upon display
+                $bannerItem->impression_count += 1;
+                $bannerItem->save();
+
+                $bannerData[] = [
+                    'banner_id' => $bannerItem->banner_id,
+                    'banner_url' => $bannerItem->banner_url,
+                    'external_link' => $bannerItem->external_link,
+                    'status' => $bannerItem->status ? true : false,
+                    'clicks' => $bannerItem->click_count,
+                    'created_at' => $bannerItem->created_at,
+                    'updated_at' => $bannerItem->updated_at,
+                ];
+            }
+
+            // Pagination data for jobs
             $pagination = [
                 'current_page' => $jobs->currentPage(),
                 'last_page' => $jobs->lastPage(),
@@ -96,6 +135,7 @@ class JobService
                 'status' => true,
                 'message' => 'Jobs retrieved successfully.',
                 'data' => $data,
+                'banners' => $bannerData,
                 'pagination' => $pagination,
             ]);
         } catch (Throwable $exception) {
@@ -106,6 +146,7 @@ class JobService
             ], 500);
         }
     }
+
     public function myJobs($request)
     {
         try {
@@ -156,6 +197,27 @@ class JobService
                 ];
             }
 
+              // Fetching 2 random active banners
+              $banners = $this->bannerModel->getRandomActiveBanners();
+
+              $bannerData = [];
+
+              foreach ($banners as $bannerItem) {
+                
+                   //Increase impression upon display
+                   $bannerItem->impression_count += 1;
+                   $bannerItem->save();
+
+                  $bannerData[] = [
+                      'banner_id' => $bannerItem->banner_id,
+                      'banner_url' => $bannerItem->banner_url,
+                      'external_link' => $bannerItem->external_link,
+                      'status' => $bannerItem->status ? true : false,
+                      'clicks' => $bannerItem->click_count,
+                      'created_at' => $bannerItem->created_at,
+                      'updated_at' => $bannerItem->updated_at,
+                  ];
+              }
             $pagination = [
                 'current_page' => $jobs->currentPage(),
                 'last_page' => $jobs->lastPage(),
@@ -169,6 +231,7 @@ class JobService
                 'status' => true,
                 'message' => 'Jobs retrieved successfully.',
                 'data' => $data,
+                'banners' => $bannerData,
                 'pagination' => $pagination,
             ]);
         } catch (Throwable $exception) {
@@ -221,10 +284,9 @@ class JobService
             }
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
-                $file = $request->file('proof');
-                $filePath = 'proofs/' . time() . '_' . $file->getClientOriginalName();
-                Storage::disk('s3')->put($filePath, file_get_contents($file), 'public');
-                $proofUrl = Storage::disk('s3')->url($filePath);
+                $file = $request->hasFile('proof');
+                $filePath = 'proofs/' . time() . '_' . $file->extension();
+                $proofUrl = $this->awsService->uploadImage($file, $filePath);
             }
 
             //return $proofUrl;

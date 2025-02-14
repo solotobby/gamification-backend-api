@@ -9,7 +9,8 @@ use Throwable;
 
 class  UserService
 {
-    protected $user, $auth;
+    protected $user;
+    protected $auth;
     public function __construct(AuthRepositoryModel $auth,)
     {
         $this->auth = $auth;
