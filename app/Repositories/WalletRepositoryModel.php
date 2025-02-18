@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Currency;
 use App\Models\PaymentTransaction;
+use App\Models\User;
 use App\Models\Wallet;
 
 class WalletRepositoryModel
@@ -12,6 +13,32 @@ class WalletRepositoryModel
     {
         $wallet = Wallet::create(['user_id' => $user->id, 'balance' => '0.00', 'base_currency' => $currency]);
         return $wallet;
+    }
+
+    public function walletDetails($user, $currency = null)
+    {
+
+        $wallet = Wallet::where('user_id', $user->id)->first();
+
+        if (!$wallet) {
+            $currency = strtoupper($currency ?? 'NGN');
+            $wallet = $this->createWallet($user, $currency);
+        }
+        // Map currency
+        $balance = match (strtoupper($wallet->base_currency)) {
+            'NAIRA', 'NGN' => $wallet->balance,
+            'DOLLAR', 'USD' => $wallet->usd_balance,
+            default => $wallet->bonus,
+        };
+        return [
+            'id' => $wallet->id,
+            'user_id' => $wallet->user_id,
+            'balance' => $balance,
+            'user_type' => $wallet->user_type,
+            'base_currency' => $wallet->base_currency,
+            'created_at' => $wallet->created_at,
+            'updated_at' => $wallet->updated_at,
+        ];
     }
 
     public function updateWallet($user, $currency, $amount)
