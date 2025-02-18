@@ -101,7 +101,7 @@ class AuthService
 
             // Generate user data and token
             $data['user'] = $this->auth->findUserWithRole($request->email);
-            $data['wallet'] = $user->wallet;
+            $data['wallet'] = $this->walletModel->walletDetails($user);
             $data['token'] = $user->createToken('freebyz')->accessToken;
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
 
@@ -287,7 +287,7 @@ class AuthService
         $currency = $curLocation === 'Nigeria' ? 'NGN' : 'USD';
 
         // Create wallet
-        $wallet = $this->wallet->createWallet($user, $currency);
+        $wallet = $this->wallet->walletDetails($user, $currency);
 
         // Handle optional profile creation for non-local environments
         $profile = [];

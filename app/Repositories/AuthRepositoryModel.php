@@ -6,7 +6,6 @@ use App\Models\OTP;
 use App\Models\User;
 use App\Models\Profile;
 use Illuminate\Support\Str;
-use App\Models\SurveyInterest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Stevebauman\Location\Facades\Location;
