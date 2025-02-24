@@ -29,6 +29,11 @@ class  UserService
             $data['wallet'] = $this->wallet->walletDetails($user);
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
             $data['profile'] = setProfile($user);
+            return response()->json([
+                'status' => true,
+                'message' => 'User Details Successfully Retrieved',
+                'data' => $data
+            ], 200);
         } catch (Throwable $e) {
             return response()->json([
                 'status' => false,
@@ -36,10 +41,5 @@ class  UserService
                 'message' => 'Error processing request'
             ], 500);
         }
-        return response()->json([
-            'status' => true,
-            'message' => 'User Details Successfully Retrieved',
-            'data' => $data
-        ], 200);
     }
 }

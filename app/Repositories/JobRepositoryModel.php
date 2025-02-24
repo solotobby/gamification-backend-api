@@ -31,11 +31,11 @@ class JobRepositoryModel
             'created_at',
             'ASC'
         )->paginate(
-                10,
-                ['*'],
-                'page',
-                $page
-            );
+            10,
+            ['*'],
+            'page',
+            $page
+        );
     }
 
 
@@ -75,7 +75,12 @@ class JobRepositoryModel
         )->orderBy(
             'created_at',
             'ASC'
-        )->paginate(10, ['*'], 'page', $page);
+        )->paginate(
+            10,
+            ['*'],
+            'page',
+            $page
+        );
     }
 
     public function getCampaignStats($camId)
