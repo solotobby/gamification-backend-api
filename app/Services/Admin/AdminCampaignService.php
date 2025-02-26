@@ -64,4 +64,56 @@ class AdminCampaignService
             ], 500);
         }
     }
+
+    public function getCampaigns($request)
+    {
+        try {
+
+            $type = strtolower($request->query('type'));
+            // Fetch campaigns
+            $campaigns = $this->campaignModel->getCampaignsByAdmin( $type);
+
+            // Prepare campaign data
+            $data = [];
+            foreach ($campaigns as $campaign) {
+                $unitPrice = $campaign->campaign_amount;
+                $totalAmount = $campaign->total_amount;
+
+                $data[] = [
+                    'id' => $campaign->id,
+                    'user_id' => $campaign->user_id,
+                    'user_name' => $campaign->user->name ?? null,
+                    'job_id' => $campaign->job_id,
+                    'title' => $campaign->post_title,
+                    'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
+                    'unit_price' => round($unitPrice, 5),
+                    'total_amount' => round($totalAmount, 5),
+                    'currency' => $campaign->currency,
+                    'status' => $campaign->status,
+                    'created' => $campaign->created_at,
+                ];
+            }
+            $pagination = [
+                'total' => $campaigns->total(),
+                'per_page' => $campaigns->perPage(),
+                'current_page' => $campaigns->currentPage(),
+                'last_page' => $campaigns->lastPage(),
+                'from' => $campaigns->firstItem(),
+                'to' => $campaigns->lastItem(),
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Campaign List',
+                'data' => $data,
+                'pagination' => $pagination,
+            ], 200);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
 }

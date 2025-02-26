@@ -42,7 +42,7 @@ class CampaignRepositoryModel
         return Campaign::create($request->all());
     }
 
-    public function getCampaignsByPagination($id, $type, $page = null)
+   public function getCampaignsByPagination($id, $type, $page = null)
     {
         $query = Campaign::where(
             'user_id',
@@ -66,6 +66,25 @@ class CampaignRepositoryModel
     }
 
 
+    public function getCampaignsByAdmin($type, $page = null)
+    {
+        $query = Campaign::query();
+        if (!empty($type)) {
+            $query->where(
+                'status',
+                $type
+            );
+        }
+        return $query->orderBy(
+            'created_at',
+            'DESC'
+        )->paginate(
+            20,
+            ['*'],
+            'page',
+            $page
+        );
+    }
     public function getCampaignById($id, $userId = null)
     {
         $query = Campaign::where(

@@ -19,4 +19,10 @@ class CampaignController extends Controller
     {
         return $this->campaign->approveOrDeclineCampaign($request);
     }
+
+    public function getCampaignsByAdmin(Request $request)
+    {
+        return $this->campaign->getCampaigns($request);
+    }
+
 }

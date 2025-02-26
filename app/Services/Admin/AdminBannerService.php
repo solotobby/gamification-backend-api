@@ -36,7 +36,7 @@ class AdminBannerService
                 $data[] = [
                     'id' => $banner->id,
                     'user_id' => $banner->user_id,
-                    'user_name' => $this->authModel->findUserById($banner->user_id)['name'],
+                    'user_name' => $banner->user->name,
                     'banner_id' => $banner->banner_id,
                     'banner_url' => $banner->banner_url,
                     'external_link' => $banner->external_link,
@@ -101,7 +101,8 @@ class AdminBannerService
                 $ban->live_state = 'Started';
                 $ban->save();
 
-                $user = $this->authModel->findUserById($ban->user_id);
+
+                $user = $ban->user;
                 $content = 'Congratulations, your ad is Live on Freebyz.';
                 $subject = 'Ad Banner Placement - Live!';
                 Mail::to($user->email)->send(new GeneralMail(
