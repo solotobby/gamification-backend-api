@@ -27,6 +27,19 @@ class BannerRepositoryModel
         );
     }
 
+    public function getBannerByAdmin($page = null)
+    {
+        return Banner::orderBy(
+            'created_at',
+            'DESC'
+        )->paginate(
+            50,
+            ['*'],
+            'page',
+            $page
+        );
+    }
+
     public function createBanner($user, $request, $bannerUrl, $currency)
     {
         $banner = new Banner();
@@ -90,6 +103,6 @@ class BannerRepositoryModel
     }
 
     public function increaseImpression($bannerId){
-        
+
     }
 }

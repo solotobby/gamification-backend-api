@@ -21,4 +21,17 @@ class BannerValidator
             throw new ValidationException($validator);
         }
     }
+
+    public function toggleBannerValidator($request)
+    {
+        $validationRules = [
+            'action' => 'required|string|in:activate,deactivate',
+            'banner_id' => 'required|string',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }
