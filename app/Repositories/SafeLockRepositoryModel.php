@@ -23,6 +23,19 @@ class SafeLockRepositoryModel
             $page
         );
     }
+
+    public function getSafeLocksByAdmin( $page = null)
+    {
+        return SafeLock::orderBy(
+            'created_at',
+            'DESC'
+        )->paginate(
+            50,
+            ['*'],
+            'page',
+            $page
+        );
+    }
     public function createSafeLock($userId, $interestRate, $amountLocked, $currency, $duration, $interestAccrued, $totalPayment, $startDate, $maturityDate)
     {
         $data = [

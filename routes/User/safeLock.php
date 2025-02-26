@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\SafeLockController;
 
 Route::middleware([

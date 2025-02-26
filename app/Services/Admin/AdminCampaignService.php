@@ -11,7 +11,11 @@ use Throwable;
 
 class AdminCampaignService
 {
-    protected $campaignModel, $campaignService, $validator, $currencyModel, $walletModel;
+    protected $campaignModel;
+    protected $campaignService;
+    protected $validator;
+    protected $currencyModel;
+    protected $walletModel;
     public function __construct(
         CampaignRepositoryModel $campaignModel,
         CampaignValidator $validator,
@@ -39,10 +43,9 @@ class AdminCampaignService
                 ], 404);
             }
 
-            if($request->decision === 'approve'){
+            if ($request->decision === 'approve') {
                 $decision = 'Live';
-            }
-            else{
+            } else {
                 $decision = 'Declined';
             }
             $campaign->status = $decision;
