@@ -12,5 +12,5 @@ Route::middleware([
 )->group(function () {
     Route::post('/create', [TicketController::class, 'createTicket']);
     Route::get('/', [TicketController::class, 'getUserTickets']);
-    Route::get('/{id}', [TicketController::class, 'getTicket']);
+    Route::get('/details/{id}', [TicketController::class, 'getTicket']);
 });
