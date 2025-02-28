@@ -170,7 +170,7 @@ class CampaignService
             // Check wallet balance and debit if valid
             if (!$this->walletModel->checkWalletBalance(
                 $user,
-                $baseCurrency,
+                $currency->code,
                 $total
             )) {
                 return response()->json([
@@ -181,7 +181,7 @@ class CampaignService
 
             if (!$this->walletModel->debitWallet(
                 $user,
-                $baseCurrency,
+                $currency->code,
                 $total
             )) {
                 return response()->json([
@@ -198,6 +198,7 @@ class CampaignService
                 $percent,
                 $allowUpload,
                 $priotize,
+                $currency,
             );
 
             // Notify user via email
@@ -564,17 +565,16 @@ class CampaignService
         return true;
     }
 
-    private function processCampaign($total, $request, $job_id, $percent, $allowUpload, $priotize)
+    private function processCampaign($total, $request, $job_id, $percent, $allowUpload, $priotize, $currency)
     {
         $user = auth()->user();
-        $currency = $this->walletModel->mapCurrency($user->wallet->base_currency);
-        $channel = $user->wallet->base_currency == "NGN" ? 'paystack' : 'paypal';
+        $channel = $currency->code == "NGN" ? 'paystack' : 'paypal';
 
         $request->merge([
             'user_id' => $user->id,
             'total_amount' => $total,
             'job_id' => $job_id,
-            'currency' => $currency,
+            'currency' => $currency->code,
             'impressions' => 0,
             'pending_count' => 0,
             'completed_count' => 0,
@@ -590,15 +590,15 @@ class CampaignService
             $user,
             $campaign,
             $total,
-            $currency,
+            $currency->code,
             $channel,
         );
 
         // Update admin wallet
-        $this->campaignModel->updateAdminWallet($percent, $currency);
+        $this->campaignModel->updateAdminWallet($percent, $currency->code);
 
         // Log admin transaction
-        $this->campaignModel->logAdminTransaction($percent, $currency, $channel, $user);
+        $this->campaignModel->logAdminTransaction($percent, $currency->code, $channel, $user);
 
         return $campaign;
     }
