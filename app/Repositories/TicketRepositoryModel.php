@@ -33,12 +33,33 @@ class TicketRepositoryModel
         );
     }
 
+    public function getTicketsByAdmin($page = null)
+    {
+        return Ticket::orderBy(
+            'created_at',
+            'desc'
+        )->paginate(
+            25,
+            ['*'],
+            'page',
+            $page
+        );
+    }
+
     public function getTicketById($user, $id)
     {
         return Ticket::where(
             'user_id',
             $user->id
         )->where(
+            'id',
+            $id
+        )->first();
+    }
+
+    public function getTicketByAdmin($id)
+    {
+        return Ticket::where(
             'id',
             $id
         )->first();

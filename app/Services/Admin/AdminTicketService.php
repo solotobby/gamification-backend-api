@@ -1,25 +1,29 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Admin;
 
 use App\Repositories\TicketRepositoryModel;
 use App\Services\Providers\AWSServiceProvider;
+use App\Services\TicketService;
 use App\Validators\TicketValidator;
 use Throwable;
 
-class TicketService
+class AdminTicketService
 {
     protected $ticketModel;
     protected $awsService;
     protected $validator;
+    protected $ticketService;
     public function __construct(
         TicketRepositoryModel $ticketModel,
         AWSServiceProvider $awsService,
         TicketValidator $validator,
+        TicketService $ticketService,
     ) {
         $this->ticketModel = $ticketModel;
         $this->awsService = $awsService;
         $this->validator = $validator;
+        $this->ticketService  = $ticketService;
     }
 
     public function createTicket($request)
@@ -59,10 +63,9 @@ class TicketService
         }
     }
 
-    public function getUserTickets()
+    public function getUsersTickets()
     {
-        $user = auth()->user();
-        $tickets = $this->ticketModel->getTickets($user);
+        $tickets = $this->ticketModel->getTicketsByAdmin();
 
         $data = [];
 
@@ -70,6 +73,8 @@ class TicketService
             $data[] = [
                 'id' => $ticket->id,
                 'user_id' => $ticket->user_id,
+                'user_name' => $ticket->user->name,
+                'user_email' => $ticket->user->email,
                 'subject' => $ticket->subject,
                 'message' => $ticket->message,
                 'proof_url' => $ticket->proof_url,
@@ -88,31 +93,19 @@ class TicketService
         ];
         return response()->json([
             'status' => true,
-            'message' => 'User tickets retrieved.',
+            'message' => 'Users tickets retrieved.',
             'data' => $data,
             'pagination' => $pagination,
         ], 200);
     }
 
-    public function getTicket($id)
-    {
-        $user = auth()->user();
-        $ticket = $this->ticketModel->getTicketById($user, $id);
-
-        return response()->json([
-            'status' => true,
-            'message' => 'User ticket retrieved.',
-            'data' => $ticket,
-        ], 200);
-    }
-
     public function sendMessage($request, $ticketId)
     {
-       // return $ticketId;
+        // return $ticketId;
         $this->validator->validateMessageSending($request);
         try {
             $user = auth()->user();
-            $ticket = $this->ticketModel->getTicketById($user, $ticketId);
+            $ticket = $this->ticketModel->getTicketByAdmin($ticketId);
             if (!$ticket) {
                 return response()->json([
                     'status' => false,
@@ -120,9 +113,12 @@ class TicketService
                 ], 404);
             }
 
-         $this->ticketModel->sendMessage($user, $ticket->id, $request);
+            $this->ticketModel->sendMessage($user, $ticket->id, $request);
 
-           $messages = $this->messages($ticketId);
+            if ($ticket->status === 'open') {
+                $ticket->update(['status' => 'in_progress']);
+            }
+            $messages = $this->ticketService->messages($ticketId);
             return response()->json([
                 'status' => true,
                 'message' => 'Message sent successfully',
@@ -139,8 +135,7 @@ class TicketService
     // Get messages for a ticket
     public function getMessages($ticketId)
     {
-        $user = auth()->user();
-        $ticket = $this->ticketModel->getTicketById($user, $ticketId);
+        $ticket = $this->ticketModel->getTicketByAdmin($ticketId);
         if (!$ticket) {
             return response()->json([
                 'status' => false,
@@ -148,7 +143,7 @@ class TicketService
             ], 404);
         }
 
-        $messages = $this->messages($ticketId);
+        $messages = $this->ticketService->messages($ticketId);
 
         return response()->json([
             'status' => true,
@@ -157,35 +152,21 @@ class TicketService
         ]);
     }
 
-    // function to format messages
-    public function messages($ticketId){
-        $messages = $this->ticketModel->getMessages($ticketId);
-
-        $data = [];
-        foreach($messages as $message){
-            $data[] = [
-                'id' => $message->id,
-                'sender_id' => $message->sender_id,
-                'sender_name' => $message->sender->name,
-                'sender_role' => $message->sender->role,
-                'message' => $message->message,
-                'created_at' => $message->created_at,
-                'updated_at' => $message->updated_at
-            ];
-
+    // Close a ticket
+    public function closeTicket($ticketId)
+    {
+        $ticket = $this->ticketModel->getTicketByAdmin($ticketId);
+        if (!$ticket) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Ticket not found'
+            ], 404);
         }
-        $pagination = [
-            'total' => $messages->total(),
-            'per_page' => $messages->perPage(),
-            'current_page' => $messages->currentPage(),
-            'last_page' => $messages->lastPage(),
-            'from' => $messages->firstItem(),
-            'to' => $messages->lastItem(),
-        ];
 
-        return [
-            'messages' => $data,
-            'pagination' => $pagination,
-        ];
+        $ticket->update(['status' => 'closed']);
+        return response()->json([
+            'status' => true,
+            'message' => 'Ticket closed successfully'
+        ]);
     }
 }
