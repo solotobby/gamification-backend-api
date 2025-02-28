@@ -43,6 +43,7 @@ class TicketService
             ];
             $ticket = $this->ticketModel->createTicket($data);
 
+            $this->ticketModel->sendMessage($user, $ticket->id, $request);
 
             return response()->json([
                 'status' => true,
@@ -103,5 +104,88 @@ class TicketService
             'message' => 'User ticket retrieved.',
             'data' => $ticket,
         ], 200);
+    }
+
+    public function sendMessage($request, $ticketId)
+    {
+       // return $ticketId;
+        $this->validator->validateMessageSending($request);
+        try {
+            $user = auth()->user();
+            $ticket = $this->ticketModel->getTicketById($user, $ticketId);
+            if (!$ticket) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Ticket not found'
+                ], 404);
+            }
+
+            $message = $this->ticketModel->sendMessage($user, $ticket->id, $request);
+           // return $message;
+
+           $messages = $this->messages($ticketId);
+            return response()->json([
+                'status' => true,
+                'message' => 'Message sent successfully',
+                'data' => $messages
+            ], 201);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+    // Get messages for a ticket
+    public function getMessages($ticketId)
+    {
+        $user = auth()->user();
+        $ticket = $this->ticketModel->getTicketById($user, $ticketId);
+        if (!$ticket) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Ticket not found'
+            ], 404);
+        }
+
+        $messages = $this->messages($ticketId);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Messages retrieved successfully',
+            'data' => $messages
+        ]);
+    }
+
+    // function to format messages
+    public function messages($ticketId){
+        $messages = $this->ticketModel->getMessages($ticketId);
+
+        foreach($messages as $message){
+            $data[] = [
+                'id' => $message->id,
+                'sender_id' => $message->sender_id,
+                'sender_name' => $message->sender->name,
+                'sender_role' => $message->sender->role,
+                'message' => $message->message,
+                'created_at' => $message->created_at,
+                'updated_at' => $message->updated_at
+            ];
+
+        }
+        $pagination = [
+            'total' => $messages->total(),
+            'per_page' => $messages->perPage(),
+            'current_page' => $messages->currentPage(),
+            'last_page' => $messages->lastPage(),
+            'from' => $messages->firstItem(),
+            'to' => $messages->lastItem(),
+        ];
+
+        return [
+            'messages' => $data,
+            'pagination' => $pagination,
+        ];
     }
 }

@@ -21,4 +21,17 @@ class TicketValidator
             throw new ValidationException($validator);
         }
     }
+
+    public static function validateMessageSending($request)
+    {
+        $validationRules = [
+            'message' => 'required|string',
+        ];
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }

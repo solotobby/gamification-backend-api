@@ -28,4 +28,13 @@ class TicketController extends Controller
     {
         return $this->ticketService->getTicket($id);
     }
+
+    public function sendMessage(Request $request, $ticketId) {
+        return $this->ticketService->sendMessage($request, $ticketId);
+    }
+
+    public function getMessages($ticketId) {
+        return $this->ticketService->getMessages( $ticketId);
+    }
+
 }
