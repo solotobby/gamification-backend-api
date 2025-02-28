@@ -66,8 +66,8 @@ class FeedbackController extends Controller
         if($request->category == 'transfer_issue'){
             $category = 'transfer issue';
             $content = 'Thank you for taking the time to send this '.$category.'. We have recieved it and will act on it accordingly. Please send a screenshot of proof of payment to info@dominahl.com.  Thank you once again.';
-        }elseif($request->category == 'complaint'){
-            $category = 'complaint';
+        }elseif($request->category == 'ticket'){
+            $category = 'ticket';
             $content = 'Thank you for taking the time to send this '.$category.'. We have recieved it and will act on it accordingly. Thank you once again.';
         }else{
             $category = 'feedback';
@@ -75,11 +75,11 @@ class FeedbackController extends Controller
         }
 
         if($request->hasFile('proof')){
-         
+
             $fileBanner = $request->file('proof');
             $Bannername = time() . $fileBanner->getClientOriginalName();
             $filePathBanner = 'feedbacks/' . $Bannername;
-    
+
             Storage::disk('s3')->put($filePathBanner, file_get_contents($fileBanner), 'public');
             $proofUrl = Storage::disk('s3')->url($filePathBanner);
 

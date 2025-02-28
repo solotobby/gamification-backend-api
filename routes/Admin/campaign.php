@@ -8,7 +8,9 @@ Route::middleware([
     'auth:api',
     'isAdmin'
 ])->prefix(
-    'admin'
+    'admin/campaign'
 )->group(function () {
-    Route::post('/campaign/decision', [CampaignController::class, 'campaignDecision']);
+    Route::get('/', [CampaignController::class, 'getCampaignsByAdmin']);
+
+    Route::post('/decision', [CampaignController::class, 'campaignDecision']);
 });

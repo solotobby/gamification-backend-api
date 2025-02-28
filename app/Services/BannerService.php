@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Banner;
-use App\Models\BannerClick;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\BannerRepositoryModel;
 use App\Repositories\SurveyRepositoryModel;
@@ -14,7 +12,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+
 
 class BannerService
 {
@@ -93,7 +91,6 @@ class BannerService
 
     public function createBanner($request)
     {
-
         $this->bannerValidator->createBannerValidator($request);
         try {
 

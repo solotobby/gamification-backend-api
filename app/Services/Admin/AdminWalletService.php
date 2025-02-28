@@ -4,9 +4,7 @@ namespace App\Services\Admin;
 
 use App\Mail\GeneralMail;
 use App\Repositories\BankRepositoryModel;
-use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\LogRepositoryModel;
-use App\Services\CampaignService;
 use App\Repositories\WalletRepositoryModel;
 use App\Validators\WalletValidator;
 use App\Repositories\WithdrawalRepositoryModel;
@@ -15,7 +13,11 @@ use Throwable;
 
 class AdminWalletService
 {
-    protected $withdrawalModel, $bankModel, $validator, $logModel, $walletModel;
+    protected $withdrawalModel;
+    protected $bankModel;
+    protected $validator;
+    protected $logModel;
+    protected $walletModel;
     public function __construct(
         WalletRepositoryModel $walletModel,
         WithdrawalRepositoryModel $withdrawalModel,

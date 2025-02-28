@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Mail\GeneralMail;
-use App\Models\User;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Validators\SafeLockValidator;
 use App\Repositories\AuthRepositoryModel;

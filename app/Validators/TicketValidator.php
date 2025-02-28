@@ -5,16 +5,16 @@ namespace App\Validators;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-class BannerValidator
+class TicketValidator
 {
-    public function createBannerValidator($request)
+    public static function validateTicketCreation($request)
     {
         $validationRules = [
-            'banner_image' => 'required|image|mimes:png,jpeg,gif,jpg',
-            'external_link' => 'required|string',
-            'audience' => 'required|array|min:5',
-            'budget' => 'required|numeric',
+            'subject' => 'required|string',
+            'message' => 'required|string',
+            'proof' => 'nullable|image|mimes:png,jpeg,gif,jpg',
         ];
+
         $validator = Validator::make($request->all(), $validationRules);
 
         if ($validator->fails()) {
@@ -22,12 +22,12 @@ class BannerValidator
         }
     }
 
-    public function toggleBannerValidator($request)
+    public static function validateMessageSending($request)
     {
         $validationRules = [
-            'action' => 'required|string|in:activate,deactivate',
-            'banner_id' => 'required|string',
+            'message' => 'required|string',
         ];
+
         $validator = Validator::make($request->all(), $validationRules);
 
         if ($validator->fails()) {
