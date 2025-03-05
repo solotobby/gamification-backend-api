@@ -61,37 +61,46 @@ class TicketService
 
     public function getUserTickets()
     {
-        $user = auth()->user();
-        $tickets = $this->ticketModel->getTickets($user);
 
-        $data = [];
+        try {
+            $user = auth()->user();
+            $tickets = $this->ticketModel->getTickets($user);
 
-        foreach ($tickets as $ticket) {
-            $data[] = [
-                'id' => $ticket->id,
-                'user_id' => $ticket->user_id,
-                'subject' => $ticket->subject,
-                'message' => $ticket->message,
-                'proof_url' => $ticket->proof_url,
-                'status' => ($ticket->status),
-                'created_at' => $ticket->created_at,
-                'updated_at' => $ticket->updated_at
+            $data = [];
+
+            foreach ($tickets as $ticket) {
+                $data[] = [
+                    'id' => $ticket->id,
+                    'user_id' => $ticket->user_id,
+                    'subject' => $ticket->subject,
+                    'message' => $ticket->message,
+                    'proof_url' => $ticket->proof_url,
+                    'status' => ($ticket->status),
+                    'created_at' => $ticket->created_at,
+                    'updated_at' => $ticket->updated_at
+                ];
+            }
+            $pagination = [
+                'total' => $tickets->total(),
+                'per_page' => $tickets->perPage(),
+                'current_page' => $tickets->currentPage(),
+                'last_page' => $tickets->lastPage(),
+                'from' => $tickets->firstItem(),
+                'to' => $tickets->lastItem(),
             ];
+            return response()->json([
+                'status' => true,
+                'message' => 'User tickets retrieved.',
+                'data' => $data,
+                'pagination' => $pagination,
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-        $pagination = [
-            'total' => $tickets->total(),
-            'per_page' => $tickets->perPage(),
-            'current_page' => $tickets->currentPage(),
-            'last_page' => $tickets->lastPage(),
-            'from' => $tickets->firstItem(),
-            'to' => $tickets->lastItem(),
-        ];
-        return response()->json([
-            'status' => true,
-            'message' => 'User tickets retrieved.',
-            'data' => $data,
-            'pagination' => $pagination,
-        ], 200);
     }
 
     public function getTicket($id)
@@ -108,7 +117,7 @@ class TicketService
 
     public function sendMessage($request, $ticketId)
     {
-       // return $ticketId;
+        // return $ticketId;
         $this->validator->validateMessageSending($request);
         try {
             $user = auth()->user();
@@ -120,9 +129,9 @@ class TicketService
                 ], 404);
             }
 
-         $this->ticketModel->sendMessage($user, $ticket->id, $request);
+            $this->ticketModel->sendMessage($user, $ticket->id, $request);
 
-           $messages = $this->messages($ticketId);
+            $messages = $this->messages($ticketId);
             return response()->json([
                 'status' => true,
                 'message' => 'Message sent successfully',
@@ -158,11 +167,12 @@ class TicketService
     }
 
     // function to format messages
-    public function messages($ticketId){
+    public function messages($ticketId)
+    {
         $messages = $this->ticketModel->getMessages($ticketId);
 
         $data = [];
-        foreach($messages as $message){
+        foreach ($messages as $message) {
             $data[] = [
                 'id' => $message->id,
                 'sender_id' => $message->sender_id,
@@ -172,7 +182,6 @@ class TicketService
                 'created_at' => $message->created_at,
                 'updated_at' => $message->updated_at
             ];
-
         }
         $pagination = [
             'total' => $messages->total(),
