@@ -145,9 +145,12 @@ class JobRepositoryModel
         )->first();
     }
 
-    public function availableJobs($userId, $subcategory = null, $page = null)
+    public function availableJobs($userId, $category = null, $page = null)
     {
-        $completedCampaignIds = CampaignWorker::where('user_id', $userId)
+        $completedCampaignIds = CampaignWorker::where(
+            'user_id',
+            $userId
+        )
             ->pluck('campaign_id')
             ->toArray();
         return Campaign::where(
@@ -163,10 +166,10 @@ class JobRepositoryModel
         )->whereNotIn(
             'id',
             $completedCampaignIds
-        )->when($subcategory, function ($query) use ($subcategory) {
+        )->when($category, function ($query) use ($category) {
             $query->where(
-                'campaign_subcategory',
-                $subcategory
+                'campaign_type',
+                $category
             );
         })->orderByRaw(
             "CASE WHEN approved = 'prioritize' THEN 1 ELSE 2 END"
@@ -174,7 +177,12 @@ class JobRepositoryModel
             ->orderBy(
                 'created_at',
                 'DESC'
-            )->paginate(10, ['*'], 'page', $page);
+            )->paginate(
+                10,
+                ['*'],
+                'page',
+                $page
+            );
     }
 
     public function getJobById($jobId)

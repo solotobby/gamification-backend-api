@@ -11,7 +11,9 @@ class Testimony extends Model
 
     protected $table = "testimonies";
 
-    protected $fillable = ['user_id', 'game_id', 'message'];
-
-    
+    protected $fillable = [
+        'user_id',
+        'game_id',
+        'message'
+    ];
 }
