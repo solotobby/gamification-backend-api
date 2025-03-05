@@ -9,12 +9,15 @@ class Usdverified extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'referral_id', 'is_paid'];
+    protected $fillable = [
+        'user_id',
+        'referral_id',
+        'is_paid'
+    ];
 
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id');
     }
-
-    
 }

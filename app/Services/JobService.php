@@ -61,11 +61,11 @@ class JobService
     {
         try {
             $user = auth()->user();
-            $subCategory = strtolower($request->query('subcategory_id'));
+            $category = strtolower($request->query('category_id'));
             $page = strtolower($request->query('page'));
 
             // Fetching available jobs
-            $jobs = $this->jobModel->availableJobs($user->id, $subCategory, $page);
+            $jobs = $this->jobModel->availableJobs($user->id, $category, $page);
             $data = [];
 
             foreach ($jobs as $key => $value) {
