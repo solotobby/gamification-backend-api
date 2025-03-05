@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\ticketService;
+use App\Services\TicketService;
 use Illuminate\Http\Request;
 
 class TicketController extends Controller
 {
     protected $ticketService;
 
-    public function __construct(ticketService $ticketService)
+    public function __construct(TicketService $ticketService)
     {
         $this->ticketService = $ticketService;
     }
