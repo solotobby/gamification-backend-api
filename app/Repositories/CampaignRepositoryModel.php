@@ -101,6 +101,22 @@ class CampaignRepositoryModel
         return $query->first();
     }
 
+    public function getCampaignByJobId($id, $userId = null)
+    {
+        $query = Campaign::where(
+            'job_id',
+            $id
+        );
+        if ($userId) {
+            $query->where(
+                'user_id',
+                $userId
+            );
+        }
+
+        return $query->first();
+    }
+
 
     public function availableJobs()
     {

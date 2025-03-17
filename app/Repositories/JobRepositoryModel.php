@@ -93,7 +93,7 @@ class JobRepositoryModel
         $statusCounts = CampaignWorker::where('campaign_id', $camId)
             ->whereIn('status', ['Pending', 'Denied', 'Approved'])
             ->selectRaw('status, count(*) as count')
-            ->groupBy('sta  tus')
+            ->groupBy('status')
             ->get();
 
         // Map the result into the counts array
