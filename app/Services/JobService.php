@@ -85,7 +85,7 @@ class JobService
 
                 $data[] = [
                     'id' => $value->id,
-                    'job_id' => $value->job_id,
+                    'campaign_id' => $value->job_id,
                     'campaign_amount' => $unitPrice,
                     'post_title' => $value->post_title,
                     'number_of_staff' => $value->number_of_staff,
@@ -382,7 +382,7 @@ class JobService
             // Prepare response data
             $data = [
                 'id' => $job->id,
-                'job_id' => $job->job_id,
+                'campaign_id' => $job->job_id,
                 'campaign_name' => $job->post_title,
                 'campaign_type' => $job->campaignType->name,
                 'campaign_category' => $job->campaignCategory->name,
