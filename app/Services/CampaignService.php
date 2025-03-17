@@ -55,7 +55,7 @@ class CampaignService
             $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
 
             // Fetch currency details
-            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+           $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
 
             // Validate retrieved data
             if (!$currency) {
@@ -82,7 +82,7 @@ class CampaignService
                 $data[] = [
                     'id' => $campaign->id,
                     'user_id' => $campaign->user_id,
-                    'job_id' => $campaign->job_id,
+                    'campaign_id' => $campaign->job_id,
                     'title' => $campaign->post_title,
                     'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
                     'unit_price' => round($unitPrice, 5),
@@ -227,7 +227,7 @@ class CampaignService
 
             $user = auth()->user();
             // Get the campaign details using the UserId and CampaignId
-            $campaign = $this->campaignModel->getCampaignById($request->campaign_id, $user->id);
+            $campaign = $this->campaignModel->getCampaignByJobId($request->campaign_id, $user->id);
 
             $baseCurrency = $user->wallet->base_currency;
 
@@ -273,10 +273,11 @@ class CampaignService
             // Create transaction
             $this->campaignModel->createPaymentTransaction(
                 $user->id,
-                $request->campaign_id,
+                $campaign->id,
                 $total
             );
 
+            $saveCampaign['campaign_id'] = $campaign->job_id;
             // Notify user via email
             Mail::to($user->email)->send(new CreateCampaign($saveCampaign));
 
@@ -364,7 +365,7 @@ class CampaignService
     {
         try {
             $userId = auth()->user()->id;
-            $campaign = $this->campaignModel->getCampaignById($campaignId, $userId);
+            $campaign = $this->campaignModel->getCampaignByJobId($campaignId, $userId);
 
             // Return error if campaign is not found
             if (!$campaign) {
@@ -374,13 +375,14 @@ class CampaignService
                 ], 404);
             }
             // Prepare Stat Response
+            $data['campaign_id'] = $campaign->job_id;
             $data['number_of_workers'] = $campaign->number_of_staff;
-            $data['spent_amount'] = $spentAmount = $this->jobModel->getCampaignSpentAmount($campaignId);
+            $data['spent_amount'] = $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
             $data['campaign_total_amount'] = $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
             $data['campaign_unit_amount'] = $campaign->campaign_amount;
             $data['campaign_currency'] = $campaign->currency;
             $data['amount_ratio'] = $campaign->currency . '' . $spentAmount . ' / ' . $campaign->currency . '' . $campaignAmount;
-            $data['status'] = $this->jobModel->getCampaignStats($campaignId);
+            $data['status'] = $this->jobModel->getCampaignStats($campaign->id);
 
             return response()->json([
                 'status' => true,
@@ -403,9 +405,8 @@ class CampaignService
             $type = strtolower($request->query('type'));
             $page = strtolower($request->query('page'));
 
-            $campaign = $this->campaignModel->getCampaignById($campaignId, $userId);
+            $campaign = $this->campaignModel->getCampaignByJobId($campaignId, $userId);
 
-            // Return error if campaign is not found
             if (!$campaign) {
                 return response()->json([
                     'status' => false,
@@ -415,7 +416,7 @@ class CampaignService
             $jobs = $this->jobModel->getJobsByIdAndType($campaign->id, $type, $page);
 
             $data['campaign_name'] = $campaign->post_title;
-            $data['campaign_id'] = $campaign->id;
+            $data['campaign_id'] = $campaign->job_id;
             $data['jobs'] = $jobs->getCollection()->map(function ($job) use ($campaign) {
                 return [
                     'job_id' => $job->id,
@@ -428,6 +429,15 @@ class CampaignService
 
                 ];
             });
+            $pagination = [
+                'total' => $jobs->total(),
+                'per_page' => $jobs->perPage(),
+                'current_page' => $jobs->currentPage(),
+                'last_page' => $jobs->lastPage(),
+                'from' => $jobs->firstItem(),
+                'to' => $jobs->lastItem(),
+            ];
+
         } catch (Exception $exception) {
             return response()->json([
                 'status' => false,
@@ -439,7 +449,8 @@ class CampaignService
         return response()->json([
             'status' => true,
             'message' => 'Campaign Activities Jobs',
-            'data' => $data
+            'data' => $data,
+            'pagination' => $pagination,
         ], 200);
     }
 
@@ -448,7 +459,7 @@ class CampaignService
         try {
             $userId = auth()->user()->id;
             // Retrieve the campaign for the authenticated user
-            $campaign = $this->campaignModel->getCampaignById($campaignId, $userId);
+            $campaign = $this->campaignModel->getCampaignByJobId($campaignId, $userId);
 
             // Return error if campaign is not found
             if (!$campaign) {
@@ -473,6 +484,7 @@ class CampaignService
             // Save the updated campaign status
             $campaign->save();
 
+            $campaign['campaign_id'] = $campaign->job_id;
             return response()->json([
                 'status' => true,
                 'message' => 'Campaign status updated successfully to ' . $campaign->status,
@@ -503,7 +515,7 @@ class CampaignService
                 ], 400);
             }
 
-            $campaign = $this->campaignModel->getCampaignById($campId, $userId);
+            $campaign = $this->campaignModel->getCampaignByJobId($campId, $userId);
 
             // Return error if campaign is not found
             if (!$campaign) {
@@ -513,11 +525,11 @@ class CampaignService
                 ], 404);
             }
 
-            $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campId);
+            $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campaign->id);
             // return $job;
             $data = [
                 'job_id' => $job->id,
-                'campaign_id' => $campaign->id,
+                'campaign_id' => $campaign->job_id,
                 'campaign_name' => $campaign->post_title,
                 'campaign_description' => $campaign->description,
                 'proof_of_completion' => $campaign->proof,
@@ -608,13 +620,20 @@ class CampaignService
 
         try {
             $user = auth()->user();
-            $action = strtolower($request->query('action'));
-            $jobId = $request->query('job_id');
-            $campId = $request->query('campaign_id');
+            $action = strtolower($request->action);
+            $jobId = $request->job_id;
+            $campId = $request->campaign_id;
             $reason = $request->reason;
 
+            $campaign = $this->campaignModel->getCampaignByJobId($campId);
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign not found.',
+                ], 404);
+            }
             // Retrieve job details
-            $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campId);
+            $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campaign->id);
             if (!$job) {
                 return response()->json([
                     'status' => false,
@@ -630,15 +649,6 @@ class CampaignService
                 ], 400);
             }
 
-            // Retrieve campaign details
-            $campaign = $this->campaignModel->getCampaignById($campId, $user->id);
-            if (!$campaign) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Campaign not found.',
-                ], 404);
-            }
-
             // Retrieve worker details
             $worker = $this->authModel->findUserById($job->user_id);
             $currency = $worker->wallet->base_currency;
@@ -646,10 +656,10 @@ class CampaignService
             // Perform action
             if ($action === 'deny') {
                 $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Denied');
-                $this->decreasePendingCountAfterDenial($campId);
+                $this->decreasePendingCountAfterDenial($campaign->id);
             } elseif ($action === 'approve') {
                 $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Approved');
-                $this->increaseCompletedCountAfterApproval($campId);
+                $this->increaseCompletedCountAfterApproval($campaign->id);
                 $this->walletModel->creditWallet($worker, $currency, $job->amount);
             } else {
                 return response()->json([
@@ -661,7 +671,7 @@ class CampaignService
             // Prepare response data
             $data = [
                 'job_id' => $job->id,
-                'campaign_id' => $campaign->id,
+                'campaign_id' => $campaign->job_id,
                 'campaign_name' => $campaign->post_title,
                 'campaign_description' => $campaign->description,
                 'proof_of_completion' => $campaign->proof,

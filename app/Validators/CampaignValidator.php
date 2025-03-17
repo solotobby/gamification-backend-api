@@ -33,7 +33,7 @@ class CampaignValidator
     {
         $validationRules = [
             'new_worker_number' => 'required|string',
-            'campaign_id' => 'required|string|exists:campaigns,id',
+            'campaign_id' => 'required|string|exists:campaigns,job_id',
         ];
         $validator = Validator::make($request->all(), $validationRules);
 
@@ -46,7 +46,7 @@ class CampaignValidator
     {
         $validationRules = [
             'user_id' => 'required|string|exists:users,id',
-            'campaign_id' => 'required|string|exists:campaigns,id',
+            'campaign_id' => 'required|string|exists:campaigns,job_id',
             'decision' => 'required|string|in:approve,decline'
         ];
         $validator = Validator::make($request->all(), $validationRules);
@@ -61,7 +61,7 @@ class CampaignValidator
         $validationRules = [
             'action' => 'required|string|in:approve,deny',
             'reason' => 'required|string',
-            'campaign_id' => 'required|string',
+            'campaign_id' => 'required|string|exists:campaigns,job_id',
             'job_id' => 'required|string'
         ];
         $validator = Validator::make($request->all(), $validationRules);

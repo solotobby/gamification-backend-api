@@ -85,7 +85,7 @@ class JobService
 
                 $data[] = [
                     'id' => $value->id,
-                    'job_id' => $value->job_id,
+                    'campaign_id' => $value->job_id,
                     'campaign_amount' => $unitPrice,
                     'post_title' => $value->post_title,
                     'number_of_staff' => $value->number_of_staff,
@@ -183,7 +183,7 @@ class JobService
                     'id' => $job->id,
                     'worker_id' => $job->user_id,
                     'worker_name' => $workerDetails->name,
-                    'campaign_id' => $job->campaign_id,
+                    'campaign_id' => $campaignDetails->job_id,
                     'campaign_name' => $campaignDetails->post_title,
                     'campaign_owner_id' => $campaignDetails->user_id,
                     'comment' => $job->comment,
@@ -328,6 +328,9 @@ class JobService
             ));
 
             DB::commit();
+
+            unset($campaignWorker['job_id']);
+            $campaignWorker['campaign_id'] = $campaign->job_id;
             return response()->json([
                 'status' => true,
                 'message' => 'Job Submitted Successfully',
@@ -379,6 +382,7 @@ class JobService
             // Prepare response data
             $data = [
                 'id' => $job->id,
+                'campaign_id' => $job->job_id,
                 'campaign_name' => $job->post_title,
                 'campaign_type' => $job->campaignType->name,
                 'campaign_category' => $job->campaignCategory->name,
