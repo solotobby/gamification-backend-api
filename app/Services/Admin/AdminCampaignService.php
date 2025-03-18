@@ -59,10 +59,11 @@ class AdminCampaignService
         } catch (Throwable $e) {
             return response()->json([
                 'status' => false,
-                'error' => $e->getMessage(),
+               // 'error' => $e->getMessage(),
                 'message' => 'Error processing request'
             ], 500);
         }
+
     }
 
     public function getCampaigns($request)
