@@ -35,7 +35,7 @@ class AdminCampaignService
         $this->validator->AdminDecisionOnCampaign($request);
 
         try {
-            $campaign = $this->campaignModel->getCampaignById($request->campaign_id, $request->user_id);
+            $campaign = $this->campaignModel->getCampaignByJobId($request->campaign_id, $request->user_id);
             if (!$campaign) {
                 return response()->json([
                     'status' => false,
@@ -83,7 +83,7 @@ class AdminCampaignService
                     'id' => $campaign->id,
                     'user_id' => $campaign->user_id,
                     'user_name' => $campaign->user->name ?? null,
-                    'job_id' => $campaign->job_id,
+                    'campaign_id' => $campaign->job_id,
                     'title' => $campaign->post_title,
                     'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
                     'unit_price' => round($unitPrice, 5),
