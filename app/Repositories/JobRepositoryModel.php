@@ -38,6 +38,28 @@ class JobRepositoryModel
         );
     }
 
+    public function getJobsByCampaignIdsAndType($campaignIds, $type, $page = null)
+    {
+        return CampaignWorker::whereIn(
+            'campaign_id',
+            $campaignIds
+        )
+            ->where(
+                'status',
+                $type
+            )
+            ->orderBy(
+                'created_at',
+                'ASC'
+            )
+            ->paginate(
+                10,
+                ['*'],
+                'page',
+                $page
+            );
+    }
+
 
     public function createJobs($user, $campaignId, $request, $currency, $proofUrl, $unitPrice)
     {

@@ -55,7 +55,7 @@ class CampaignService
             $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
 
             // Fetch currency details
-           $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
 
             // Validate retrieved data
             if (!$currency) {
@@ -429,6 +429,7 @@ class CampaignService
 
                 ];
             });
+
             $pagination = [
                 'total' => $jobs->total(),
                 'per_page' => $jobs->perPage(),
@@ -438,6 +439,12 @@ class CampaignService
                 'to' => $jobs->lastItem(),
             ];
 
+            return response()->json([
+                'status' => true,
+                'message' => 'Campaign Activities Jobs',
+                'data' => $data,
+                'pagination' => $pagination,
+            ], 200);
         } catch (Exception $exception) {
             return response()->json([
                 'status' => false,
@@ -445,14 +452,73 @@ class CampaignService
                 'message' => 'Error processing request'
             ], 500);
         }
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Campaign Activities Jobs',
-            'data' => $data,
-            'pagination' => $pagination,
-        ], 200);
     }
+
+    public function allCampaignJobList($request)
+    {
+        try {
+            $userId = auth()->user()->id;
+            $type = strtolower($request->query('type'));
+            $page = $request->query('page', 1);
+
+            $campaigns = $this->campaignModel->getUserCampaigns($userId);
+            if ($campaigns->isEmpty()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No campaigns found for the user.'
+                ], 404);
+            }
+
+            $campaignIds = $campaigns->pluck('id')->toArray();
+
+            // Fetch jobs performed on user's campaigns
+            $jobs = $this->jobModel->getJobsByCampaignIdsAndType($campaignIds, $type, $page);
+
+            if ($jobs->isEmpty()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No jobs found for the user campaigns.'
+                ], 404);
+            }
+
+            // Format job data
+            $data = $jobs->getCollection()->map(function ($job) {
+                $worker = $this->authModel->findUserById($job->user_id);
+
+                return [
+                    'campaign_id' => $job->campaign->job_id,
+                    'job_id' => $job->id,
+                    'worker_name' => $worker->name ?? 'Unknown',
+                    'campaign_name' => $job->campaign->post_title,
+                    'amount' => "{$job->campaign->currency} {$job->amount}",
+                    'status' => $job->status,
+                    'created_at' => $job->created_at,
+                    'updated_at' => $job->updated_at,
+                ];
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => ucfirst($type) . ' Campaign Jobs Retrieved Successfully',
+                'data' => $data,
+                'pagination' => [
+                    'total' => $jobs->total(),
+                    'per_page' => $jobs->perPage(),
+                    'current_page' => $jobs->currentPage(),
+                    'last_page' => $jobs->lastPage(),
+                    'from' => $jobs->firstItem(),
+                    'to' => $jobs->lastItem(),
+                ],
+            ], 200);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
 
     public function pauseCampaign($campaignId)
     {

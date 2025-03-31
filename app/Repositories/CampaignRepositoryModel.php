@@ -42,7 +42,7 @@ class CampaignRepositoryModel
         return Campaign::create($request->all());
     }
 
-   public function getCampaignsByPagination($id, $type, $page = null)
+    public function getCampaignsByPagination($id, $type, $page = null)
     {
         $query = Campaign::where(
             'user_id',
@@ -63,6 +63,20 @@ class CampaignRepositoryModel
             'page',
             $page
         );
+    }
+
+    public function getUserCampaigns($id)
+    {
+        return Campaign::where(
+            'user_id',
+            $id
+        )
+            ->get([
+                'id',
+                'post_title',
+                'job_id',
+                'user_id'
+            ]);
     }
 
 
