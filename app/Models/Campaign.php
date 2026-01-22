@@ -31,9 +31,34 @@ class Campaign extends Model
         'currency',
         'pending_count',
         'impressions',
-        'completed_count'
+        'completed_count',
+        'allow_upload',
+
+        'approval_time',
+        'flagged_at',
+        'flagged_reason',
+        'flagging_resolved',
+        'expected_result_image'
     ];
 
+
+    protected $casts = [
+        'flagged_at' => 'datetime',
+    ];
+
+    // Accessor for percentage progress
+    public function getPercentageProgressAttribute()
+    {
+        if ($this->number_of_staff > 0) {
+            return round(($this->completed / $this->number_of_staff) * 100, 2); // Rounded to 2 decimals
+        }
+        return 0;
+    }
+
+    public function userAttempts()
+    {
+        return $this->belongsToMany(User::class, 'campaign_workers', 'campaign_id', 'user_id');
+    }
 
     public function user()
     {
@@ -59,6 +84,13 @@ class Campaign extends Model
     {
         return $this->hasMany(CampaignWorker::class, 'campaign_id');
     }
+
+    public function approvedAttempts()
+    {
+        $this->attempts()->where('status', 'Approved')->get();
+    }
+
+
 
     // public function completedAll()
     // {

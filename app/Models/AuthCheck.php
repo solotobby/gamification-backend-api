@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class BannerImpression extends Model
+class AuthCheck extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'banner_id'
+        'email',
+        'token'
     ];
 }

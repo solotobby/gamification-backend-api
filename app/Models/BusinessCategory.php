@@ -9,7 +9,7 @@ class BusinessCategory extends Model
 {
     use HasFactory;
 
-    protected $table = 'business_categories'; // Table name
+    protected $table = 'business_categories'; 
     protected $fillable = [
         'name',
         'is_active'
