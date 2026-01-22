@@ -35,7 +35,14 @@ class User extends Authenticatable
         'age_range',
         'gender',
         'base_currency',
-        'country'
+        'is_verified',
+        'is_blacklisted',
+        'is_business',
+        'verified_at',
+        'is_wallet_transfered',
+        'email_verified_at',
+        'email_verification_attempted_at',
+        'username'
     ];
 
     /**
@@ -46,7 +53,6 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'base_currency',
     ];
 
     /**
@@ -56,6 +62,10 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'is_business' => 'boolean',
+        'is_blacklisted' => 'boolean',
+        'is_wallet_transfered' => 'boolean',
+
     ];
 
     public function hasRole($role = []): bool
@@ -64,6 +74,14 @@ class User extends Authenticatable
             return in_array($this->role, $role);
         }
         return $this->role == $role;
+    }
+    public function getWalletCurrencyAttribute()
+    {
+        if ($this->hasRole('super_admin')) {
+            return 'NGN';
+        }
+
+        return $this->wallet->base_currency ?? 'NGN';
     }
 
     public function staff()
@@ -76,24 +94,18 @@ class User extends Authenticatable
         return $this->hasOne(Wallet::class);
     }
 
-    public function accountDetails()
-    {
-        return $this->hasOne(Wallet::class);
-    }
-
     public function referees()
     {
-        return $this->hasMany(Referral::class, 'referee_id', 'referral_code');
+        return $this->belongsToMany(User::class, 'referral', 'referee_id');
     }
-
-    public function referredBy()
-    {
-        return $this->hasOne(Referral::class, 'user_id', 'id');
-    }
-
     public function usd_referees()
     {
         return $this->belongsToMany(User::class, 'usdverifieds', 'referral_id');
+    }
+
+    public function attemptedCampaigns()
+    {
+        return $this->belongsToMany(Campaign::class, 'campaign_workers', 'user_id', 'campaign_id');
     }
 
     public function myWorks()
@@ -106,20 +118,20 @@ class User extends Authenticatable
         return $this->hasMany(PaymentTransaction::class);
     }
 
-    public function firstTransaction()
-    {
-        return $this->transactions()->exists();
-    }
-
-
     public function myJobs()
     {
-        return $this->hasMany(CampaignWorker::class);
+        return $this->hasMany(CampaignWorker::class, 'user_id');
     }
+
 
     public function myCampaigns()
     {
         return $this->hasMany(Campaign::class);
+    }
+
+    public function accountDetails()
+    {
+        return $this->hasOne(BankInformation::class,  'user_id');
     }
 
     public function myFeedBackList()
@@ -142,10 +154,6 @@ class User extends Authenticatable
         return $this->hasOne(AccountInformation::class, 'user_id');
     }
 
-    public function bankDetails()
-    {
-        return $this->hasOne(BankInformation::class, 'user_id');
-    }
     public function notifications()
     {
         return $this->hasMany(Notification::class);
@@ -178,5 +186,20 @@ class User extends Authenticatable
     public function myRating()
     {
         return $this->hasMany(Rating::class, 'campaign_id');
+    }
+
+    public function skill()
+    {
+        return $this->hasOne(SkillAsset::class, 'user_id');
+    }
+
+    public function paymentTransactions()
+    {
+        return $this->hasMany(PaymentTransaction::class);
+    }
+
+    public function getIncomeAttribute()
+    {
+        return $this->attributes['income'] ?? 0;
     }
 }

@@ -5,19 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ConversionRate extends Model
+class ExportJob extends Model
 {
     use HasFactory;
-
     protected $fillable = [
-        'from',
-        'to',
-        'rate',
-        'amount',
         'status',
-        'referral_commission',
-        'upgrade_fee',
-        'allow_upload',
-        'priotize'
+        'email',
+        'file_path',
+        'error_message',
+        'completed_at'
     ];
 }

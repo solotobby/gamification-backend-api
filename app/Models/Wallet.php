@@ -17,7 +17,9 @@ class Wallet extends Model
         'bonus',
         'user_type',
         'base_currency',
-        'usd_balance'
+        'usd_balance',
+        'base_currency_balance',
+        'base_currency_set'
     ];
 
     public function user()

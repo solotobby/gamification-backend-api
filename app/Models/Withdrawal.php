@@ -9,17 +9,22 @@ class Withdrawal extends Model
 {
     use HasFactory;
 
-    protected $table = "Withrawals";
+    protected $table = "withrawals";
+
     protected $fillable = [
         'user_id',
         'amount',
         'next_payment_date',
         'status',
-        'currency',
+        'base_currency',
         'channel',
         'paypal_email',
         'is_usd',
-        'base_currency'
+        'content'
+    ];
+
+    protected $casts = [
+        'content' => 'array',
     ];
 
     public function user()

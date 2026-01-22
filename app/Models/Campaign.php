@@ -33,7 +33,6 @@ class Campaign extends Model
         'impressions',
         'completed_count',
         'allow_upload',
-
         'approval_time',
         'flagged_at',
         'flagged_reason',
