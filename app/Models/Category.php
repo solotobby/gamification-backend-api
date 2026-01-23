@@ -13,7 +13,8 @@ class Category extends Model
 
     protected $fillable = [
         'name',
-        'is_active'
+        'is_active',
+        'type'
     ];
 
     public function subCate()

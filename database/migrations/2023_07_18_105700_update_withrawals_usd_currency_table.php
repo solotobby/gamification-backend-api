@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class UpdateWithdrawalsUsdCurrencyTable extends Migration
+class UpdateWithrawalsUsdCurrencyTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class UpdateWithdrawalsUsdCurrencyTable extends Migration
      */
     public function up()
     {
-        Schema::table('Withdrawals', function (Blueprint $table) {
+        Schema::table('Withrawals', function (Blueprint $table) {
             $table->string('base_currency')->nullable();
         });
     }

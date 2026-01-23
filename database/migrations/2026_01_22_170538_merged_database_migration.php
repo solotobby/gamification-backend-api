@@ -256,9 +256,13 @@ class MergedDatabaseMigration extends Migration
         });
 
         Schema::table('wallets', function (Blueprint $table) {
+
+            $table->string('base_currency_balance')->default('0.00');
+            $table->boolean('base_currency_set')->default(false);
             $table->string('point')->default('0.0');
             $table->index('base_currency', 'idx_wallets_currency');
         });
+
 
         Schema::table('profiles', function (Blueprint $table) {
             $table->string('pathway')->nullable();
@@ -268,6 +272,7 @@ class MergedDatabaseMigration extends Migration
             $table->date('verified_at')->nullable();
             $table->date('email_verification_attempted_at')->nullable();
             $table->boolean('is_business')->default(false);
+            $table->string('username')->nullable();
             $table->string('api_key', 80)->unique()->nullable();
 
             // Indexes
@@ -358,7 +363,7 @@ class MergedDatabaseMigration extends Migration
         });
 
         Schema::table('wallets', function (Blueprint $table) {
-            $table->dropColumn('point');
+            $table->dropColumn(['base_currency_balance', 'base_currency_set', 'point']);
             $table->dropIndex('idx_wallets_currency');
         });
 
@@ -367,7 +372,7 @@ class MergedDatabaseMigration extends Migration
         });
 
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['verified_at', 'email_verification_attempted_at', 'is_business', 'api_key']);
+            $table->dropColumn(['verified_at', 'email_verification_attempted_at', 'is_business', 'username', 'api_key']);
             $table->dropIndex('users_role_verified_index');
             $table->dropIndex('users_role_email_verified_index');
             $table->dropIndex('users_role_created_index');

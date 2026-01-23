@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class UpdateWithdrawalsTable extends Migration
+class UpdateWithrawalsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,8 @@ class UpdateWithdrawalsTable extends Migration
      */
     public function up()
     {
-        Schema::table('Withdrawals', function (Blueprint $table) {
+        Schema::table('Withrawals', function (Blueprint $table) {
+            $table->text('content')->nullable();
             $table->string('paypal_email')->nullable();
             $table->boolean('is_usd')->default(false);
         });
@@ -27,7 +28,7 @@ class UpdateWithdrawalsTable extends Migration
     public function down()
     {
         Schema::table('Withdrawals', function (Blueprint $table) {
-            $table->dropColumn(['paypal_email', 'is_usd']);
+            $table->dropColumn(['content', 'paypal_email', 'is_usd']);
         });
     }
 }
