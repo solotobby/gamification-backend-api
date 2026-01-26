@@ -13,7 +13,7 @@ class UpdateWithrawalsUsdCurrencyTable extends Migration
      */
     public function up()
     {
-        Schema::table('Withrawals', function (Blueprint $table) {
+        Schema::table('withrawals', function (Blueprint $table) {
             $table->string('base_currency')->nullable();
         });
     }
@@ -25,7 +25,7 @@ class UpdateWithrawalsUsdCurrencyTable extends Migration
      */
     public function down()
     {
-        Schema::table('Withrawals', function (Blueprint $table) {
+        Schema::table('withrawals', function (Blueprint $table) {
             $table->dropColumn(['base_currency']);
         });
     }

@@ -13,7 +13,7 @@ class CreateWithrawalsTable extends Migration
      */
     public function up()
     {
-        Schema::create('Withrawals', function (Blueprint $table) {
+        Schema::create('withrawals', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('amount');
@@ -30,6 +30,6 @@ class CreateWithrawalsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('Withrawals');
+        Schema::dropIfExists('withrawals');
     }
 }

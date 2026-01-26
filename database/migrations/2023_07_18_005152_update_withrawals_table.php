@@ -13,7 +13,7 @@ class UpdateWithrawalsTable extends Migration
      */
     public function up()
     {
-        Schema::table('Withrawals', function (Blueprint $table) {
+        Schema::table('withrawals', function (Blueprint $table) {
             $table->text('content')->nullable();
             $table->string('paypal_email')->nullable();
             $table->boolean('is_usd')->default(false);
@@ -27,7 +27,7 @@ class UpdateWithrawalsTable extends Migration
      */
     public function down()
     {
-        Schema::table('Withrawals', function (Blueprint $table) {
+        Schema::table('withrawals', function (Blueprint $table) {
             $table->dropColumn(['content', 'paypal_email', 'is_usd']);
         });
     }
