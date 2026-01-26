@@ -25,7 +25,7 @@ class UpdateWithrawalsUsdCurrencyTable extends Migration
      */
     public function down()
     {
-        Schema::table('Withdrawals', function (Blueprint $table) {
+        Schema::table('Withrawals', function (Blueprint $table) {
             $table->dropColumn(['base_currency']);
         });
     }

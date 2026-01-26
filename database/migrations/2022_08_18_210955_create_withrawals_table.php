@@ -30,6 +30,6 @@ class CreateWithrawalsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('Withdrawals');
+        Schema::dropIfExists('Withrawals');
     }
 }

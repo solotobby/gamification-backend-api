@@ -27,7 +27,7 @@ class UpdateWithrawalsTable extends Migration
      */
     public function down()
     {
-        Schema::table('Withdrawals', function (Blueprint $table) {
+        Schema::table('Withrawals', function (Blueprint $table) {
             $table->dropColumn(['content', 'paypal_email', 'is_usd']);
         });
     }
