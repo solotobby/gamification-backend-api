@@ -175,7 +175,6 @@ class AuthRepositoryModel
             'user_id' => $user->id
         ])->first();
 
-        // Return collected data with fallback for missing records
         return [
             'is_survey' => $interest ? 1 : 0,
             'is_welcome' => $profile->is_welcome ?? 0,
