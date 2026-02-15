@@ -85,7 +85,10 @@ class AuthService
             $user = $this->auth->findUser($request->email);
 
             if (!$user) {
-                return response()->json(['status' => false, 'message' => 'User not found'], 404);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found'
+                ], 404);
             }
 
             // Ensure user has a role
@@ -114,7 +117,7 @@ class AuthService
                 'data' => $data,
             ], 200);
         } catch (Throwable $e) {
-            // return $e;
+            //  return $e;
             throw new BadRequestException('Error processing request');
         }
     }
@@ -185,7 +188,7 @@ class AuthService
             }
 
             // Check OTP expiration
-            $expirationTime = $otp->created_at->addMinutes(config('auth.otp_expiration', 2));
+            $expirationTime = $otp->created_at->addMinutes(config('auth.otp_expiration', 10));
             if (now()->greaterThan($expirationTime)) {
                 $this->auth->deleteOtp($otp);
                 return response()->json([
@@ -212,7 +215,7 @@ class AuthService
         }
     }
 
-    public function sendResetPasswordLink($request)
+    public function sendResetPasswordToken($request)
     {
         // Validate request
         $this->validator->validateResetPasswordLink($request);
@@ -220,31 +223,59 @@ class AuthService
         try {
             // Find user by email
             $validateEmail = $this->auth->findUser($request->email);
-            // return $validateEmail;
-            if (!$validateEmail) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No account associated with this email'
-                ], 404);
-            }
+
 
             // Create URL token and store it in the password_resets table
-            $token = $this->auth->createToken($validateEmail->email);
-
-            // Create reset link
-            $link = url('password/reset/' . $token);
+            $token = $this->auth->createOTPToken($validateEmail->email);
 
             // Send email
-            $subject = 'Freebyz Password Reset Link';
-            $content = 'Hi, ' . $validateEmail->name . '. Your Password Reset Link is: ' . $link;
-            Mail::to($validateEmail->email)->send(new GeneralMail($validateEmail, $content, $subject, ''));
+            $subject = 'Freebyz Password Reset Code';
+
+            $content = 'Hi ' . $validateEmail->name . ',
+            your 6-digit password reset code is ' . $token . '.
+            This code will expire in 10 minutes. If you did not request a password reset, please ignore this email.';
+
+            Mail::to($validateEmail->email)
+                ->send(new GeneralMail($validateEmail, $content, $subject, ''));
 
             return response()->json([
                 'status' => true,
-                'message' => 'Reset Password Link Sent'
+                'message' => 'Forget Password code sent'
             ], 200);
         } catch (Throwable) {
             throw new BadRequestException('Error processing request');
+        }
+    }
+
+    public function verifyToken($request)
+    {
+
+        $this->validator->verifyToken($request);
+        try {
+            // Verify Token
+            $checkToken = $this->auth->verifyOtp($request->token, $request->email);
+            if (!$checkToken) {
+                return response()->json(['status' => false, 'message' => 'Something unexpected happen, contact the admin or try again later'], 401);
+            }
+
+            // Delete Token
+            $this->auth->deleteToken($request->token);
+
+            $newToken = $this->auth->createToken($request->email);
+
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Verification Successful',
+                'data' => [
+                    'token' => $newToken
+                ]
+            ], 200);
+        } catch (Throwable) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request'
+            ], 500);
         }
     }
 
@@ -256,7 +287,10 @@ class AuthService
             // Verify Token
             $checkToken = $this->auth->verifyToken($request->token);
             if (!$checkToken) {
-                return response()->json(['status' => false, 'message' => 'Something unexpected happen, contact the admin or try again later'], 401);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Something unexpected happen, contact the admin or try again later'
+                ], 401);
             }
 
             // Update Password
@@ -341,7 +375,7 @@ class AuthService
 
         try {
 
-            $token = rand(10000, 10000000);
+            $token = rand(100000, 999999);
 
             DB::table('password_resets')->insert(['email' => $request->email, 'token' => $token, 'created_at' => now()]);
             $subject = 'Freebyz Email Verification';

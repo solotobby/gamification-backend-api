@@ -35,7 +35,9 @@ class AuthRepositoryModel
 
     public function updateUserPassword($email, $password)
     {
-        return $this->findUser($email)->update(['password' => Hash::make($password)]);
+        return $this->findUser($email)->update([
+            'password' => Hash::make($password)
+        ]);
     }
     public function updateUserVerificationStatus($id)
     {
@@ -78,13 +80,12 @@ class AuthRepositoryModel
         )->first();
     }
 
-
-
     public function findUserWithRole($email)
     {
         $user =  User::with(['roles'])->where('email', $email)->first();
         return $user;
     }
+
     public function generateOTP($user)
     {
         $startTime = now();
@@ -143,6 +144,17 @@ class AuthRepositoryModel
         return Hash::check($requestPassword, $userPassword);
     }
 
+    public function createOTPToken($email)
+    {
+        $token = random_int(100000, 999999);
+        DB::table('password_resets')->insert([
+            'email' => $email,
+            'token' => $token,
+            'created_at' => now()
+        ]);
+        return $token;
+    }
+
     public function createToken($email)
     {
         $token = Str::random(64);
@@ -157,6 +169,11 @@ class AuthRepositoryModel
     public function verifyToken($token)
     {
         return DB::table('password_resets')->where('token', $token)->first();
+    }
+
+    public function verifyOtp($token, $email)
+    {
+        return DB::table('password_resets')->where('token', $token)->where('email', $email)->first();
     }
 
     public function deleteToken($token)

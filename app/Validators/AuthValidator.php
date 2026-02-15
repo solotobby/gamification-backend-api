@@ -114,4 +114,17 @@ class AuthValidator
             throw new ValidationException($validator);
         }
     }
+
+     public static function verifyToken($request)
+    {
+        $validationRules = [
+            'token' => 'required|string',
+            'email' => 'required|email|max:255|exists:users,email',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
 }

@@ -15,7 +15,7 @@ class AuthController extends Controller
     public function __construct(AuthService $authService)
     {
         $this->authService = $authService;
-      
+
     }
 
     public function register(Request $request)
@@ -41,14 +41,19 @@ class AuthController extends Controller
     public function localReg(Request $request) {}
 
 
-    public function sendRessetPasswordLink(Request $request)
+    public function sendResetPasswordToken(Request $request)
     {
-        return $this->authService->sendResetPasswordLink($request);
+        return $this->authService->sendResetPasswordToken($request);
     }
 
-    public function ressetPassword(Request $request)
+    public function resetPassword(Request $request)
     {
         return $this->authService->resetPassword($request);
+    }
+
+     public function verifyToken(Request $request)
+    {
+        return $this->authService->verifyToken($request);
     }
 
     public function logout(Request $request)
