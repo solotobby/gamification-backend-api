@@ -49,11 +49,33 @@ class CampaignRepositoryModel
             $id
         );
         if (!empty($type)) {
-            $query->where(
-                'status',
-                $type
-            );
+            switch (strtolower($type)) {
+                case 'completed':
+                    $query->where('is_completed', true);
+                    break;
+
+                case 'denied':
+                    $query->where('status', 'Denied');
+                    break;
+
+                case 'live':
+                    $query->where('status', 'Live')
+                        ->where('is_completed', false);
+                    break;
+
+                case 'pending':
+                    $query->where('status', 'Offline');
+                    break;
+
+                case 'flagged':
+                    $query->where('flagged', true);
+                    break;
+
+                default:
+                    break;
+            }
         }
+
         return $query->orderBy(
             'created_at',
             'DESC'
