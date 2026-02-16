@@ -167,7 +167,7 @@ class JobRepositoryModel
         )->first();
     }
 
-    public function availableJobs($userId, $category = null, $page = null)
+    public function availableJobsOld($userId, $category = null, $page = null)
     {
         $completedCampaignIds = CampaignWorker::where(
             'user_id',
@@ -207,6 +207,68 @@ class JobRepositoryModel
             );
     }
 
+
+    public function availableJobs($userId, $categoryID = null, $page = null)
+    {
+        $query = Campaign::query()
+            ->with(['campaignType', 'campaignCategory'])
+            ->where('status', 'Live')
+            ->where('is_completed', false)
+            ->where(function ($q) use ($userId) {
+
+                // Exclude campaigns already worked on
+                $q->whereNotExists(function ($sub) use ($userId) {
+                    $sub->selectRaw(1)
+                        ->from('campaign_workers')
+                        ->whereColumn('campaign_id', 'campaigns.id')
+                        ->where('user_id', $userId);
+                });
+
+                // Special campaigns
+                $q->orWhere(function ($special) use ($userId) {
+                    $special->whereIn('id', [8188, 8401])
+                        ->whereNotExists(function ($sub) use ($userId) {
+                            $sub->selectRaw(1)
+                                ->from('campaign_workers')
+                                ->whereColumn('campaign_id', 'campaigns.id')
+                                ->where('user_id', $userId)
+                                ->whereIn('status', ['Approved', 'Pending']);
+                        })
+                        ->whereRaw("
+                            (
+                                SELECT COUNT(*)
+                                FROM campaign_workers
+                                WHERE campaign_id = campaigns.id
+                                AND user_id = ?
+                                AND status = 'Denied'
+                            ) < 3
+                        ", [$userId]);
+                });
+            });
+
+        // Optional category filter
+        if ($categoryID > 0) {
+            $query->where('campaign_type', $categoryID);
+        }
+
+
+        // Ordering
+        $query->orderByRaw("
+            CASE
+                WHEN job_id = 'Lgh1yOgwO' THEN 0
+                WHEN approved IN ('Priotized','Priotize') THEN 1
+                ELSE 2
+            END
+        ")->orderByDesc('created_at');
+
+        return $query->paginate(
+            10,
+            ['*'],
+            'page',
+            $page
+        );
+        //  return $query->paginate(10);
+    }
     public function getJobById($jobId)
     {
         return Campaign::where(

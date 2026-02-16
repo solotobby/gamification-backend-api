@@ -41,7 +41,7 @@ class AuthController extends Controller
     public function localReg(Request $request) {}
 
 
-    public function sendResetPasswordToken(Request $request)
+    public function sendForgetPasswordToken(Request $request)
     {
         return $this->authService->sendResetPasswordToken($request);
     }

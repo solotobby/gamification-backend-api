@@ -117,7 +117,7 @@ class AuthService
                 'data' => $data,
             ], 200);
         } catch (Throwable $e) {
-            //  return $e;
+              return $e;
             throw new BadRequestException('Error processing request');
         }
     }

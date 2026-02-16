@@ -65,7 +65,7 @@ class JobService
             $page = strtolower($request->query('page'));
 
             // Fetching available jobs
-            $jobs = $this->jobModel->availableJobs($user->id, $category, $page);
+           $jobs = $this->jobModel->availableJobs($user->id, $category, $page)->appends(['page' => $page]);;
             $data = [];
 
             foreach ($jobs as $key => $value) {
@@ -92,6 +92,7 @@ class JobService
                     'type' => $value->campaignType->name,
                     'category' => $value->campaignCategory->name,
                     'completed' => $count,
+                    'campaign_review' => round(mt_rand(25, 50) / 10, 1), // Review calculation to be done later
                     'is_completed' => $count >= $value->number_of_staff ? true : false,
                     'progress' => round($progress, 2),
                     'currency' => $currency->code,
