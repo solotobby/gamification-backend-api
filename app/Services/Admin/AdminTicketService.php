@@ -3,7 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Repositories\TicketRepositoryModel;
-use App\Services\Providers\AWSServiceProvider;
+use App\Services\Providers\CloudinaryService;
 use App\Services\TicketService;
 use App\Validators\TicketValidator;
 use Throwable;
@@ -11,17 +11,17 @@ use Throwable;
 class AdminTicketService
 {
     protected $ticketModel;
-    protected $awsService;
+    protected $cloudinary;
     protected $validator;
     protected $ticketService;
     public function __construct(
         TicketRepositoryModel $ticketModel,
-        AWSServiceProvider $awsService,
+        CloudinaryService $cloudinary,
         TicketValidator $validator,
         TicketService $ticketService,
     ) {
         $this->ticketModel = $ticketModel;
-        $this->awsService = $awsService;
+        $this->cloudinary = $cloudinary;
         $this->validator = $validator;
         $this->ticketService  = $ticketService;
     }
@@ -35,8 +35,7 @@ class AdminTicketService
             $proofUrl = 'no image';
             if ($request->hasFile('proof')) {
                 $file = $request->hasFile('proof');
-                $filePath = 'proofs/' . time() . '_' . $file->extension();
-                $proofUrl = $this->awsService->uploadImage($file, $filePath);
+                $proofUrl = $this->cloudinary->uploadImage($file);
             }
             $data = [
                 'user_id' => $user->id,

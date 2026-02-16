@@ -6,7 +6,7 @@ use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\BannerRepositoryModel;
 use App\Repositories\SurveyRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
-use App\Services\Providers\AWSServiceProvider;
+use App\Services\Providers\CloudinaryService;
 use App\Validators\BannerValidator;
 use Carbon\Carbon;
 use Exception;
@@ -21,7 +21,7 @@ class BannerService
     protected $currencyModel;
     protected $walletModel;
     protected $bannerValidator;
-    protected $awsService;
+    protected $cloudinary;
 
     public function __construct(
         BannerRepositoryModel $bannerModel,
@@ -29,14 +29,14 @@ class BannerService
         CurrencyRepositoryModel $currencyModel,
         WalletRepositoryModel $walletModel,
         BannerValidator $bannerValidator,
-        AWSServiceProvider $awsService,
+        CloudinaryService $cloudinary
     ) {
         $this->bannerModel = $bannerModel;
         $this->surveyModel = $surveyModel;
         $this->currencyModel = $currencyModel;
         $this->walletModel = $walletModel;
         $this->bannerValidator = $bannerValidator;
-        $this->awsService = $awsService;
+        $this->cloudinary = $cloudinary;
     }
 
     public function listBanner()
@@ -126,8 +126,8 @@ class BannerService
 
            // s3 bucket processing
             $file = $request->file('banner_image');
-            $filePath = 'ad/' . time() . '.' . $file->extension();
-            $bannerUrl = $this->awsService->uploadImage($file, $filePath);
+            // $filePath = 'ad/' . time() . '.' . $file->extension();
+            $bannerUrl = $this->cloudinary->uploadImage($file);
 
             //Save Banner
             $banner = $this->bannerModel->createBanner(

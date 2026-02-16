@@ -23,9 +23,11 @@ use App\Models\User;
 use App\Models\VirtualAccount;
 use App\Models\Wallet;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Stevebauman\Location\Facades\Location;
+
 
 if (!function_exists('GetSendmonnyUserId')) {  //sendmonny user idauthenticated user
     function GetSendmonnyUserId()
@@ -505,7 +507,7 @@ if (!function_exists('listPreferences')) {
     function listPreferences()
     {
         $lists = Preference::all();
-        $totalInterest = \DB::table('user_interest')->count();
+        $totalInterest = DB::table('user_interest')->count();
         $lis = [];
         foreach ($lists as $list) {
             $count = $list->users()->count();
@@ -529,7 +531,7 @@ if (!function_exists('listPreferences')) {
 if (!function_exists('countryList')) {
     function countryList()
     {
-        $users = User::select('country', \DB::raw('COUNT(*) as total'))->where('role', 'regular')->groupBy('country')->get();
+        $users = User::select('country', DB::raw('COUNT(*) as total'))->where('role', 'regular')->groupBy('country')->get();
         return $users;
     }
 }
@@ -652,7 +654,6 @@ if (!function_exists('generateVirtualAccountOnboarding')) {
                         'bank_name' => $response['data']['bank']['name'],
                         'account_name' => $response['data']['account_name'],
                         'account_number' => $response['data']['account_number'],
-                        'account_name' => $response['data']['account_name'],
                         'currency' => 'NGN'
                     ]);
                 }
@@ -700,7 +701,6 @@ if (!function_exists('generateVirtualAccountOnboarding')) {
                         'bank_name' => $response['data']['bank']['name'],
                         'account_name' => $response['data']['account_name'],
                         'account_number' => $response['data']['account_number'],
-                        'account_name' => $response['data']['account_name'],
                         'currency' => 'NGN'
                     ]);
                 }
@@ -762,7 +762,6 @@ if (!function_exists('generateVirtualAccount')) {
                         'bank_name' => $response['data']['bank']['name'],
                         'account_name' => $response['data']['account_name'],
                         'account_number' => $response['data']['account_number'],
-                        'account_name' => $response['data']['account_name'],
                         'currency' => 'NGN'
                     ]);
                 }
@@ -810,7 +809,6 @@ if (!function_exists('generateVirtualAccount')) {
                         'bank_name' => $response['data']['bank']['name'],
                         'account_name' => $response['data']['account_name'],
                         'account_number' => $response['data']['account_number'],
-                        'account_name' => $response['data']['account_name'],
                         'currency' => 'NGN'
                     ]);
                 }
@@ -866,7 +864,6 @@ if (!function_exists('reGenerateVirtualAccount')) {
                     'bank_name' => $response['data']['bank']['name'],
                     'account_name' => $response['data']['account_name'],
                     'account_number' => $response['data']['account_number'],
-                    'account_name' => $response['data']['account_name'],
                     'currency' => 'NGN',
                 ]);
 
@@ -1064,7 +1061,7 @@ if (!function_exists('userNairaUpgrade')) {
         ]);
 
 
-        $referee = \DB::table('referral')->where('user_id',  $user->id)->first();
+        $referee = DB::table('referral')->where('user_id',  $user->id)->first();
 
         if ($referee) {
             $refereeInfo = Profile::where('user_id', $referee->referee_id)->first()->is_celebrity;

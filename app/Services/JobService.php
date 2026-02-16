@@ -11,7 +11,7 @@ use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\JobRepositoryModel;
 use App\Repositories\LogRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
-use App\Services\Providers\AWSServiceProvider;
+use App\Services\Providers\CloudinaryService;
 use App\Validators\CampaignValidator;
 use Exception;
 use Illuminate\Support\Facades\Mail;
@@ -30,7 +30,7 @@ class JobService
     protected $campaignModel;
     protected $campaignService;
     protected $validator;
-    protected $awsService;
+    protected $cloudinary;
     protected $bannerModel;
 
     public function __construct(
@@ -42,7 +42,7 @@ class JobService
         CampaignService $campaignService,
         CampaignValidator $validator,
         LogRepositoryModel $log,
-        AWSServiceProvider $awsService,
+        CloudinaryService $cloudinary,
         BannerRepositoryModel $bannerModel,
     ) {
         $this->jobModel = $jobModel;
@@ -53,7 +53,7 @@ class JobService
         $this->campaignService = $campaignService;
         $this->validator = $validator;
         $this->log = $log;
-        $this->awsService = $awsService;
+        $this->cloudinary = $cloudinary;
         $this->bannerModel = $bannerModel;
     }
 
@@ -113,8 +113,8 @@ class JobService
                 $bannerData[] = [
                     'banner_id' => $bannerItem->banner_id,
                     'banner_url' => $bannerItem->banner_url,
-                  //  'external_link' => $bannerItem->external_link,
-                   // 'status' => $bannerItem->status ? true : false,
+                    //  'external_link' => $bannerItem->external_link,
+                    // 'status' => $bannerItem->status ? true : false,
                     'clicks' => $bannerItem->click_count,
                     'created_at' => $bannerItem->created_at,
                     'updated_at' => $bannerItem->updated_at,
@@ -197,27 +197,27 @@ class JobService
                 ];
             }
 
-              // Fetching 2 random active banners
-              $banners = $this->bannerModel->getRandomActiveBanners();
+            // Fetching 2 random active banners
+            $banners = $this->bannerModel->getRandomActiveBanners();
 
-              $bannerData = [];
+            $bannerData = [];
 
-              foreach ($banners as $bannerItem) {
+            foreach ($banners as $bannerItem) {
 
-                   //Increase impression upon display
-                   $bannerItem->impression_count += 1;
-                   $bannerItem->save();
+                //Increase impression upon display
+                $bannerItem->impression_count += 1;
+                $bannerItem->save();
 
-                  $bannerData[] = [
-                      'banner_id' => $bannerItem->banner_id,
-                      'banner_url' => $bannerItem->banner_url,
-                     // 'external_link' => $bannerItem->external_link,
-                      //'status' => $bannerItem->status ? true : false,
-                      'clicks' => $bannerItem->click_count,
-                      'created_at' => $bannerItem->created_at,
-                      'updated_at' => $bannerItem->updated_at,
-                  ];
-              }
+                $bannerData[] = [
+                    'banner_id' => $bannerItem->banner_id,
+                    'banner_url' => $bannerItem->banner_url,
+                    // 'external_link' => $bannerItem->external_link,
+                    //'status' => $bannerItem->status ? true : false,
+                    'clicks' => $bannerItem->click_count,
+                    'created_at' => $bannerItem->created_at,
+                    'updated_at' => $bannerItem->updated_at,
+                ];
+            }
             $pagination = [
                 'current_page' => $jobs->currentPage(),
                 'last_page' => $jobs->lastPage(),
@@ -285,8 +285,7 @@ class JobService
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
                 $file = $request->hasFile('proof');
-                $filePath = 'proofs/' . time() . '_' . $file->extension();
-                $proofUrl = $this->awsService->uploadImage($file, $filePath);
+                $proofUrl = $this->cloudinary->uploadImage($file);
             }
 
             //return $proofUrl;
