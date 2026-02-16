@@ -20,7 +20,9 @@ class CampaignValidator
             'campaign_type' => 'required|numeric',
             'campaign_subcategory' => 'required|numeric',
             'priotize' => 'required|boolean',
-            'allow_upload' => 'required|boolean'
+            'allow_upload' => 'required|boolean',
+            'expected_result_image' => 'nullable|string',
+            'approval_time' => 'required|numeric|in:24,36,48,56,72'
         ];
         $validator = Validator::make($request->all(), $validationRules);
 

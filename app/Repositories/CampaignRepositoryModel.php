@@ -42,7 +42,7 @@ class CampaignRepositoryModel
         return Campaign::create($request->all());
     }
 
-    public function getCampaignsByPagination($id, $type, $page = null)
+    public function getCampaignsByPagination($id, $type, $per_page, $page = null)
     {
         $query = Campaign::where(
             'user_id',
@@ -58,7 +58,7 @@ class CampaignRepositoryModel
             'created_at',
             'DESC'
         )->paginate(
-            10,
+            $per_page,
             ['*'],
             'page',
             $page
@@ -155,6 +155,7 @@ class CampaignRepositoryModel
             'reference' => $ref,
             'amount' => $amount,
             'status' => 'successful',
+            'balance' => app(WalletRepositoryModel::class)->getWalletBalance($user->id),
             'currency' => $currency,
             'channel' => $channel,
             'type' => 'campaign_posted',
@@ -200,6 +201,7 @@ class CampaignRepositoryModel
             'amount' => $amount,
             'status' => 'successful',
             'currency' => 'NGN',
+            'balance' => app(WalletRepositoryModel::class)->getWalletBalance($userId),
             'channel' => 'paystack',
             'type' => 'edit_campaign_payment',
             'description' => 'Extend Campaign Payment'
@@ -230,6 +232,7 @@ class CampaignRepositoryModel
             'status' => 'successful',
             'currency' => $currency,
             'channel' => $channel,
+            'balance' => app(WalletRepositoryModel::class)->getWalletBalance(1),
             'type' => 'campaign_revenue',
             'description' => 'Campaign revenue from ' . $user->name,
             'tx_type' => 'Credit',

@@ -31,31 +31,40 @@ class CloudinaryService
         }
     }
 
-    public function uploadBase64Image(string $base64, string $folder = 'uploads'): ?string
-    {
-        try {
-            if (!str_starts_with($base64, 'data:image')) {
-                $base64 = 'data:image/jpeg;base64,' . $base64;
-            }
-
-            $uploadedFile = Cloudinary::upload(
-                $base64,
-                [
-                    'folder' => $folder,
-                    'resource_type' => 'image',
-                    'transformation' => [
-                        'quality' => 'auto:good',
-                        'fetch_format' => 'auto',
-                    ],
-                ]
-            );
-
-            return $uploadedFile->getSecurePath();
-        } catch (\Exception $e) {
-            Log::error('Cloudinary base64 upload failed: ' . $e->getMessage());
-            return null;
-        }
+   public function uploadBase64Image(?string $base64, string $folder = 'uploads'): ?string
+{
+    if (!$base64) {
+        return null;
     }
+
+    // remove spaces/newlines
+    $base64 = trim($base64);
+    $base64 = str_replace(["\n", "\r"], '', $base64);
+
+    // validate base64 structure
+    if (!preg_match('/^data:image\/(\w+);base64,/', $base64)) {
+        return null;
+    }
+
+    try {
+        $uploadedFile = Cloudinary::upload($base64, [
+            'folder' => $folder,
+            'resource_type' => 'image',
+            'transformation' => [
+                'quality' => 'auto:good',
+                'fetch_format' => 'auto',
+            ],
+        ]);
+
+        return $uploadedFile?->getSecurePath();
+    } catch (\Throwable $e) {
+        Log::error('Cloudinary base64 upload failed', [
+            'error' => $e->getMessage()
+        ]);
+        return null;
+    }
+}
+
 
     public function uploadFile($file, string $folder = 'files'): ?string
     {

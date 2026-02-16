@@ -160,11 +160,9 @@ class AuthService
 
             $otp = $this->auth->generateOTP($user);
 
-            if (env('APP_ENV') !== 'localenv') {
-                $subject = 'Freebyz Email Verification';
-                $content = 'Hi, ' . $user->name . ', Your Email Verification Code is ' . $otp;
-                Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
-            }
+            $subject = 'Freebyz Email Verification';
+            $content = ' Your Email Verification Code is ' . $otp;
+            Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
 
             return response()->json([
                 'status' => true,
@@ -231,8 +229,7 @@ class AuthService
             // Send email
             $subject = 'Freebyz Password Reset Code';
 
-            $content = 'Hi ' . $validateEmail->name . ',
-            your 6-digit password reset code is ' . $token . '.
+            $content = 'Your 6-digit password reset code is ' . $token . '.
             This code will expire in 10 minutes. If you did not request a password reset, please ignore this email.';
 
             Mail::to($validateEmail->email)
@@ -349,15 +346,13 @@ class AuthService
         // Generate OTP
         $otp = $this->auth->generateOTP($user);
 
-        // Send verification emails if not local
-        if (env('APP_ENV') !== 'localenv') {
-            $subject = 'Freebyz Email Verification';
-            $content = 'Hi, ' . $user->name . ', Your Email Verification Code is ' . $otp;
-            Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
+        $welcomeSubject = 'Welcome to Freebyz';
+        Mail::to($user->email)->send(new Welcome($user, $welcomeSubject, ''));
 
-            $welcomeSubject = 'Welcome to Freebyz';
-            Mail::to($payload['email'])->send(new Welcome($user, $welcomeSubject, ''));
-        }
+        $subject = 'Freebyz Email Verification';
+        $content = 'Your Email Verification Code is ' . $otp;
+        Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
+
 
         return [
             'user' => $user,
@@ -379,7 +374,6 @@ class AuthService
 
             DB::table('password_resets')->insert(['email' => $request->email, 'token' => $token, 'created_at' => now()]);
             $subject = 'Freebyz Email Verification';
-            // $r_link = url('password/reset/'.$token);
             $content = 'Hi, Your email verification code is: ' . $token;
             $user['name'] = '';
             $user['email'] = $request->email;

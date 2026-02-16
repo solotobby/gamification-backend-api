@@ -112,6 +112,12 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    'reply_to' => [
+        'address' => env('MAIL_REPLY_TO_ADDRESS', 'holla@freebyz.com'),
+        'name' => env('MAIL_REPLY_TO_NAME', 'Freebyz Support'),
+    ],
+
+
     /*
     |--------------------------------------------------------------------------
     | Markdown Mail Settings

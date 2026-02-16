@@ -22,7 +22,8 @@ use Stevebauman\Location\Facades\Location;
 class GeneralController extends Controller
 {
 
-    public function fix(){
+    public function fix()
+    {
 
         //  $users = User::where('role', 'regular')->where('country', 'Nigeria')->get('phone');
         //  $list = [];
@@ -37,7 +38,7 @@ class GeneralController extends Controller
 
         $campaigns = Campaign::where('status', 'Live')->orderBy('created_at', 'DESC')->get();
         $list = [];
-        foreach($campaigns as $key => $value){
+        foreach ($campaigns as $key => $value) {
             $data['pending'] = 'Pending';
             $data['approve'] = 'Approved';
             $lisCamp = Campaign::where('id', $value->id)->first();
@@ -55,7 +56,8 @@ class GeneralController extends Controller
         return 'okay';
     }
 
-    public function promo(){
+    public function promo()
+    {
         return view('promo');
     }
 
@@ -65,16 +67,18 @@ class GeneralController extends Controller
         Analytics::dailyVisit('LandingPage');
         $users = User::where('role', 'regular')->count();
         $workers = CampaignWorker::all()->count();
-        $transactions = PaymentTransaction::inRandomOrder()->limit(10)->where('type', 'cash_withdrawal')->select(['user_id','amount','description'])->get();
-        return view('landingPage', ['transactions' => $transactions, 'users' => $users, 'workers' => $workers ]);// ['prizesWon' => $prizesWon, 'gameplayed' => $gameplayed, 'user' => $user]);
+        $transactions = PaymentTransaction::inRandomOrder()->limit(10)->where('type', 'cash_withdrawal')->select(['user_id', 'amount', 'description'])->get();
+        return view('landingPage', ['transactions' => $transactions, 'users' => $users, 'workers' => $workers]); // ['prizesWon' => $prizesWon, 'gameplayed' => $gameplayed, 'user' => $user]);
     }
 
-    public function ladingPageApi(){
-        return PaymentTransaction::with(['user:id,name'])->inRandomOrder()->limit(10)->where('type', 'cash_withdrawal')->select(['user_id','amount','description', 'created_at'])->get();
+    public function ladingPageApi()
+    {
+        return PaymentTransaction::with(['user:id,name'])->inRandomOrder()->limit(10)->where('type', 'cash_withdrawal')->select(['user_id', 'amount', 'description', 'created_at'])->get();
     }
 
-    public function country() {
-        return allCountries();
+    public function country()
+    {
+        return config('countries');
     }
 
     public function contact()
@@ -148,7 +152,8 @@ class GeneralController extends Controller
         return $request;
     }
 
-    public function wellahealth($ref){
+    public function wellahealth($ref)
+    {
         // foreach($subscription as $list){
         //     $planType = $list['planType'];
         //     $groupedSubscriptions[$planType][] = $list;
@@ -156,14 +161,14 @@ class GeneralController extends Controller
         // return $groupedSubscriptions;
 
         $user = User::where('referral_code', $ref)->first();
-        if(!$user){
+        if (!$user) {
             return abort(404);
         }
         $display = [];
-       foreach(listWellaHealthScriptions() as $list){
-            $mysubscriptions = PartnerSubscription::where('user_id', $user->id)->first();//pluck('plan_code')->toArray();
+        foreach (listWellaHealthScriptions() as $list) {
+            $mysubscriptions = PartnerSubscription::where('user_id', $user->id)->first(); //pluck('plan_code')->toArray();
             $display[] = [
-                'data'=> $list,
+                'data' => $list,
                 'is_subscribed' => $list['planCode'] == @$mysubscriptions->plan_code ? true : false,
                 'subscriptionCode' => $list['planCode'] == @$mysubscriptions->plan_code ? @$mysubscriptions->subscription_code : null,
             ];
@@ -175,11 +180,11 @@ class GeneralController extends Controller
 
 
 
-       return view('user.partner.wellahealth.external', ['subscriptions' => $filteredArray, 'ref' => $ref]);
-
+        return view('user.partner.wellahealth.external', ['subscriptions' => $filteredArray, 'ref' => $ref]);
     }
 
-    public function processWellaHealth($ref, $planCode, $numberOfPersons, $amount, $type){
+    public function processWellaHealth($ref, $planCode, $numberOfPersons, $amount, $type)
+    {
         $referral = User::where('referral_code', $ref)->first();
         return view('user.partner.wellahealth.process', [
             'ref' => $ref,
@@ -192,7 +197,8 @@ class GeneralController extends Controller
         //return [$ref, $planCode, $numberOfPersons, $amount];
     }
 
-    public function storeWellaHealth(Request $request){
+    public function storeWellaHealth(Request $request)
+    {
 
         $data['firstName'] = $request->firstName;
         $data['lastName'] = $request->lastName;
@@ -216,8 +222,8 @@ class GeneralController extends Controller
         $beneficiaryCount = count($formattedData);
         $user = User::where('referral_code', $request->referral_code)->first();
 
-        if($user){
-            if($beneficiaryCount == 1){
+        if ($user) {
+            if ($beneficiaryCount == 1) {
                 //enter them in subscription
                 $payload = [
                     'agentCode' => 'WHPXTest10076',
@@ -234,19 +240,17 @@ class GeneralController extends Controller
 
                 $createSubscription = createWellaHealthScription($payload);
 
-                if($createSubscription){
+                if ($createSubscription) {
 
                     $response = $this->completeWellaHealthSubscription($createSubscription, $formattedData, $request->referral_code, $request->amount, $user, $request->planCode);
                     $ref = time();
                     $url =  $this->initiatePayment($formattedData[0]['email'], $request->amount, $response, $ref);
-                    transactionProcessor($user,  $ref, $request->amount, 'unsuccessful', 'NGN', 'paystack', 'wellahealth_payment', 'WellaHealth Payment Initiation by '.$formattedData[0]['firstName'].' '.$formattedData[0]['lastName'], 'Payment_Initiation', 'Credit', 'regular');
+                    transactionProcessor($user,  $ref, $request->amount, 'unsuccessful', 'NGN', 'paystack', 'wellahealth_payment', 'WellaHealth Payment Initiation by ' . $formattedData[0]['firstName'] . ' ' . $formattedData[0]['lastName'], 'Payment_Initiation', 'Credit', 'regular');
 
                     // PaystackHelpers::paymentTrasanction($user->id, '1', $ref, $request->amount, 'unsuccessful', 'NGN', 'paystack', 'wellahealth_payment', 'WellaHealth Payment Initiation by '.$formattedData[0]['firstName'].' '.$formattedData[0]['lastName'], 'Payment_Initiation', 'regular');
                     return redirect($url);
                 }
-
-
-            }else{
+            } else {
 
                 $filteredData = array_slice($formattedData, 1);
 
@@ -264,38 +268,37 @@ class GeneralController extends Controller
                     'beneficiaryList' => $filteredData
                 ];
                 $createSubscription = createWellaHealthScription($payload);
-                if($createSubscription){
+                if ($createSubscription) {
                     // $this->completeWellaHealthSubscription($createSubscription, $formattedData, $request->referral_code, $request->amount, $user, $request->planCode);
-                   $response =  $this->completeWellaHealthSubscription($createSubscription, $formattedData, $request->referral_code, $request->amount, $user, $request->planCode);
+                    $response =  $this->completeWellaHealthSubscription($createSubscription, $formattedData, $request->referral_code, $request->amount, $user, $request->planCode);
                     $ref = time();
                     $url =  $this->initiatePayment($formattedData[0]['email'], $request->amount, $response, $ref);
 
                     // $url =  $this->initiatePayment($formattedData[0]['email'], $request->amount, $response, $ref);
 
-                    transactionProcessor($user,  $ref, $request->amount, 'unsuccessful', 'NGN', 'paystack', 'wellahealth_payment', 'WellaHealth Payment Initiation by '.$formattedData[0]['firstName'].' '.$formattedData[0]['lastName'], 'Payment_Initiation', 'Credit', 'regular');
+                    transactionProcessor($user,  $ref, $request->amount, 'unsuccessful', 'NGN', 'paystack', 'wellahealth_payment', 'WellaHealth Payment Initiation by ' . $formattedData[0]['firstName'] . ' ' . $formattedData[0]['lastName'], 'Payment_Initiation', 'Credit', 'regular');
 
                     // PaystackHelpers::paymentTrasanction($user->id, '1', $ref, $request->amount, 'unsuccessful', 'NGN', 'paystack', 'wellahealth_payment', 'WellaHealth Payment Initiation by '.$formattedData[0]['firstName'].' '.$formattedData[0]['lastName'], 'Payment_Initiation', 'regular');
                     return redirect($url);
                 }
-
             }
-        }else{
+        } else {
             dd('not available');
         }
-
     }
 
-    public function completeWellaHealthSubscription($createSubscription, $formattedData, $referral, $amount, $user, $planCode){
+    public function completeWellaHealthSubscription($createSubscription, $formattedData, $referral, $amount, $user, $planCode)
+    {
 
-        if($referral){
+        if ($referral) {
             $affiliate_commission = 0.07 * $amount;
             $commission = 0.03 * $amount;
-           //$referral = User::where('referral_code', $request->referral)->first();
+            //$referral = User::where('referral_code', $request->referral)->first();
             $affiliate_referral_id = $user->id;
-           // creditWallet($referral, 'Naira', $affiliate_commission);
+            // creditWallet($referral, 'Naira', $affiliate_commission);
             //transactionProcessor($referral,$ref,$request->amount, 'successful', 'NGN', 'system', 'wellahealth_subscription_affiliate_commission', auth()->user()->name.' WellaHealth affiliate commission', 'Credit', 'regular');
 
-        }else{
+        } else {
             $affiliate_commission = 0;
             $commission = 0.1 * $amount;
             $affiliate_referral_id = null;
@@ -317,7 +320,7 @@ class GeneralController extends Controller
 
         $partnership = PartnerSubscription::create($data);
 
-        foreach($formattedData as $formatted){
+        foreach ($formattedData as $formatted) {
             PartnershipBeneficiary::create([
                 'partnership_subscriptions_id' => $partnership->id,
                 'firstName' => $formatted['firstName'],
@@ -331,38 +334,39 @@ class GeneralController extends Controller
         return $partnership;
     }
 
-    public function initiatePayment($email, $amount, $response, $ref){
+    public function initiatePayment($email, $amount, $response, $ref)
+    {
 
         return [$email, $amount, $response, $ref];
         $res = Http::withHeaders([
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer '.env('PAYSTACK_SECRET_KEY')
+            'Authorization' => 'Bearer ' . env('PAYSTACK_SECRET_KEY')
         ])->post('https://api.paystack.co/transaction/initialize', [
             'email' => $email, //$formattedData[0]['email'],
-            'amount' => $amount*100,
+            'amount' => $amount * 100,
             'channels' => ['card'],
             'currency' => 'NGN',
             'reference' => $ref,
             'callback_url' => url('agent/wellahealth/payment'),
-            "metadata"=> [
-                "partnership_id"=> $response->id,
+            "metadata" => [
+                "partnership_id" => $response->id,
             ]
 
         ]);
 
         return json_decode($res->getBody()->getContents(), true)['data']['authorization_url'];
-
     }
 
-    public function agentPayment(){
+    public function agentPayment()
+    {
         $url = request()->fullUrl();
         $url_components = parse_url($url);
         parse_str($url_components['query'], $params);
 
-         $ref = $params['trxref']; //paystack
+        $ref = $params['trxref']; //paystack
         $res = PaystackHelpers::verifyTransaction($ref); //
-        if($res['status'] == true){
+        if ($res['status'] == true) {
             $partnership_id =  $res['data']['metadata']['partnership_id'];
             $partnership = PartnerSubscription::where('id', $partnership_id)->first();
             $partnership->is_paid = true;
@@ -375,19 +379,20 @@ class GeneralController extends Controller
             $tx = transactionProcessor($affiliate, time(), $partnership->affiliate_commission, 'successful', 'NGN', 'paystack', 'wellahealth_payment', 'WellaHealth Payment Initiation Completed', 'Payment_Completed', 'Credit', 'regular');
 
             return view('user.partner.wellahealth.success');
-        }else{
+        } else {
 
             return view('user.partner.wellahealth.success');
         }
     }
 
 
-    public function apiTest(){
+    public function apiTest()
+    {
 
         return $location = Location::get(request()->ip());
-
     }
-    public function testy(){
+    public function testy()
+    {
 
         return $location = Location::get(request()->ip());
 
@@ -487,56 +492,66 @@ class GeneralController extends Controller
         // return $this->paystackApi('ghana');
     }
 
-    public function paystackApi($location){
+    public function paystackApi($location)
+    {
         //locations can be  nigeria, ghana, kenya
         $lowerCaseLocation = strtolower($location);
-        $url = 'https://api.paystack.co/bank?country='.$lowerCaseLocation;
+        $url = 'https://api.paystack.co/bank?country=' . $lowerCaseLocation;
         $res = Http::withHeaders([
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer '.env('PAYSTACK_SECRET_KEY')
+            'Authorization' => 'Bearer ' . env('PAYSTACK_SECRET_KEY')
         ])->get($url)->throw();
 
         return $bankList = json_decode($res->getBody()->getContents(), true)['data'];
-
     }
 
-    public function initiatePaystackTx(){
+    public function initiatePaystackTx()
+    {
         $res = Http::withHeaders([
             'Accept' => 'application/json',
             'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer '.env('PAYSTACK_SECRET_KEY')
+            'Authorization' => 'Bearer ' . env('PAYSTACK_SECRET_KEY')
         ])->post('https://api.paystack.co/transaction/initialize', [
             'email' => 'solotobby@gmail.com', //auth()->user()->email,
-            'amount' => 1050*100,
+            'amount' => 1050 * 100,
             'channels' => ['mobile_money'],
             'currency' => 'GH',
             'reference' => time(),
             'callback_url' => '/' //url($redirect_url)
         ]);
         return json_decode($res->getBody()->getContents(), true);
-    //    return $res['data']['authorization_url'];
+        //    return $res['data']['authorization_url'];
+    }
+public function deviceLocation()
+{
+    $ip = request()->getClientIp();
+
+    $location = Location::get($ip);
+
+    if (!$location) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Unable to determine location for IP: ' . $ip,
+            'data' => [
+                'ip' => $ip,
+                'country' => null,
+                'region' => null,
+                'city' => null
+            ]
+        ], 200);
     }
 
-    public function deviceLocation(){
+    $data['ip'] = $location->ip;
+    $data['country'] = $location->countryName;
+    $data['region'] = $location->regionName;
+    $data['city'] = $location->cityName;
 
-        if(env('APP_DEBUG') == true){
-            $ip = '31.205.133.91';
-        }else{
-            $ip = request()->getClientIp();
-        }
-
-        $location = Location::get($ip);
-
-        // return ['ip'=>$location->ip, 'country'=>$location->countryName, 'region'=>$location->regionName, 'city'=>$location->cityName];
-
-        $data['ip'] = $location->ip;
-        $data['country'] = $location->countryName;
-        $data['region'] = $location->regionName;
-        $data['city'] = $location->cityName;
-        return response()->json(['message' => 'Basic Device Location', 'status' => true, 'data' => $data], 200);
-
-    }
-
+    return response()->json([
+        'status' => true,
+        'message' => 'Basic Device Location',
+        'data' => $data
+    ], 200);
+}
 
 }

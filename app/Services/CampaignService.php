@@ -9,13 +9,17 @@ use Throwable;
 use Illuminate\Support\Facades\Mail;
 use App\Validators\CampaignValidator;
 use App\Helpers\SystemActivities;
+use App\Mail\AdminCampaignPosted;
 use App\Mail\CreateCampaign;
 use App\Models\Campaign;
 use App\Models\CampaignWorker;
 use App\Models\Rating;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\JobRepositoryModel;
+use App\Services\Providers\CloudinaryService;
 use Exception;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CampaignService
 {
@@ -47,8 +51,9 @@ class CampaignService
             $user = auth()->user();
 
             $type = strtolower($request->query('type'));
+            $per_page = strtolower($request->query('per_page', 10));
             // Fetch campaigns by user ID
-            $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type);
+            $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
 
             // Fetch user's base currency and map it
             $baseCurrency = $user->wallet->base_currency;
@@ -85,6 +90,8 @@ class CampaignService
                     'campaign_id' => $campaign->job_id,
                     'title' => $campaign->post_title,
                     'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
+                    'completed_count' => $campaign->completed_count,
+                    'expected_count' => (int)$campaign->number_of_staff,
                     'unit_price' => round($unitPrice, 5),
                     'total_amount' => round($totalAmount, 5),
                     'currency' => $currency->code,
@@ -161,11 +168,12 @@ class CampaignService
             // return $subAmount;
             // Calculate estimated amount and total
             $estAmount = $request->number_of_staff * $subAmount->amount;
-            $percent = (60 / 100) * $estAmount;
+            $userPercent = $user->is_business ? 100 : 60;
+            $percent = ($userPercent / 100) * $estAmount;
             $total = $estAmount + $percent + $iniAmount + $prAmount;
 
             // Generate a unique job ID
-            $jobId = rand(10000, 10000000);
+            $jobId = rand(1000000, 1000000000);
 
             // Check wallet balance and debit if valid
             if (!$this->walletModel->checkWalletBalance(
@@ -246,7 +254,8 @@ class CampaignService
                 $campaign->campaign_type
             );
             $estAmount = $request->new_worker_number * $subAmount->amount;
-            $percent = (60 / 100) * $estAmount;
+            $userPercent = $user->is_business ? 100 : 60;
+            $percent = ($userPercent / 100) * $estAmount;
             $total = $estAmount + $percent + $iniAmount;
 
             // Check wallet balance and debit if valid
@@ -298,7 +307,8 @@ class CampaignService
     public function getCategories()
     {
         try {
-            $baseCurrency = auth()->user()->wallet->base_currency;
+            $user = auth()->user();
+            $baseCurrency = $user->wallet->base_currency;
             $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
 
             // Fetch all active categories
@@ -343,12 +353,16 @@ class CampaignService
                 return [
                     'id' => $category['id'],
                     'name' => $category['name'],
+                    'url' => $category['url'],
                     'subcategories' => $subCategoryData
                 ];
             });
 
             // Get the currency details
-            $data['currency']  = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $data['currency'] = $this->currencyModel->getCurrencyByCode($mapCurrency) ?? [];
+
+            $data['currency']['campaign_percentage'] = $user->is_business ? 100 : 60;
+
 
 
             return response()->json([
@@ -648,6 +662,14 @@ class CampaignService
         $user = auth()->user();
         $channel = $currency->code == "NGN" ? 'paystack' : 'paypal';
 
+        $approvalTime = $user->is_business
+            ? $request->approval_time
+            : 24;
+            Log::info('Base64 input', ['image' => $request->expected_result_image]);
+
+        if ($request->filled('expected_result_image')) {
+            $expectedURL = app(CloudinaryService::class)->uploadBase64Image($request->expected_result_image);
+        }
         $request->merge([
             'user_id' => $user->id,
             'total_amount' => $total,
@@ -657,7 +679,9 @@ class CampaignService
             'pending_count' => 0,
             'completed_count' => 0,
             'allow_upload' => $allowUpload,
-            'approved' => $priotize
+            'approved' => $priotize,
+            'expected_result_image' => $expectedURL ?? null,
+            'approval_time' => $approvalTime
         ]);
 
         // Create the campaign
@@ -671,6 +695,11 @@ class CampaignService
             $currency->code,
             $channel,
         );
+
+
+        Mail::to('victor@freebyztechnologies.com')
+            ->cc('alan@freebyztechnologies.com')
+            ->send(new AdminCampaignPosted($campaign));
 
         // Update admin wallet
         $this->campaignModel->updateAdminWallet($percent, $currency->code);

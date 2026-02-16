@@ -37,7 +37,8 @@
             "app/Helpers/wellahealthApiIntegration.php",
             "app/Helpers/brails.php",
             "app/Helpers/flutterwave.php",
-            "app/Helpers/bloq.php"
+            "app/Helpers/bloq.php",
+            "app/Services/Providers/CloudinaryService.php"
         ]
     },
     "autoload-dev": {

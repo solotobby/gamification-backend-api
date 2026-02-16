@@ -100,6 +100,7 @@ class WalletRepositoryModel
         $currency = Currency::where('code', $mapCurrency)->first();
         return $currency->referral_commission;
     }
+
     public function mapCurrency($currency)
     {
         switch (strtolower($currency)) {
@@ -120,7 +121,22 @@ class WalletRepositoryModel
         }
     }
 
-    public function getWalletBalance($user, $currency) {}
+    public function getWalletBalance($userId)
+    {
+        $wallet = Wallet::where('user_id', $userId)->first();
+
+        if (!$wallet) {
+            return 0;
+        }
+
+        return match ($wallet->base_currency) {
+            'NGN' => $wallet->balance,
+            'naira' => $wallet->balance,
+            'USD' => $wallet->usd_balance,
+            'dollar' => $wallet->usd_balance,
+            default => $wallet->base_currency_balance,
+        };
+    }
 
     public function debitWallet($user, $currency, $amount)
     {
