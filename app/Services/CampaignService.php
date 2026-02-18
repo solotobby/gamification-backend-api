@@ -55,6 +55,7 @@ class CampaignService
             // Fetch campaigns by user ID
             $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
 
+            // Log::info($campaigns);
             // Fetch user's base currency and map it
             $baseCurrency = $user->wallet->base_currency;
             $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
@@ -90,12 +91,15 @@ class CampaignService
                     'campaign_id' => $campaign->job_id,
                     'title' => $campaign->post_title,
                     'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
-                    'completed_count' => $campaign->completed_count,
+                    'completed_count' => $campaign->pending_count + $campaign->completed_count,
                     'expected_count' => (int)$campaign->number_of_staff,
+                    'campaign_category' => $campaign->campaignType->name,
+                    'campaign_category_url' => $campaign->campaignType->url,
                     'unit_price' => round($unitPrice, 5),
                     'total_amount' => round($totalAmount, 5),
                     'currency' => $currency->code,
-                    'status' => $campaign->status,
+                    // 'status' => $campaign->status,
+                     'status' => $this->mapCampaignStatus($campaign),
                     'created' => $campaign->created_at,
                 ];
             }
@@ -122,6 +126,36 @@ class CampaignService
             ], 500);
         }
     }
+
+    private function mapCampaignStatus($campaign)
+    {
+        if ($campaign->is_completed) {
+            return 'completed';
+        }
+
+        if ($campaign->status === 'Denied') {
+            return 'declined';
+        }
+
+        if ($campaign->status === 'Flagged') {
+            return 'flagged';
+        }
+
+         if ($campaign->status === 'Paused') {
+            return 'paused';
+        }
+
+        if ($campaign->status === 'Live' && !$campaign->is_completed) {
+            return 'live';
+        }
+
+        if ($campaign->status === 'Offline') {
+            return 'pending';
+        }
+
+        return strtolower($campaign->status);
+    }
+
 
     public function currencyConversion($from, $to)
     {
@@ -362,6 +396,7 @@ class CampaignService
             $data['currency'] = $this->currencyModel->getCurrencyByCode($mapCurrency) ?? [];
 
             $data['currency']['campaign_percentage'] = $user->is_business ? 100 : 60;
+            $data['currency']['business_account'] = $user->is_business ? true : false;
 
 
 
@@ -565,6 +600,7 @@ class CampaignService
             $campaign->save();
 
             $campaign['campaign_id'] = $campaign->job_id;
+            $campaign['status'] = $this->mapCampaignStatus($campaign);
             return response()->json([
                 'status' => true,
                 'message' => 'Campaign status updated successfully to ' . $campaign->status,
@@ -665,7 +701,7 @@ class CampaignService
         $approvalTime = $user->is_business
             ? $request->approval_time
             : 24;
-            Log::info('Base64 input', ['image' => $request->expected_result_image]);
+        Log::info('Base64 input', ['image' => $request->expected_result_image]);
 
         if ($request->filled('expected_result_image')) {
             $expectedURL = app(CloudinaryService::class)->uploadBase64Image($request->expected_result_image);

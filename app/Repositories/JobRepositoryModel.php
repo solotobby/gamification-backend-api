@@ -38,6 +38,15 @@ class JobRepositoryModel
         );
     }
 
+    public function getAllJobs($user, $page = null)
+    {
+        return CampaignWorker::where('user_id', $user->id)
+            ->orderBy('created_at', 'ASC')
+            ->paginate(10, ['*'], 'page', $page);
+    }
+
+
+
     public function getJobsByCampaignIdsAndType($campaignIds, $type, $page = null)
     {
         return CampaignWorker::whereIn(

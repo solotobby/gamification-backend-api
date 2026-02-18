@@ -44,7 +44,7 @@ class CampaignRepositoryModel
 
     public function getCampaignsByPagination($id, $type, $per_page, $page = null)
     {
-        $query = Campaign::where(
+        $query = Campaign::with(['campaignType'])->where(
             'user_id',
             $id
         );
@@ -54,7 +54,7 @@ class CampaignRepositoryModel
                     $query->where('is_completed', true);
                     break;
 
-                case 'denied':
+                case 'declined':
                     $query->where('status', 'Denied');
                     break;
 
@@ -67,8 +67,12 @@ class CampaignRepositoryModel
                     $query->where('status', 'Offline');
                     break;
 
+                case 'paused':
+                    $query->where('status', 'Paused');
+                    break;
+
                 case 'flagged':
-                    $query->where('flagged', true);
+                    $query->where('status', 'Flagged');
                     break;
 
                 default:

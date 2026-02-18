@@ -65,9 +65,10 @@ class JobService
             $page = strtolower($request->query('page'));
 
             // Fetching available jobs
-           $jobs = $this->jobModel->availableJobs($user->id, $category, $page)->appends(['page' => $page]);;
+            $jobs = $this->jobModel->availableJobs($user->id, $category, $page)->appends(['page' => $page]);;
             $data = [];
 
+            // return $jobs;
             foreach ($jobs as $key => $value) {
                 $count = $value->pending_count + $value->completed_count;
                 $div = $count / $value->number_of_staff;
@@ -91,7 +92,10 @@ class JobService
                     'number_of_staff' => $value->number_of_staff,
                     'type' => $value->campaignType->name,
                     'category' => $value->campaignCategory->name,
+                    'url' => $value->campaignType->url,
                     'completed' => $count,
+                    'completed_count' => $count,
+                    'expected_count' => (int)$value->number_of_staff,
                     'campaign_review' => round(mt_rand(25, 50) / 10, 1), // Review calculation to be done later
                     'is_completed' => $count >= $value->number_of_staff ? true : false,
                     'progress' => round($progress, 2),
@@ -140,6 +144,7 @@ class JobService
                 'pagination' => $pagination,
             ]);
         } catch (Throwable $exception) {
+            // return $exception;
             return response()->json([
                 'status' => false,
                 'error' => $exception->getMessage(),
@@ -152,27 +157,24 @@ class JobService
     {
         try {
             $user = auth()->user();
-            $type = strtolower($request->query('type'));
+            $type = strtolower($request->query('type', ''));
 
-            // Validate the type
             $validTypes = ['completed', 'disputed', 'pending'];
-            if (!in_array($type, $validTypes)) {
+
+            if ($type && !in_array($type, $validTypes)) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Invalid job type provided.',
                 ], 400);
             }
 
-            if ($type === 'completed') {
-                $type = 'approved';
-            }
+            $type = $type === 'completed' ? 'approved' : $type;
 
-            $jobs = [];
-            if ($type === 'disputed') {
-                $jobs = $this->jobModel->getDisputedJobs($user);
-            } else {
-                $jobs = $this->jobModel->getJobByType($user, $type);
-            }
+            $jobs = match (true) {
+                !$type => $this->jobModel->getAllJobs($user),
+                $type === 'disputed' => $this->jobModel->getDisputedJobs($user),
+                default => $this->jobModel->getJobByType($user, $type),
+            };
 
             // return $jobs;
             $data = [];
@@ -193,6 +195,7 @@ class JobService
                     'status' => $job->status,
                     'reason' => $job->reason,
                     'created_at' => $job->created_at,
+                    'can_dispute' => $job->is_dispute ? false : true,
                     'has_dispute' => $job->is_dispute ? true : false,
                     'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
                 ];
