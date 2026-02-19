@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\BankInformation;
+use App\Models\VirtualAccount;
 
 class BankRepositoryModel
 {
@@ -11,7 +12,15 @@ class BankRepositoryModel
        return BankInformation::where(
             'user_id',
             $userId
-        )->first();
+        )->latest()->first();
+    }
+
+    public function getVirtualBank($userId)
+    {
+       return VirtualAccount::where(
+            'user_id',
+            $userId
+        )->latest()->first();
     }
 
     public function saveBankDetails($data, $user)
