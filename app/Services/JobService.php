@@ -84,6 +84,7 @@ class JobService
                     $unitPrice *= $rate;
                 }
 
+              $check =  $this->checkVerification($user, $currency, $unitPrice);
                 $data[] = [
                     'id' => $value->id,
                     'campaign_id' => $value->job_id,
@@ -100,7 +101,14 @@ class JobService
                     'is_completed' => $count >= $value->number_of_staff ? true : false,
                     'progress' => round($progress, 2),
                     'currency' => $currency->code,
-                    'created_at' => $value->created_at
+                    'original_currency' => $value->currency,
+                    'campaign_allow_upload' => $value->allow_upload ? true : false,
+                    'campaign_instruction' => $value->proof,
+                    'campaign_approval_time' => $value->approval_time,
+                    'campaign_description' => $value->description,
+                    'can_perform_task' => $check,
+                    'can_perform_task_reason' => $check ? '' : 'User not verified',
+                    'created_at' => $value->created_at,
                 ];
             }
 
@@ -189,9 +197,13 @@ class JobService
                     'campaign_id' => $campaignDetails->job_id,
                     'campaign_name' => $campaignDetails->post_title,
                     'campaign_owner_id' => $campaignDetails->user_id,
+                    'campaign_category' => $campaignDetails->campaignType->name,
+                    'campaign_category_url' => $campaignDetails->campaignType->url,
                     'comment' => $job->comment,
-                    'amount' => $job->amount,
                     'currency' => $user->wallet->base_currency,
+                    'amount' => $job->amount,
+                    'proof_url' => $job->proof_url,
+                    // 'expected_image_url' => $campaignDetails->proof_url,
                     'status' => $job->status,
                     'reason' => $job->reason,
                     'created_at' => $job->created_at,
@@ -262,7 +274,16 @@ class JobService
                     'message' => 'Job not found'
                 ], 400);
             }
-            $checkJob = $this->jobModel->checkIfJobIsDoneByUser($campaign->job_id);
+
+            $owner = $this->jobModel->checkIfJobIsYours($campaign->job_id);
+            if ($owner) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You cannot perform your own task'
+                ], 400);
+            }
+
+            $checkJob = $this->jobModel->checkIfJobIsDoneByUser($campaign->id);
             if ($checkJob) {
                 return response()->json([
                     'status' => false,
@@ -394,6 +415,7 @@ class JobService
                 'campaign_currency' => $baseCurrency,
                 'campaign_number_of_worker' => $job->number_of_staff,
                 'campaign_url_link' => $job->post_link,
+                'campaign_expect' => $job->post_link,
                 'campaign_allow_upload' => $job->allow_upload ? true : false,
                 'campaign_instruction' => $job->proof,
                 'created_at' => $job->created_at,

@@ -6,11 +6,17 @@ use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
 
 class CloudinaryService
 {
     public function uploadImage($file, string $folder = 'uploads'): ?string
     {
+        if (!$file instanceof UploadedFile) {
+            Log::error('Invalid file passed to uploadImage', ['file' => $file]);
+            return null;
+        }
+
         try {
             $uploadedFile = Cloudinary::upload(
                 $file->getRealPath(),
@@ -30,40 +36,39 @@ class CloudinaryService
             return null;
         }
     }
+    public function uploadBase64Image(?string $base64, string $folder = 'uploads'): ?string
+    {
+        if (!$base64) {
+            return null;
+        }
 
-   public function uploadBase64Image(?string $base64, string $folder = 'uploads'): ?string
-{
-    if (!$base64) {
-        return null;
+        // remove spaces/newlines
+        $base64 = trim($base64);
+        $base64 = str_replace(["\n", "\r"], '', $base64);
+
+        // validate base64 structure
+        if (!preg_match('/^data:image\/(\w+);base64,/', $base64)) {
+            return null;
+        }
+
+        try {
+            $uploadedFile = Cloudinary::upload($base64, [
+                'folder' => $folder,
+                'resource_type' => 'image',
+                'transformation' => [
+                    'quality' => 'auto:good',
+                    'fetch_format' => 'auto',
+                ],
+            ]);
+
+            return $uploadedFile?->getSecurePath();
+        } catch (\Throwable $e) {
+            Log::error('Cloudinary base64 upload failed', [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
     }
-
-    // remove spaces/newlines
-    $base64 = trim($base64);
-    $base64 = str_replace(["\n", "\r"], '', $base64);
-
-    // validate base64 structure
-    if (!preg_match('/^data:image\/(\w+);base64,/', $base64)) {
-        return null;
-    }
-
-    try {
-        $uploadedFile = Cloudinary::upload($base64, [
-            'folder' => $folder,
-            'resource_type' => 'image',
-            'transformation' => [
-                'quality' => 'auto:good',
-                'fetch_format' => 'auto',
-            ],
-        ]);
-
-        return $uploadedFile?->getSecurePath();
-    } catch (\Throwable $e) {
-        Log::error('Cloudinary base64 upload failed', [
-            'error' => $e->getMessage()
-        ]);
-        return null;
-    }
-}
 
 
     public function uploadFile($file, string $folder = 'files'): ?string

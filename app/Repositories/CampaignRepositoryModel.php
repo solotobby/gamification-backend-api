@@ -127,7 +127,7 @@ class CampaignRepositoryModel
     }
     public function getCampaignById($id, $userId = null)
     {
-        $query = Campaign::where(
+        $query = Campaign::with(['campaignType', 'campaignCategory'])->where(
             'id',
             $id
         );

@@ -326,6 +326,17 @@ class JobRepositoryModel
             $id
         )->exists();
     }
+
+    public function checkIfJobIsYours($id)
+    {
+        return Campaign::where(
+            'user_id',
+            auth()->id()
+        )->where(
+            'job_id',
+            $id
+        )->first();
+    }
     public function createDisputeOnWorker($jobId)
     {
         $updateStatus = CampaignWorker::where(

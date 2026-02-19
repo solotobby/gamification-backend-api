@@ -85,6 +85,8 @@ class CampaignService
                     $totalAmount *= $rate;
                 }
 
+                $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
+                $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
                 $data[] = [
                     'id' => $campaign->id,
                     'user_id' => $campaign->user_id,
@@ -98,8 +100,11 @@ class CampaignService
                     'unit_price' => round($unitPrice, 5),
                     'total_amount' => round($totalAmount, 5),
                     'currency' => $currency->code,
+                    'original_currency' => $campaign->currency,
                     // 'status' => $campaign->status,
-                     'status' => $this->mapCampaignStatus($campaign),
+                    'status' => $this->mapCampaignStatus($campaign),
+                    'amount_ratio' => $campaign->currency . '' . $spentAmount . ' / ' . $campaign->currency . '' . $campaignAmount,
+                    'stat' => $this->jobModel->getCampaignStats($campaign->id),
                     'created' => $campaign->created_at,
                 ];
             }
@@ -141,7 +146,7 @@ class CampaignService
             return 'flagged';
         }
 
-         if ($campaign->status === 'Paused') {
+        if ($campaign->status === 'Paused') {
             return 'paused';
         }
 
