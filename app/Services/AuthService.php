@@ -9,6 +9,7 @@ use App\Mail\Welcome;
 use Illuminate\Support\Facades\Mail;
 use App\Exceptions\BadRequestException;
 use App\Repositories\AuthRepositoryModel;
+use App\Repositories\BankRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
 use Throwable;
@@ -22,6 +23,7 @@ class AuthService
 {
     protected $validator;
     protected $auth;
+    protected $bank;
     protected $wallet;
     protected $refer;
     protected $log;
@@ -34,12 +36,14 @@ class AuthService
         ReferralRepositoryModel $refer,
         LogRepositoryModel $log,
         WalletRepositoryModel $walletModel,
+        BankRepositoryModel $bank,
     ) {
         $this->validator = $validator;
         $this->auth = $auth;
         $this->wallet = $wallet;
         $this->refer = $refer;
         $this->log = $log;
+        $this->bank = $bank;
         $this->walletModel = $walletModel;
     }
 
@@ -107,6 +111,7 @@ class AuthService
             $data['wallet'] = $this->walletModel->walletDetails($user);
             $data['token'] = $user->createToken('freebyz')->accessToken;
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
+            $data['virtual_account'] = $this->bank->getVirtualBank($user->id) ?? null;
 
             //    Log Activities
             $this->log->createLogForLogin($user);
