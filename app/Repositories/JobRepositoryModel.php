@@ -15,7 +15,7 @@ class JobRepositoryModel
             $user->id
         );
 
-        if ($type === 'approved') {
+        if ($type === 'completed') {
             $query->whereIn(
                 'status',
                 ['approved', 'denied']
