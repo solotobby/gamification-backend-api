@@ -85,15 +85,22 @@ class JobRepositoryModel
 
     public function setPendingCount($id)
     {
-        $campaign = Campaign::where('id', $id)->first();
-        $campaign->number_of_staff;
-        if ($campaign->pending_count == $campaign->number_of_staff) {
+        $campaign = Campaign::find($id);
+
+        if (!$campaign) {
+            return false;
+        }
+
+        $campaign->increment('pending_count');
+
+        if (($campaign->pending_count + $campaign->completed_count) >= $campaign->number_of_staff) {
             $campaign->is_completed = true;
             $campaign->save();
-            return 'OK';
-        } else {
-            return 'NOT OK';
+
+            return true;
         }
+
+        return true;
     }
     public function getDisputedJobs($user, $page = null)
     {
@@ -165,16 +172,16 @@ class JobRepositoryModel
         )->paginate(10, ['*'], 'page', $page);
     }
 
-    public function getJobByIdAndCampaignId($jobId, $campaignId)
+    public function getJobByIdAndCampaignId($jobId, $campaignId, $userId = null)
     {
-        return CampaignWorker::where(
-            'id',
-            $jobId
-        )->where(
-            'campaign_id',
-            $campaignId
-        )->first();
+        return CampaignWorker::where('id', $jobId)
+            ->where('campaign_id', $campaignId)
+            ->when($userId !== null, function ($query) use ($userId) {
+                $query->where('user_id', $userId);
+            })
+            ->first();
     }
+
 
     public function availableJobsOld($userId, $category = null, $page = null)
     {

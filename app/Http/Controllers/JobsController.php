@@ -39,4 +39,10 @@ class JobsController extends Controller
     {
         return $this->jobService->submitWork($request);
     }
+
+      public function jobRating(Request $request){
+
+       return $this->jobService->jobRating($request);
+    }
+
 }

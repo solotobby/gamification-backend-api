@@ -10,6 +10,7 @@ use App\Repositories\BannerRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\JobRepositoryModel;
 use App\Repositories\LogRepositoryModel;
+use App\Repositories\RatingRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
 use App\Services\Providers\CloudinaryService;
 use App\Validators\CampaignValidator;
@@ -27,6 +28,7 @@ class JobService
     protected $walletModel;
     protected $log;
     protected $authModel;
+    protected $ratingModel;
     protected $campaignModel;
     protected $campaignService;
     protected $validator;
@@ -35,6 +37,7 @@ class JobService
 
     public function __construct(
         JobRepositoryModel $jobModel,
+        RatingRepositoryModel $ratingModel,
         AuthRepositoryModel $authModel,
         CampaignRepositoryModel $campaignModel,
         WalletRepositoryModel $walletModel,
@@ -47,6 +50,7 @@ class JobService
     ) {
         $this->jobModel = $jobModel;
         $this->authModel = $authModel;
+        $this->ratingModel = $ratingModel;
         $this->campaignModel = $campaignModel;
         $this->walletModel = $walletModel;
         $this->currencyModel = $currencyModel;
@@ -84,7 +88,7 @@ class JobService
                     $unitPrice *= $rate;
                 }
 
-              $check =  $this->checkVerification($user, $currency, $unitPrice);
+                $check =  $this->checkCanPerform($user, $currency, $unitPrice, $value);
                 $data[] = [
                     'id' => $value->id,
                     'campaign_id' => $value->job_id,
@@ -108,8 +112,8 @@ class JobService
                     'campaign_approval_time' => $value->approval_time,
                     'campaign_description' => $value->description,
                     'expected_image_url' => $value->expected_result_image,
-                    'can_perform_task' => $check,
-                    'can_perform_task_reason' => $check ? '' : 'User not verified',
+                    'can_perform_task' => $check === true,
+                    'can_perform_task_reason' => $check === true ? '' : $check,
                     'created_at' => $value->created_at,
                 ];
             }
@@ -311,7 +315,7 @@ class JobService
             }
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
-                $file = $request->hasFile('proof');
+                $file = $request->file('proof');
                 $proofUrl = $this->cloudinary->uploadImage($file);
             }
 
@@ -326,7 +330,7 @@ class JobService
                 $proofUrl,
                 $unitPrice
             );
-            $campaign->increment('pending_count');
+            // $campaign->increment('pending_count');
             $this->jobModel->setPendingCount($campaign->id);
 
             // Activity log
@@ -448,6 +452,26 @@ class JobService
         return false;
     }
 
+    public function checkCanPerform($user, $currency, $unitPrice, $campaign)
+    {
+        $isOwner = $campaign->user_id === $user->id;
+        $isVerified = $user->is_verified;
+        $isBelowThreshold = (int) $currency->min_upgrade_amount > $unitPrice;
+
+        if ($isOwner) {
+            return "You cannot perform your own campaign.";
+        }
+
+        if ($isVerified) {
+            return true;
+        }
+
+        if ($isBelowThreshold) {
+            return true;
+        }
+
+        return "Your account needs verification to perform this campaign.";
+    }
 
     public function createDispute($request)
     {
@@ -490,6 +514,51 @@ class JobService
                 'status' => false,
                 'error' => $exception->getMessage(),
                 'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+    public function jobRating($request)
+    {
+
+        $this->validator->validateJobRating($request);
+
+        try {
+
+            $userId = auth()->user()->id;
+            $campaign = $this->campaignModel->getCampaignByJobId($request->campaign_id);
+
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Campaign not found'
+                ], 404);
+            }
+            $workDone = $this->jobModel->getJobByIdAndCampaignId(
+                $request->job_id,
+                $campaign->id,
+                $userId
+            );
+
+            $this->ratingModel->create([
+                'user_id' => $userId,
+                'campaign_id' => $request->campaign_id,
+                'campaign_worker_id' => $workDone->id,
+                'rating' => $request->rating,
+                'comment' => $request->comment,
+                'type' => 'job',
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Thank you for taking the time to rate this task, we really appreciate it',
+                'data' => null
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => false,
+                // 'error' => $e->getMessage(),
+                'message' => 'Error processing request',
             ], 500);
         }
     }

@@ -44,6 +44,22 @@ class CampaignValidator
         }
     }
 
+    public static function validateJobRating($request)
+    {
+        $validationRules = [
+            'campaign_id' => 'required|string|exists:campaigns,job_id',
+            'job_id' => 'required|string|exists:campaign_workers,id',
+            'rating' => 'required|integer|between:1,5',
+            'comment' => 'required|string',
+        ];
+
+        $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
     public static function AdminDecisionOnCampaign($request)
     {
         $validationRules = [

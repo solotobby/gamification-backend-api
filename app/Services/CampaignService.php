@@ -132,7 +132,7 @@ class CampaignService
         }
     }
 
-    private function mapCampaignStatus($campaign)
+    public function mapCampaignStatus($campaign)
     {
         if ($campaign->is_completed) {
             return 'completed';
@@ -160,8 +160,6 @@ class CampaignService
 
         return strtolower($campaign->status);
     }
-
-
     public function currencyConversion($from, $to)
     {
         $currencyRate = $this->currencyModel->convertCurrency($from, $to);
@@ -837,9 +835,6 @@ class CampaignService
         }
     }
 
-
-
-
     public function viewCampaign($job_id)
     {
         try {
@@ -920,4 +915,6 @@ class CampaignService
 
         return view('admin.campaign_mgt.admin_activities', ['lists' => $cam, 'count' => $count]);
     }
+
+
 }
