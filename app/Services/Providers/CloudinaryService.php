@@ -10,7 +10,7 @@ use Illuminate\Http\UploadedFile;
 
 class CloudinaryService
 {
-    public function uploadImage($file, string $folder = 'uploads'): ?string
+    public function uploadImage($file, string $folder = 'uploads', bool $watermark = false): ?string
     {
         if (!$file instanceof UploadedFile) {
             Log::error('Invalid file passed to uploadImage', ['file' => $file]);
@@ -18,47 +18,79 @@ class CloudinaryService
         }
 
         try {
+            $transformation = [
+                'quality' => 'auto:good',
+                'fetch_format' => 'auto',
+            ];
+
+            if ($watermark) {
+                $transformation[] = [
+                    'overlay' => [
+                        'font_family' => 'Arial',
+                        'font_size' => 60,
+                        'text' => 'FREEBYZ.COM',
+                    ],
+                    'color' => '#000000',
+                    'opacity' => 50,
+                    'gravity' => 'center',
+                    'angle' => 45,
+                    'effect' => 'outline:3'
+                ];
+            }
+
             $uploadedFile = Cloudinary::upload(
                 $file->getRealPath(),
                 [
                     'folder' => $folder,
                     'resource_type' => 'image',
-                    'transformation' => [
-                        'quality' => 'auto:good',
-                        'fetch_format' => 'auto',
-                    ],
+                    'transformation' => $transformation,
                 ]
             );
 
-            return $uploadedFile->getSecurePath();
+            return $uploadedFile?->getSecurePath();
         } catch (\Exception $e) {
             Log::error('Cloudinary image upload failed: ' . $e->getMessage());
             return null;
         }
     }
-    public function uploadBase64Image(?string $base64, string $folder = 'uploads'): ?string
+
+    public function uploadBase64Image(?string $base64, string $folder = 'uploads', bool $watermark = false): ?string
     {
         if (!$base64) {
             return null;
         }
 
-        // remove spaces/newlines
         $base64 = trim($base64);
         $base64 = str_replace(["\n", "\r"], '', $base64);
 
-        // validate base64 structure
         if (!preg_match('/^data:image\/(\w+);base64,/', $base64)) {
             return null;
         }
 
         try {
+            $transformation = [
+                'quality' => 'auto:good',
+                'fetch_format' => 'auto',
+            ];
+
+            if ($watermark) {
+                $transformation[] = [
+                    'overlay' => [
+                        'font_family' => 'Arial',
+                        'font_size' => 60,
+                        'text' => 'FREEBYZ.COM',
+                    ],
+                    'color' => '#FFFFFF',
+                    'opacity' => 30,
+                    'gravity' => 'center',
+                    'angle' => 45,
+                ];
+            }
+
             $uploadedFile = Cloudinary::upload($base64, [
                 'folder' => $folder,
                 'resource_type' => 'image',
-                'transformation' => [
-                    'quality' => 'auto:good',
-                    'fetch_format' => 'auto',
-                ],
+                'transformation' => $transformation,
             ]);
 
             return $uploadedFile?->getSecurePath();

@@ -50,7 +50,7 @@ class CampaignValidator
             'campaign_id' => 'required|string|exists:campaigns,job_id',
             'job_id' => 'required|string|exists:campaign_workers,id',
             'rating' => 'required|integer|between:1,5',
-            'comment' => 'required|string',
+            'comment' => 'nullable|string',
         ];
 
         $validator = Validator::make($request->all(), $validationRules);

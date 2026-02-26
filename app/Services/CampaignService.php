@@ -348,69 +348,130 @@ class CampaignService
             $baseCurrency = $user->wallet->base_currency;
             $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
 
-            // Fetch all active categories
             $categories = $this->campaignModel->listCategories();
             if (!$categories) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No categories found',
-                    'data' => []
-                ], 404);
+                return response()->json(['status' => false, 'message' => 'No categories found', 'data' => []], 404);
             }
 
-            $data['category'] = $categories->map(function ($category) use ($mapCurrency) {
-                // Fetch subcategories for this category
-                $subCategories = $this->campaignModel->listSubCategories($category['id']);
-
-                // Transform the subcategories
-                $subCategoryData = $subCategories->map(function ($sub) use ($mapCurrency) {
-                    $amount = $sub->amount;
-
-                    // If the currency is not NGN, convert the amount
-                    if ($mapCurrency !== 'NGN') {
-                        $currencyRate = $this->currencyModel->convertCurrency('NGN', $mapCurrency);
-
-                        if (!$currencyRate) {
-                            return response()->json(['status' => false, 'message' => 'Currency conversion rate not found.'], 404);
-                        }
-
-                        $rate = $currencyRate->rate;
-                        $amount *= $rate; // Convert the amount based on the rate
-                    }
-
-                    return [
-                        'id' => $sub->id,
-                        'amount' => round($amount, 5),
-                        'category_id' => $sub->category_id,
-                        'name' => $sub->name,
-                    ];
-                });
-
-                // Add subcategories under the category
-                return [
-                    'id' => $category['id'],
-                    'name' => $category['name'],
-                    'url' => $category['url'],
-                    'subcategories' => $subCategoryData
-                ];
-            });
-
-            // Get the currency details
+            $data['category'] = $this->mapCategories($categories, $mapCurrency);
             $data['currency'] = $this->currencyModel->getCurrencyByCode($mapCurrency) ?? [];
-
             $data['currency']['campaign_percentage'] = $user->is_business ? 100 : 60;
-            $data['currency']['business_account'] = $user->is_business ? true : false;
+            $data['currency']['business_account'] = (bool) $user->is_business;
+            $data['utility'] = $this->getUtilityData();
 
-
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Categories fetched successfully',
-                'data' => $data
-            ], 200);
+            return response()->json(['status' => true, 'message' => 'Categories fetched successfully', 'data' => $data], 200);
         } catch (Throwable $e) {
             return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error processing request'], 500);
         }
+    }
+
+    private function mapCategories($categories, string $mapCurrency): array
+    {
+        return $categories->map(function ($category) use ($mapCurrency) {
+            $subCategories = $this->campaignModel->listSubCategories($category['id']);
+
+            $subCategoryData = $subCategories->map(function ($sub) use ($mapCurrency) {
+                $amount = $sub->amount;
+
+                if ($mapCurrency !== 'NGN') {
+                    $currencyRate = $this->currencyModel->convertCurrency('NGN', $mapCurrency);
+                    if (!$currencyRate) return null;
+                    $amount *= $currencyRate->rate;
+                }
+
+                return [
+                    'id' => $sub->id,
+                    'amount' => round($amount, 5),
+                    'category_id' => $sub->category_id,
+                    'name' => $sub->name,
+                ];
+            })->filter()->values();
+
+            return [
+                'id' => $category['id'],
+                'name' => $category['name'],
+                'url' => $category['url'],
+                'subcategories' => $subCategoryData,
+            ];
+        })->toArray();
+    }
+
+    private function getUtilityData(): array
+    {
+        return [
+            'dashboard' => [
+                'info' => [
+                    'title' => 'Seasons Greetings from all of us at Freebyz Technologies Ltd!',
+                    'description' => 'Please update/verify your information before 13th July 2026 to unlock level benefits
+
+Get Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job here
+
+PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.
+
+Learn how to COMPLETE SIMPLE tasks online & earn here.
+
+VIRTUAL WALLET Account: We have noticed downtimes from our partner on Virtual wallet account. Please use another payment gateway by going to Wallet > Fund wallet OR pay manually to 0234078694 (UNION BANK-Freebyz Technologies LTD).
+
+If you paid manually, drop your evidence of payment here.'
+                ],
+                'ads' => [
+                    [
+                        'title' => 'Raise money for urgent needs',
+                        'description' => 'Create a crowd funding link to share with your friends',
+                        'image' => '',
+                        'link' => 'https://famlic.com/'
+                    ],
+                    [
+                        'title' => 'Monetise your posts on Payhankey',
+                        'description' => 'Monetize your posts and content on our social media platform - Payhankey',
+                        'image' => 'https://res.cloudinary.com/dwisk11nl/image/upload/v1772094053/uploads/ihruqojz8pjzuzfjjdnu.png',
+                        'link' => 'https://payhankey.com/'
+                    ]
+                ],
+            ],
+            'withdraw' => [
+                'info' => 'Withdrawals are made every Friday of the week. Only verified users can withdraw'
+            ],
+            'tasks' => [
+                'created_tasks' => [
+                    'info' => 'Campaigns with Activity Status Completed will not be available on the dashboard.',
+                    'warning' => 'To ensure fairness, kindly avoid denying task submissions without genuine reasons. Repeated denials will lead to your campaigns being suspended without refund.',
+                    'filter' => ['completed', 'pending', 'live', 'paused', 'declined', 'flagged'],
+                ],
+                'submitted_tasks' => [
+                    'info' => 'Campaigns with Activity Status Completed will not be available on the dashboard.',
+                    'warning' => 'To ensure fairness, you only have 12 hours to create a dispute if you think your job is denied abruptly.',
+                    'filter' => ['completed', 'pending', 'disputed'],
+                ],
+                'task_creation' => [
+                    'info' => 'Social media Apps like Facebook, TikTok, YouTube, Instagram has algorithms to detect unusual behaviour and attempt to buy followers or subscribers which can lead to a 10-15% drop in the number of followers/subscribers you actually hired. This may make you think our workers actually unsubcribed/unfollowed your page. Therefore avoid using your direct links (as much as possible). You can also choose the Comment before subscribe/Follow Subcategory or other creative means.'
+                ]
+            ],
+            'hire_workers' => [
+                'info' => 'Filter skilled worker based on your preferences'
+            ],
+            'remote_jobs' => [
+                'info' => 'Discover full-time roles, part-time positions, and exciting gigs. Join thousands of professionals finding their perfect match.',
+                'ads' => [
+                    [
+                        'title' => 'Looking for quick gigs',
+                        'description' => 'Browse through Freebyz micro-jobs and start earning today!',
+                        'image' => '',
+                        'color' => 'blue',
+                        'button_text' => 'Explore micro jobs',
+                        'link' => ''
+                    ],
+                    [
+                        'title' => 'Has your Content ever made you enough money?',
+                        'description' => 'Monetize your posts and content on our social media platform - Payhankey',
+                        'image' => 'https://res.cloudinary.com/dwisk11nl/image/upload/v1772094053/uploads/ihruqojz8pjzuzfjjdnu.png',
+                        'color' => 'purple',
+                        'button_text' => 'Get Started',
+                        'link' => 'https://payhankey.com/'
+                    ]
+                ]
+            ],
+        ];
     }
 
     public function campaignActivitiesStat($campaignId)
@@ -915,6 +976,4 @@ class CampaignService
 
         return view('admin.campaign_mgt.admin_activities', ['lists' => $cam, 'count' => $count]);
     }
-
-
 }

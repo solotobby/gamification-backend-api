@@ -316,7 +316,7 @@ class JobService
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
                 $file = $request->file('proof');
-                $proofUrl = $this->cloudinary->uploadImage($file);
+                $proofUrl = $this->cloudinary->uploadImage($file, 'uploads', true);
             }
 
             //return $proofUrl;
@@ -545,7 +545,7 @@ class JobService
                 'campaign_id' => $request->campaign_id,
                 'campaign_worker_id' => $workDone->id,
                 'rating' => $request->rating,
-                'comment' => $request->comment,
+                'comment' => $request->comment ?? null,
                 'type' => 'job',
             ]);
 
