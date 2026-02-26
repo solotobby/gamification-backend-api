@@ -308,13 +308,13 @@ class JobService
                 $unitPrice *= $rate;
             }
 
-            $check = $this->checkVerification($user, $currency, $unitPrice);
-            if (!$check) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User account yet to be verified',
-                ], 403);
-            }
+            // $check = $this->checkVerification($user, $currency, $unitPrice);
+            // if (!$check) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'User account yet to be verified',
+            //     ], 403);
+            // }
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
                 $file = $request->file('proof');

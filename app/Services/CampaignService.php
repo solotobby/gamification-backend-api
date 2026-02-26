@@ -101,7 +101,7 @@ class CampaignService
                     'total_amount' => round($totalAmount, 5),
                     'currency' => $currency->code,
                     'original_currency' => $campaign->currency,
-                    'public_link' => "https://stagging.e-portal.com.ng/tasks/".$campaign->job_id,
+                    'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
                     // 'status' => $campaign->status,
                     'status' => $this->mapCampaignStatus($campaign),
                     'amount_ratio' => $campaign->currency . '' . $spentAmount . ' / ' . $campaign->currency . '' . $campaignAmount,
@@ -452,6 +452,11 @@ class CampaignService
                 ],
                 'task_creation' => [
                     'info' => 'Social media Apps like Facebook, TikTok, YouTube, Instagram has algorithms to detect unusual behaviour and attempt to buy followers or subscribers which can lead to a 10-15% drop in the number of followers/subscribers you actually hired. This may make you think our workers actually unsubcribed/unfollowed your page. Therefore avoid using your direct links (as much as possible). You can also choose the Comment before subscribe/Follow Subcategory or other creative means.'
+                ],
+                'worker_filter' => [
+                    'approved',
+                    'pending',
+                    'denied'
                 ]
             ],
             'hire_workers' => [
@@ -542,10 +547,19 @@ class CampaignService
                     'job_id' => $job->id,
                     'worker_name' => $this->authModel->findUserById($job->user_id)->name ?? 'Unknown',
                     'campaign_name' => $campaign->post_title,
+                    'external_link' => $campaign->post_link,
+                    'campaign_id' => $campaign->job_id,
+                    'campaign_description' => $campaign->description,
                     'amount' => $campaign->currency . ' ' . $job->amount,
                     'status' => $job->status,
+                    'expected_proof_of_completion' => $campaign->proof,
+                    'expected_proof_url' => $campaign->expected_result_image,
+                    'worker_proof' => $job->comment,
+                    'worker_proof_url' => $job->proof_url === 'no image' ? null : $job->proof_url,
+                    'approval_or_denial_reason' => $job->reason,
                     'created_at' => $job->created_at,
-                    'updated_at' => $job->updated_at,
+                    'has_dispute' => $job->is_dispute,
+                    'dispute_resolved' => $job->is_dispute_resolved,
 
                 ];
             });
@@ -723,7 +737,7 @@ class CampaignService
                 'worker_name' => $this->authModel->findUserById($job->user_id)->name,
                 'worker_id' => $job->user_id,
                 'worker_proof' => $job->comment,
-                'worker_proof_url' => $job->proof_url,
+                'worker_proof_url' => $job->proof_url === 'no image' ? null : $job->proof_url,
                 'job_status' => $job->status,
                 'approval_or_denial_reason' => $job->reason,
                 'created_at' => $job->created_at,
@@ -881,14 +895,14 @@ class CampaignService
                 'worker_name' => $worker->name,
                 'worker_id' => $job->user_id,
                 'worker_proof' => $job->comment,
-                'worker_proof_url' => $job->proof_url,
+                'worker_proof_url' => $job->proof_url === 'no image' ? null : $job->proof_url,
                 'job_status' => $job->status,
                 'approval_or_denial_reason' => $job->reason,
                 'created_at' => $job->created_at,
                 'updated_at' => $job->updated_at,
                 'has_dispute' => (bool) $job->is_dispute,
                 'dispute_resolved' => (bool) $job->is_dispute_resolved,
-                'public_link' => "https://stagging.e-portal.com.ng/tasks/".$campaign->job_id,
+                'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
 
             ];
 
