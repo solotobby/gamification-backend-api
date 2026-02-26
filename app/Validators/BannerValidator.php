@@ -10,7 +10,7 @@ class BannerValidator
     public function createBannerValidator($request)
     {
         $validationRules = [
-            'banner_image' => 'required|file|mimes:jpg,jpeg,png,gif,heic|max:5120',
+            'banner_image' => 'required|file|max:5120',
             'external_link' => 'required|string|url',
             // 'audience' => 'required|array|min:5',
             'budget' => 'required|string',
