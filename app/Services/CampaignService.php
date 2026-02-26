@@ -753,6 +753,7 @@ If you paid manually, drop your evidence of payment here.'
         $userId = auth()->user()->id;
         $campaign = $this->campaignModel->getCampaignById($id, $userId);
         $campaign->completed_count += 1;
+        $campaign->pending_count -= 1;
         $campaign->save();
         return true;
     }
@@ -851,7 +852,7 @@ If you paid manually, drop your evidence of payment here.'
             // Perform action
             if ($action === 'deny') {
                 $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Denied');
-                $this->decreasePendingCountAfterDenial($campaign->id);
+                // $this->decreasePendingCountAfterDenial($campaign->id);
             } elseif ($action === 'approve') {
                 $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Approved');
                 $this->increaseCompletedCountAfterApproval($campaign->id);

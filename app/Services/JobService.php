@@ -213,7 +213,7 @@ class JobService
                     'status' => $job->status,
                     'reason' => $job->reason,
                     'created_at' => $job->created_at,
-                    'can_dispute' =>  $job->status == 'Denied' ?  true : false,
+                    'can_dispute' =>  $job->canCreateDispute(),
                     'has_dispute' => $job->is_dispute ? true : false,
                     'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
                 ];

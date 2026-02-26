@@ -316,8 +316,11 @@ class JobRepositoryModel
             $jobId
         )->first();
 
+        $updateStatus->denied_at = now();
         $updateStatus->reason = $reason;
         $updateStatus->status = $status;
+        $updateStatus->slot_released = false;
+
         $updateStatus->save();
 
         return $updateStatus;
