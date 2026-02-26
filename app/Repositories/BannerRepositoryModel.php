@@ -54,6 +54,7 @@ class BannerRepositoryModel
         $banner->country = 'all';
         $banner->currency = $currency->code;
         $banner->status = false;
+        $banner->live_state = 'Under Review';
         $banner->amount = $request->budget;
         $banner->banner_url = $bannerUrl;
         $banner->impression = 0;
