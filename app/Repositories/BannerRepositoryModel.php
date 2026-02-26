@@ -83,7 +83,7 @@ class BannerRepositoryModel
 
     public function findBanner($bannerId)
     {
-        return Banner::where('banner_id', $bannerId)->first();
+        return Banner::where('banner_id', $bannerId)->where('status', true)->first();
     }
 
     public function logBannerClicks($user, $bannerId)
@@ -102,7 +102,5 @@ class BannerRepositoryModel
             ->get();
     }
 
-    public function increaseImpression($bannerId){
-
-    }
+    public function increaseImpression($bannerId) {}
 }

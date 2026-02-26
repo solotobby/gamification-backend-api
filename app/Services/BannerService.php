@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\GeneralMail;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\BannerRepositoryModel;
 use App\Repositories\SurveyRepositoryModel;
@@ -12,7 +13,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\Mail;
 
 class BannerService
 {
@@ -150,14 +151,14 @@ class BannerService
             );
 
             //Save banner Interest
-            $this->bannerModel->createBannerInterest(
-                $request->audience,
-                $banner
-            );
+            // $this->bannerModel->createBannerInterest(
+            //     $request->audience,
+            //     $banner
+            // );
 
-            // $content = 'Your ad banner placement is successfully created. It is currently under review, you will get a notification when it goes live!';
-            // $subject = 'Ad Banner Placement - Under Review';
-            // Mail::to(auth()->user()->email)->send(new GeneralMail(auth()->user(), $content, $subject, ''));
+            $content = 'Your ad banner placement is successfully created. It is currently under review, you will get a notification when it goes live!';
+            $subject = 'Ad Banner Placement - Under Review';
+            Mail::to(auth()->user()->email)->send(new GeneralMail(auth()->user(), $content, $subject, ''));
 
             DB::commit();
             return response()->json([
@@ -170,7 +171,7 @@ class BannerService
             Log::error($exception->getMessage());
             return response()->json([
                 'status' => false,
-                'error' => $exception->getMessage(),
+                // 'error' => $exception->getMessage(),
                 'message' => 'Error processing request'
             ], 500);
         }

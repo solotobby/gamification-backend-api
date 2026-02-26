@@ -12,7 +12,7 @@ class BannerValidator
         $validationRules = [
             'banner_image' => 'required|image|mimes:png,jpeg,gif,jpg',
             'external_link' => 'required|string',
-            'audience' => 'required|array|min:5',
+            // 'audience' => 'required|array|min:5',
             'budget' => 'required|numeric',
         ];
         $validator = Validator::make($request->all(), $validationRules);
