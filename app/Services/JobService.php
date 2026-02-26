@@ -112,6 +112,7 @@ class JobService
                     'campaign_approval_time' => $value->approval_time,
                     'campaign_description' => $value->description,
                     'expected_image_url' => $value->expected_result_image,
+                    'public_link' => "https://stagging.e-portal.com.ng/tasks/".$value->job_id,
                     'can_perform_task' => $check === true,
                     'can_perform_task_reason' => $check === true ? '' : $check,
                     'created_at' => $value->created_at,
@@ -216,6 +217,7 @@ class JobService
                     'can_dispute' =>  $job->canCreateDispute(),
                     'has_dispute' => $job->is_dispute ? true : false,
                     'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
+                    'public_link' => "https://stagging.e-portal.com.ng/tasks/".$campaignDetails->job_id,
                 ];
             }
 
@@ -425,6 +427,8 @@ class JobService
                 'campaign_allow_upload' => $job->allow_upload ? true : false,
                 'campaign_instruction' => $job->proof,
                 'created_at' => $job->created_at,
+                'public_link' => "https://stagging.e-portal.com.ng/tasks/".$job->job_id,
+
             ];
             return response()->json([
                 'status' => true,

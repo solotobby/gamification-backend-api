@@ -11,6 +11,7 @@ class WalletValidator
     {
         $validationRules = [
             'amount' => 'required|numeric|min:0.01',
+            'processor' => 'nullable|in:koraPay,paystack'
         ];
         $validator = Validator::make($request->all(), $validationRules);
 

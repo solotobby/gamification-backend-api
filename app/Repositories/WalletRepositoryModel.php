@@ -175,26 +175,28 @@ class WalletRepositoryModel
         if ($wallet->save()) return true;
     }
 
-    public function getUserTransactions($user, $page = null)
+    public function getUserTransactions($user, $page = null, $type = null, $search = null)
     {
-        return PaymentTransaction::where(
-            'user_id',
-            $user->id
-        )->where(
-            'status',
-            'successful'
-        )->where(
-            'user_type',
-            'regular'
-        )->orderBy(
-            'created_at',
-            'DESC'
-        )->paginate(
-            10,
-            ['*'],
-            'page',
-            $page
-        );
+        $query = PaymentTransaction::where('user_id', $user->id)
+            ->where('status', 'successful')
+            ->where('user_type', 'regular');
+
+        // Filter by credit or debit
+        if ($type && in_array($type, ['credit', 'debit'])) {
+            $query->where('tx_type', $type);
+        }
+
+        // Search
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('reference', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%")
+                    ->orWhere('amount', 'LIKE', "%{$search}%");
+            });
+        }
+
+        return $query->latest()
+            ->paginate(10, ['*'], 'page', $page);
     }
     public function creditWallet($user, $currency, $amount)
     {

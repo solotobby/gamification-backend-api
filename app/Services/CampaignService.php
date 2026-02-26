@@ -101,6 +101,7 @@ class CampaignService
                     'total_amount' => round($totalAmount, 5),
                     'currency' => $currency->code,
                     'original_currency' => $campaign->currency,
+                    'public_link' => "https://stagging.e-portal.com.ng/tasks/".$campaign->job_id,
                     // 'status' => $campaign->status,
                     'status' => $this->mapCampaignStatus($campaign),
                     'amount_ratio' => $campaign->currency . '' . $spentAmount . ' / ' . $campaign->currency . '' . $campaignAmount,
@@ -404,15 +405,15 @@ class CampaignService
                     'title' => 'Seasons Greetings from all of us at Freebyz Technologies Ltd!',
                     'description' => 'Please update/verify your information before 13th July 2026 to unlock level benefits
 
-Get Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job here
+                                    Get Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job here
 
-PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.
+                                    PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.
 
-Learn how to COMPLETE SIMPLE tasks online & earn here.
+                                    Learn how to COMPLETE SIMPLE tasks online & earn here.
 
-VIRTUAL WALLET Account: We have noticed downtimes from our partner on Virtual wallet account. Please use another payment gateway by going to Wallet > Fund wallet OR pay manually to 0234078694 (UNION BANK-Freebyz Technologies LTD).
+                                    VIRTUAL WALLET Account: We have noticed downtimes from our partner on Virtual wallet account. Please use another payment gateway by going to Wallet > Fund wallet OR pay manually to 0234078694 (UNION BANK-Freebyz Technologies LTD).
 
-If you paid manually, drop your evidence of payment here.'
+                                    If you paid manually, drop your evidence of payment here.'
                 ],
                 'ads' => [
                     [
@@ -430,7 +431,13 @@ If you paid manually, drop your evidence of payment here.'
                 ],
             ],
             'withdraw' => [
-                'info' => 'Withdrawals are made every Friday of the week. Only verified users can withdraw'
+                'info' => 'Withdrawals are made every Friday of the week. Only verified users can withdraw',
+                'payment_processor' => [
+                    'paystack',
+                    'koraPay',
+                    'virtual-account'
+                ]
+
             ],
             'tasks' => [
                 'created_tasks' => [
@@ -881,6 +888,8 @@ If you paid manually, drop your evidence of payment here.'
                 'updated_at' => $job->updated_at,
                 'has_dispute' => (bool) $job->is_dispute,
                 'dispute_resolved' => (bool) $job->is_dispute_resolved,
+                'public_link' => "https://stagging.e-portal.com.ng/tasks/".$campaign->job_id,
+
             ];
 
             return response()->json([

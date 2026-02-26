@@ -106,7 +106,7 @@ class BannerService
             if (!$this->walletModel->checkWalletBalance(
                 $user,
                 $currency->code,
-                $request->budget
+                (int)$request->budget
             )) {
                 return response()->json([
                     'status' => false,
@@ -117,7 +117,7 @@ class BannerService
             if (!$this->walletModel->debitWallet(
                 $user,
                 $currency->code,
-                $request->budget
+                (int)$request->budget
             )) {
                 return response()->json([
                     'status' => false,
@@ -171,7 +171,7 @@ class BannerService
             Log::error($exception->getMessage());
             return response()->json([
                 'status' => false,
-                // 'error' => $exception->getMessage(),
+                 'error' => $exception->getMessage(),
                 'message' => 'Error processing request'
             ], 500);
         }

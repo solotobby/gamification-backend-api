@@ -80,7 +80,9 @@ class WalletService
                 return response()->json([
                     'status' => true,
                     'message' => $currency->code . ' Wallet Funded Successfully',
-                    // 'data' => $user
+                     'data' => [
+                        'link' => 'https://stagging.e-portal.com.ng/'
+                     ]
                 ], 201);
             }
 
@@ -119,6 +121,9 @@ class WalletService
             return response()->json([
                 'status' => true,
                 'message' => $currency->code . ' Wallet Verified Successfully',
+                'data' => [
+                        'link' => 'https://stagging.e-portal.com.ng/'
+                     ]
             ], 201);
         } catch (Throwable $exception) {
             DB::rollBack();
@@ -142,6 +147,13 @@ class WalletService
             $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
 
             $amount = $request->amount;
+
+            if (!$user->is_verified) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Account not yet Verified, only verified users can make withdrawals.',
+                ], 401);
+            }
             if (!$this->walletModel->checkWalletBalance($user, $baseCurrency, $amount)) {
                 return response()->json([
                     'status' => false,
@@ -379,13 +391,22 @@ class WalletService
     }
 
 
-    public function getTransactions()
+    public function getTransactions($request)
     {
         try {
             $user = auth()->user();
-            $transactions = $this->walletModel->getUserTransactions($user);
 
-            // Map through each withdrawal record
+            $type = strtolower($request->query('type'));
+            $search = $request->query('search');
+            $page = $request->query('page');
+
+            $transactions = $this->walletModel->getUserTransactions(
+                $user,
+                $page,
+                $type,
+                $search
+            );
+
             $data = $transactions->map(function ($transaction) use ($user) {
                 return [
                     'id' => $transaction->reference,
@@ -398,21 +419,18 @@ class WalletService
                 ];
             });
 
-            // Pagination details
-            $pagination = [
-                'current_page' => $transactions->currentPage(),
-                'last_page' => $transactions->lastPage(),
-                'per_page' => $transactions->perPage(),
-                'total' => $transactions->total(),
-                'from' => $transactions->firstItem(),
-                'to' => $transactions->lastItem(),
-            ];
-
             return response()->json([
                 'status' => true,
                 'message' => 'Transactions retrieved successfully.',
                 'data' => $data,
-                'pagination' => $pagination,
+                'pagination' => [
+                    'current_page' => $transactions->currentPage(),
+                    'last_page' => $transactions->lastPage(),
+                    'per_page' => $transactions->perPage(),
+                    'total' => $transactions->total(),
+                    'from' => $transactions->firstItem(),
+                    'to' => $transactions->lastItem(),
+                ],
             ]);
         } catch (Throwable $exception) {
             return response()->json([
