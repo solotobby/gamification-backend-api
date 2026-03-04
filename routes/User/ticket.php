@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FeedbackController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\TicketController;
@@ -10,10 +11,12 @@ Route::middleware([
 ])->prefix(
     'ticket'
 )->group(function () {
-    Route::post('/create', [TicketController::class, 'createTicket']);
-    Route::get('/', [TicketController::class, 'getUserTickets']);
-    Route::get('/details/{id}', [TicketController::class, 'getTicket']);
-    Route::post('/send-message/{ticketId}', [TicketController::class, 'sendMessage']);
-    Route::get('/messages/{ticketId}', [TicketController::class, 'getMessages']);
-    Route::patch('/close/{ticketId}', [TicketController::class, 'closeTicket']);
+
+    // Route::patch('/close/{ticketId}', [TicketController::class, 'closeTicket']);
+
+    Route::post('/create', [FeedbackController::class, 'createFeedback']);
+    Route::get('/', [FeedbackController::class, 'getUserFeedbacks']);
+    Route::get('/details/{id}', [FeedbackController::class, 'getFeedback']);
+    Route::post('/send-message/{feedbackId}', [FeedbackController::class, 'sendReply']);
+    Route::get('/messages/{feedbackId}', [FeedbackController::class, 'getReplies']);
 });

@@ -483,6 +483,16 @@ class CampaignService
                     ]
                 ]
             ],
+            'talk_to_us' => [
+                'info' => 'If you are reporting a worker, please include the worker name, email and the job done. This will enable us that proper action',
+                'options' => [
+                    'Feedback' => 'feedback',
+                    'Complaint' => 'complaint',
+                    'Transfer Issue' => 'transfer_issue',
+                    'Report A Worker' => 'report',
+                    'Others' => 'others'
+                ]
+            ]
         ];
     }
 
