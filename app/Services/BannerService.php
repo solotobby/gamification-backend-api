@@ -172,7 +172,7 @@ class BannerService
             Log::error($exception->getMessage());
             return response()->json([
                 'status' => false,
-                 'error' => $exception->getMessage(),
+             'error' => $exception->getMessage(),
                 'message' => 'Error processing request'
             ], 500);
         }

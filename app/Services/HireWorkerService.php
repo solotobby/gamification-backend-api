@@ -2,16 +2,32 @@
 
 namespace App\Services;
 
+use App\Repositories\Admin\CurrencyRepositoryModel;
+use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\HireWorkerRepository;
+use App\Repositories\WalletRepositoryModel;
 use Throwable;
 
 class HireWorkerService
 {
     protected $repo;
+    protected $campaignModel;
+    protected $campaignService;
+    protected $currencyModel;
+    protected $walletModel;
 
-    public function __construct(HireWorkerRepository $repo)
-    {
+    public function __construct(
+        HireWorkerRepository $repo,
+        CampaignRepositoryModel $campaignModel,
+        WalletRepositoryModel $walletModel,
+        CurrencyRepositoryModel $currencyModel,
+        CampaignService $campaignService,
+    ) {
         $this->repo = $repo;
+        $this->campaignModel = $campaignModel;
+        $this->walletModel = $walletModel;
+        $this->currencyModel = $currencyModel;
+        $this->campaignService = $campaignService;
     }
 
     public function getWorkers($request)
@@ -31,7 +47,6 @@ class HireWorkerService
                 'data'       => $data,
                 'pagination' => $this->buildPagination($workers),
             ], 200);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -73,7 +88,6 @@ class HireWorkerService
                     ]
                 ),
             ], 200);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -96,8 +110,20 @@ class HireWorkerService
                 ], 409);
             }
 
-            $currency = baseCurrency();
-            $amount   = currencyConverter('NGN', $currency, 500);
+            // $currency = baseCurrency();
+            // $amount   = currencyConverter('NGN', $currency, 500);
+
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $unitPrice = 500;
+            if ($currency->code !== 'NGN') {
+                $rate = $this->campaignService->currencyConversion('NGN', $currency->code);
+                $unitPrice *= $rate;
+            }
+
+            $amount = $unitPrice;
 
             // Insufficient wallet balance
             if (!checkWalletBalance($user, $currency, $amount)) {
@@ -127,7 +153,6 @@ class HireWorkerService
                     'phone' => $worker->user->phone,
                 ],
             ], 200);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -150,7 +175,6 @@ class HireWorkerService
                     'availability'        => ['full-time', 'part-time', 'remote', 'contract'],
                 ],
             ], 200);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,

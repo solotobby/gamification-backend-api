@@ -105,7 +105,7 @@ class CampaignValidator
     public static function submitJob($request)
     {
         $validationRules = [
-            'proof' => 'sometimes|image|mimes:png,jpeg,gif,jpg',
+            'proof' => 'sometimes|image|mimes:png,jpeg,gif,jpg|max:2048',
             'comment' => 'required|string',
             'job_id' => 'required|string|exists:campaigns,job_id',
         ];

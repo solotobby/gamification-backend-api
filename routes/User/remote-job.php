@@ -16,11 +16,13 @@ Route::middleware([
 
 
 
-Route::prefix('hire-workers')->middleware('auth:sanctum')->group(function () {
+Route::middleware([
+    'auth:api',
+    'isUser'
+])->prefix('hire-workers')->group(function () {
 
     Route::get('/filters', [HireWorkerController::class, 'filters']);
     Route::get('/', [HireWorkerController::class, 'index']);
     Route::get('/{id}', [HireWorkerController::class, 'show']);
     Route::post('/{id}/purchase-point', [HireWorkerController::class, 'purchasePoint']);
-
 });

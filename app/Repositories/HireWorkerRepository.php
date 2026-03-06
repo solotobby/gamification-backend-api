@@ -8,6 +8,7 @@ use App\Models\Skill;
 use App\Models\SkillAsset;
 use App\Models\ProfessionalProficiencyLevel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class HireWorkerRepository
 {
@@ -60,14 +61,15 @@ class HireWorkerRepository
 
     public function purchasePoint($skillAssetId, $userId, $amount, $currency)
     {
+        Log::info($currency);
         PaymentTransaction::create([
             'user_id'     => $userId,
             'campaign_id' => '1',
             'reference'   => time(),
             'amount'      => $amount,
-            'balance'     => walletBalance($userId),
+            'balance'     => walletBalance()->balance,
             'status'      => 'successful',
-            'currency'    => $currency,
+            'currency'    => $currency->code,
             'channel'     => 'paystack',
             'type'        => 'point_purchase',
             'description' => auth()->user()->name . ' purchased point',

@@ -10,7 +10,7 @@ class TicketValidator
     public static function validateTicketCreation($request)
     {
         $validationRules = [
-            'subject' => 'required|string',
+            'category' => 'required|string',
             'message' => 'required|string',
             'proof' => 'nullable|image|mimes:png,jpeg,gif,jpg',
         ];
