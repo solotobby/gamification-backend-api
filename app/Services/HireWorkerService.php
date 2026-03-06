@@ -1,0 +1,209 @@
+<?php
+
+namespace App\Services;
+
+use App\Repositories\HireWorkerRepository;
+use Throwable;
+
+class HireWorkerService
+{
+    protected $repo;
+
+    public function __construct(HireWorkerRepository $repo)
+    {
+        $this->repo = $repo;
+    }
+
+    public function getWorkers($request)
+    {
+        try {
+            $filters = $request->only(['skill_id', 'availability', 'year_experience']);
+            $workers = $this->repo->getWorkers($filters);
+
+            $data = [];
+            foreach ($workers as $worker) {
+                $data[] = $this->formatWorkerSummary($worker);
+            }
+
+            return response()->json([
+                'status'     => true,
+                'message'    => 'Workers retrieved successfully.',
+                'data'       => $data,
+                'pagination' => $this->buildPagination($workers),
+            ], 200);
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving workers.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getWorker($id)
+    {
+        try {
+            $user   = auth()->user();
+            $worker = $this->repo->getWorkerById($id);
+
+            $hasPurchased = $this->repo->hasUserPurchasedPoint($worker->id, $user->id);
+
+            $portfolio = $this->repo->getWorkerPortfolio($worker->user_id);
+
+            // Only expose contact info if point has been purchased
+            $professionalInfo = $hasPurchased
+                ? [
+                    'email'  => $worker->user->email,
+                    'phone'  => $worker->user->phone,
+                ]
+                : null;
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Worker retrieved successfully.',
+                'data'    => array_merge(
+                    $this->formatWorkerDetail($worker),
+                    [
+                        'portfolio'          => $portfolio,
+                        'has_purchased'      => $hasPurchased,
+                        'professional_info'  => $professionalInfo,
+                        'point_required'     => !$hasPurchased ? 1 : null,
+                        'point_cost_ngn'     => !$hasPurchased ? 500 : null,
+                    ]
+                ),
+            ], 200);
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Worker not found.',
+            ], 404);
+        }
+    }
+
+    public function purchasePoint($id)
+    {
+        try {
+            $user   = auth()->user();
+            $worker = $this->repo->getWorkerById($id);
+
+            // Already purchased
+            if ($this->repo->hasUserPurchasedPoint($worker->id, $user->id)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'You have already purchased access to this worker.',
+                ], 409);
+            }
+
+            $currency = baseCurrency();
+            $amount   = currencyConverter('NGN', $currency, 500);
+
+            // Insufficient wallet balance
+            if (!checkWalletBalance($user, $currency, $amount)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Insufficient wallet balance. Please fund your wallet.',
+                ], 402);
+            }
+
+            $debit = debitWallet($user, $currency, $amount);
+
+            if (!$debit) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Failed to debit wallet. Please try again.',
+                ], 500);
+            }
+
+            $this->repo->purchasePoint($worker->id, $user->id, $amount, $currency);
+
+            // Return contact info immediately after purchase
+            return response()->json([
+                'status'  => true,
+                'message' => 'Point purchased successfully.',
+                'data'    => [
+                    'email' => $worker->user->email,
+                    'phone' => $worker->user->phone,
+                ],
+            ], 200);
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error processing point purchase.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getFilters()
+    {
+        try {
+            return response()->json([
+                'status'  => true,
+                'message' => 'Filters retrieved successfully.',
+                'data'    => [
+                    'skills'              => $this->repo->getSkills(),
+                    'proficiency_levels'  => $this->repo->getProficiencyLevels(),
+                    'year_experience'     => ['0-2', '3-5', '6-10', '10+'],
+                    'availability'        => ['full-time', 'part-time', 'remote', 'contract'],
+                ],
+            ], 200);
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving filters.',
+            ], 500);
+        }
+    }
+
+    // ─── Private Helpers ────────────────────────────────────────────────────────
+
+    private function formatWorkerSummary($worker)
+    {
+        return [
+            'id'               => $worker->id,
+            'name'             => $worker->user->name ?? null,
+            'title'            => $worker->title,
+            'skill'            => $worker->skill->name ?? null,
+            'proficiency'      => $worker->profeciencyLevel->name ?? null,
+            'year_experience'  => $worker->year_experience,
+            'availability'     => $worker->availability,
+            'location'         => $worker->location,
+            'min_price'        => $worker->min_price,
+            'max_price'        => $worker->max_price,
+        ];
+    }
+
+    private function formatWorkerDetail($worker)
+    {
+        return [
+            'id'               => $worker->id,
+            'name'             => $worker->user->name ?? null,
+            'title'            => $worker->title,
+            'description'      => $worker->description,
+            'skill'            => $worker->skill->name ?? null,
+            'skill_id'         => $worker->skill_id,
+            'proficiency'      => $worker->profeciencyLevel->name ?? null,
+            'year_experience'  => $worker->year_experience,
+            'availability'     => $worker->availability,
+            'location'         => $worker->location,
+            'min_price'        => $worker->min_price,
+            'max_price'        => $worker->max_price,
+        ];
+    }
+
+    private function buildPagination($paginator)
+    {
+        return [
+            'total'        => $paginator->total(),
+            'per_page'     => $paginator->perPage(),
+            'current_page' => $paginator->currentPage(),
+            'last_page'    => $paginator->lastPage(),
+            'from'         => $paginator->firstItem(),
+            'to'           => $paginator->lastItem(),
+        ];
+    }
+}
