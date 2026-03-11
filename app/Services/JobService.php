@@ -546,7 +546,7 @@ class JobService
 
             $this->ratingModel->create([
                 'user_id' => $userId,
-                'campaign_id' => $request->campaign_id,
+                'campaign_id' => $campaign->id,
                 'campaign_worker_id' => $workDone->id,
                 'rating' => $request->rating,
                 'comment' => $request->comment ?? null,
