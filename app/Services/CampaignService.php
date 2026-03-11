@@ -15,6 +15,7 @@ use App\Models\Campaign;
 use App\Models\CampaignWorker;
 use App\Models\Rating;
 use App\Repositories\AuthRepositoryModel;
+use App\Repositories\HireWorkerRepository;
 use App\Repositories\JobRepositoryModel;
 use App\Services\Providers\CloudinaryService;
 use Exception;
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Log;
 
 class CampaignService
 {
+    protected $repo;
+
     protected $jobModel;
     protected $currencyModel;
     protected $walletModel;
@@ -35,7 +38,9 @@ class CampaignService
         CurrencyRepositoryModel $currencyModel,
         WalletRepositoryModel $walletModel,
         AuthRepositoryModel $authModel,
-        JobRepositoryModel $jobModel
+        JobRepositoryModel $jobModel,
+        HireWorkerRepository $repo,
+
     ) {
         $this->campaignModel = $campaignModel;
         $this->validator = $validator;
@@ -43,6 +48,7 @@ class CampaignService
         $this->walletModel = $walletModel;
         $this->authModel = $authModel;
         $this->jobModel = $jobModel;
+        $this->repo = $repo;
     }
 
     public function getCampaigns($request)
@@ -460,7 +466,11 @@ class CampaignService
                 ]
             ],
             'hire_workers' => [
-                'info' => 'Filter skilled worker based on your preferences'
+                'info' => 'Filter skilled worker based on your preferences',
+                'skills'           => $this->repo->getSkills(),
+                'proficiency_levels'  => $this->repo->getProficiencyLevels(),
+                'year_experience'     => ['0-2', '3-5', '6-10', '10+'],
+                'availability'        => ['full-time', 'part-time', 'remote', 'contract'],
             ],
             'remote_jobs' => [
                 'info' => 'Discover full-time roles, part-time positions, and exciting gigs. Join thousands of professionals finding their perfect match.',
@@ -481,6 +491,27 @@ class CampaignService
                         'button_text' => 'Get Started',
                         'link' => 'https://payhankey.com/'
                     ]
+                ],
+                'filter' => [
+                    'types' => [
+                        'Full-Time' => 'fulltime',
+                        'Part-Time' => 'parttime',
+                        'Contract' => 'contract',
+                        'Internship' => 'internship',
+                        'Gig' => 'gig',
+                    ],
+                    'tiers' => [
+                        'Free' => 'free',
+                        'Premium' => 'premium'
+                    ],
+                    'remote' => [
+                        'Remote' => 'remote',
+                        'Hybrid' => 'hybrid',
+                        'On-site' => 'onsite'
+                    ],
+                    'location' => [],
+                    'min_salary' => [],
+                    'max_salary' => []
                 ]
             ],
             'talk_to_us' => [
@@ -492,7 +523,8 @@ class CampaignService
                     'Report A Worker' => 'report',
                     'Others' => 'others'
                 ]
-            ]
+            ],
+            ''
         ];
     }
 

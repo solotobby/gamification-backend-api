@@ -21,7 +21,7 @@ Route::middleware([
     'isUser'
 ])->prefix('hire-workers')->group(function () {
 
-    Route::get('/filters', [HireWorkerController::class, 'filters']);
+    // Route::get('/filters', [HireWorkerController::class, 'filters']);
     Route::get('/', [HireWorkerController::class, 'index']);
     Route::get('/{id}', [HireWorkerController::class, 'show']);
     Route::post('/{id}/purchase-point', [HireWorkerController::class, 'purchasePoint']);
