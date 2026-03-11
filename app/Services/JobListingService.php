@@ -96,12 +96,12 @@ class JobListingService
             $user = auth()->user();
             $job  = $this->jobRepository->getJobById($id);
 
-            if (!$user->hasVerifiedEmail()) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Please verify your email to apply.',
-                ], 403);
-            }
+            // if (!$user->hasVerifiedEmail()) {
+            //     return response()->json([
+            //         'status'  => false,
+            //         'message' => 'Please verify your email to apply.',
+            //     ], 403);
+            // }
 
             if ($this->jobRepository->checkHasApplied($job, $user)) {
                 return response()->json([
@@ -116,12 +116,12 @@ class JobListingService
             ]);
 
             $resumePath = null;
-            if ($request->hasFile('resume')) {
-                $resumePath = uploadFileToCloudinary(
-                    $request->file('resume'),
-                    'files'
-                );
-            }
+            // if ($request->hasFile('resume')) {
+            //     $resumePath = uploadFileToCloudinary(
+            //         $request->file('resume'),
+            //         'files'
+            //     );
+            // }
 
             $application = $this->jobRepository->createApplication($job, [
                 'user_id'      => $user->id,
