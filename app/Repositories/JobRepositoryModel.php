@@ -27,10 +27,7 @@ class JobRepositoryModel
             );
         }
 
-        return $query->orderBy(
-            'created_at',
-            'ASC'
-        )->paginate(
+        return $query->latest()->paginate(
             10,
             ['*'],
             'page',
@@ -41,7 +38,7 @@ class JobRepositoryModel
     public function getAllJobs($user, $page = null)
     {
         return CampaignWorker::where('user_id', $user->id)
-            ->orderBy('created_at', 'ASC')
+            ->latest()
             ->paginate(10, ['*'], 'page', $page);
     }
 
@@ -57,10 +54,7 @@ class JobRepositoryModel
                 'status',
                 $type
             )
-            ->orderBy(
-                'created_at',
-                'ASC'
-            )
+            ->latest()
             ->paginate(
                 10,
                 ['*'],
@@ -110,10 +104,8 @@ class JobRepositoryModel
         )->where(
             'is_dispute',
             true
-        )->orderBy(
-            'created_at',
-            'ASC'
-        )->paginate(
+        )->latest()
+        ->paginate(
             10,
             ['*'],
             'page',
