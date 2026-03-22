@@ -62,4 +62,50 @@ class PaystackServiceProvider
 
         return json_decode($res->getBody()->getContents(), true);
     }
+
+    public function createCustomer(array $data): ?array
+    {
+        $res = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->secretKey,
+            'Content-Type'  => 'application/json',
+        ])->post("{$this->baseUrl}/customer", $data);
+
+        return $res->successful() ? $res->json() : null;
+    }
+
+    public function createDedicatedAccount(array $data): ?array
+    {
+        $res = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->secretKey,
+            'Content-Type'  => 'application/json',
+        ])->post("{$this->baseUrl}/dedicated_account", $data);
+
+        return $res->successful() ? $res->json() : null;
+    }
+
+    public function initializeTransaction(string $ref, float $amount, string $callbackUrl, string $email): ?string
+    {
+        $res = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->secretKey,
+            'Content-Type'  => 'application/json',
+        ])->post("{$this->baseUrl}/transaction/initialize", [
+            'email'        => $email,
+            'amount'       => $amount * 100, // kobo
+            'reference'    => $ref,
+            'callback_url' => $callbackUrl,
+            'channels'     => ['card', 'bank', 'ussd', 'transfer'],
+            'currency'     => 'NGN',
+        ]);
+
+        return $res->successful() ? $res->json('data.authorization_url') : null;
+    }
+
+    public function verifyTransaction(string $ref): ?array
+    {
+        $res = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $this->secretKey,
+        ])->get("{$this->baseUrl}/transaction/verify/{$ref}");
+
+        return $res->successful() ? $res->json() : null;
+    }
 }

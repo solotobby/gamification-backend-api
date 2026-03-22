@@ -65,5 +65,5 @@ class WithdrawalRepositoryModel
             $withdrawalId
         )->first();
     }
-    
+
 }

@@ -38,4 +38,15 @@ return [
         'merchantEmail' => env('MERCHANT_EMAIL'),
         'callbackUrl' => env('PAYSTACK_CALLBACK_URL'),
     ],
+
+    'korapay' => [
+        'secret_key' => env('KORAPAY_SECRET_KEY'),
+    ],
+    'stripe' => [
+        'secret'         => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+    'firebase' => [
+        'server_key' => env('FIREBASE_SERVER_KEY'),
+    ],
 ];

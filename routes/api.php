@@ -6,6 +6,7 @@ use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WebhookController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,18 @@ Route::get('/unauthenticated', function () {
         'message' => 'Unauthenticated access. Please log in.',
     ], 401);
 })->name('unauthenticated');
+
+Route::prefix('webhooks')->group(function () {
+    Route::post('/paystack',  [WebhookController::class, 'handlePaystack'])->name('webhook.paystack');
+    Route::post('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
+    Route::post('/stripe',    [WebhookController::class, 'handleStripe'])->name('webhook.stripe');
+});
+
+// Admin routes
+// Route::middleware(['auth:api', 'isAdmin'])->prefix('admin')->group(function () {
+//     Route::post('/notifications/broadcast', [NotificationController::class, 'broadcast']);
+//     Route::post('/manual-verification/{id}/review', [ManualVerificationController::class, 'review']);
+// });
 
 // Route::group(['middleware' => 'cors'], function () {
 //     Route::middleware(['auth:api'])->group(function () {

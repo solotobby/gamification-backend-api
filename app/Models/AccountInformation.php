@@ -20,7 +20,7 @@ class AccountInformation extends Model
         'currency',
         'provider',
         'status'
-    ];
+    ];  
 
     public function accountInformation()
     {
