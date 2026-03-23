@@ -32,6 +32,8 @@ Route::middleware([
     Route::post('/fund-wallet',           [DepositController::class, 'initiate']);
     Route::post('/generate-virtual-account',   [VirtualAccountController::class, 'generate']);
     Route::post('/manual-verification/submit', [ManualVerificationController::class, 'submit']);
+    Route::post('/verify-account', [WalletController::class, 'verifyViaWallet']);
+
 
     // Withdrawals
     Route::get('/withdrawal-requests',  [WithdrawalController::class, 'getUserWithdrawals']);

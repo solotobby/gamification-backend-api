@@ -20,6 +20,7 @@ class WalletValidator
         }
     }
 
+
     public static function processWithdrawalValidation($request)
     {
         $validationRules = [

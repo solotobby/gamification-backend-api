@@ -25,6 +25,11 @@ class WalletController extends Controller
         return $this->walletService->fundWallet($request);
     }
 
+    public function verifyViaWallet(Request $request)
+    {
+        return $this->walletService->verifyViaWallet($request);
+    }
+
     public function getUserTransactions(Request $request)
     {
         return $this->walletService->getTransactions($request);

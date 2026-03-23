@@ -24,6 +24,8 @@ class WalletService
     protected  $authModel;
     protected  $referralModel;
 
+    protected $notification;
+
     public function __construct(
         AuthRepositoryModel $authModel,
         WalletRepositoryModel $walletModel,
@@ -33,6 +35,7 @@ class WalletService
         LogRepositoryModel $logModel,
         CampaignService $campaign,
         WithdrawalRepositoryModel $withdrawalModel,
+        NotificationService $notification,
     ) {
         $this->logModel = $logModel;
         $this->authModel = $authModel;
@@ -42,6 +45,7 @@ class WalletService
         $this->referralModel = $referralModel;
         $this->campaign = $campaign;
         $this->withdrawalModel = $withdrawalModel;
+        $this->notification = $notification;
     }
     public function fundWallet($request)
     {
@@ -80,9 +84,9 @@ class WalletService
                 return response()->json([
                     'status' => true,
                     'message' => $currency->code . ' Wallet Funded Successfully',
-                     'data' => [
+                    'data' => [
                         'link' => 'https://stagging.e-portal.com.ng/'
-                     ]
+                    ]
                 ], 201);
             }
 
@@ -122,8 +126,8 @@ class WalletService
                 'status' => true,
                 'message' => $currency->code . ' Wallet Verified Successfully',
                 'data' => [
-                        'link' => 'https://stagging.e-portal.com.ng/'
-                     ]
+                    'link' => 'https://stagging.e-portal.com.ng/'
+                ]
             ], 201);
         } catch (Throwable $exception) {
             DB::rollBack();
@@ -135,6 +139,104 @@ class WalletService
         }
     }
 
+
+    public function verifyViaWallet($request)
+    {
+
+        try {
+            $user           = auth()->user();
+            $baseCurrency   = $user->wallet->base_currency;
+            $mappedCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency       = $this->currencyModel->getCurrencyByCode($mappedCurrency);
+
+            if (!$currency) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Currency configuration not found.',
+                ], 422);
+            }
+
+            // Already verified
+            if ($user->is_verified) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Account is already verified.',
+                ], 422);
+            }
+
+            $upgradeAmount = $currency->upgrade_fee;
+
+            // Check wallet balance is sufficient
+            if (!$this->walletModel->checkWalletBalance($user, $baseCurrency, $upgradeAmount)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => "Insufficient wallet balance. You need at least {$mappedCurrency} {$upgradeAmount} to verify your account.",
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            $ref = time();
+
+            // Debit upgrade fee from wallet
+            $debited = $this->walletModel->debitWallet($user, $mappedCurrency, $upgradeAmount);
+
+            if (!$debited) {
+                DB::rollBack();
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Failed to debit wallet. Please try again.',
+                ], 500);
+            }
+
+            // Record the upgrade payment transaction
+            $this->walletModel->createTransaction(
+                $user,
+                $upgradeAmount,
+                $ref,
+                '1',
+                $mappedCurrency,
+                'upgrade_payment',
+                'Account Verification Payment',
+                'debit',
+            );
+
+            // Mark user as verified
+            $this->authModel->updateUserVerification($user);
+
+            // Process referral bonus (same as webhook flow)
+            $this->referralInUpgradeUser($user);
+
+            // Log referral
+            $this->logModel->createLogForReferral($user);
+
+            DB::commit();
+
+            $this->notification->createNotification(
+                $user,
+                'Account Verified!',
+                "Your account has been verified. {$mappedCurrency} {$upgradeAmount} was deducted from your wallet.",
+                'verification'
+            );
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Account verified successfully.',
+                'data'    => [
+                    'amount_deducted' => $upgradeAmount,
+                    'currency'        => $mappedCurrency,
+                    'reference'       => $ref,
+                ],
+            ], 200);
+        } catch (Throwable $exception) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => false,
+                'error'   => $exception->getMessage(),
+                'message' => 'Error processing request',
+            ], 500);
+        }
+    }
 
     public function processWithdrawals($request)
     {
