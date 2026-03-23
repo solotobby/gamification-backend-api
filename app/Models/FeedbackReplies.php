@@ -15,6 +15,7 @@ class FeedbackReplies extends Model
         'feedback_id',
         'user_id',
         'message',
+        'text_message',
         'status',
         'is_image',
         'image_url',
@@ -28,5 +29,9 @@ class FeedbackReplies extends Model
     public function feedback()
     {
         return $this->belongsTo(Feedback::class);
+    }
+     public function hasBoth(): bool
+    {
+        return !empty($this->text_message) && !empty($this->image_url);
     }
 }

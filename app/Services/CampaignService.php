@@ -27,6 +27,7 @@ class CampaignService
     protected $repo;
 
     protected $jobModel;
+    protected $notification;
     protected $currencyModel;
     protected $walletModel;
     protected $authModel;
@@ -40,6 +41,7 @@ class CampaignService
         AuthRepositoryModel $authModel,
         JobRepositoryModel $jobModel,
         HireWorkerRepository $repo,
+        NotificationService $notification
 
     ) {
         $this->campaignModel = $campaignModel;
@@ -49,6 +51,7 @@ class CampaignService
         $this->authModel = $authModel;
         $this->jobModel = $jobModel;
         $this->repo = $repo;
+        $this->notification = $notification;
     }
 
     public function getCampaigns($request)
@@ -254,12 +257,18 @@ class CampaignService
                 $currency,
             );
 
+             $this->notification->createNotification(
+                $user,
+                'Task Created',
+                "Task with ID {$jobId} Created Successfully and pending approval from the admin",
+                'task'
+            );
             // Notify user via email
             Mail::to($user->email)->send(new CreateCampaign($campaign));
 
             return response()->json([
                 'status' => true,
-                'message' => 'Campaign Posted Successfully. A member of our team will activate your campaign within 24 hours.',
+                'message' => 'Task Posted Successfully. A member of our team will activate your campaign within 24 hours.',
                 'data' => $campaign,
             ], 201);
         } catch (Throwable $e) {

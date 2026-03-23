@@ -39,13 +39,22 @@ class FeedbackRepositoryModel
 
     public function sendReply($user, $feedbackId, $message, $isImage = false, $imageUrl = null)
     {
-        return FeedbackReplies::create([
-            'feedback_id'   => $feedbackId,
-            'user_id'       => $user->id,
-            'message'       => $message ?? $imageUrl,
-            'is_image'      => $isImage,
-            'image_url'     => $imageUrl,
-        ]);
+        // return FeedbackReplies::create([
+        //     'feedback_id'   => $feedbackId,
+        //     'user_id'       => $user->id,
+        //     'message'       => $message ?? $imageUrl,
+        //     'is_image'      => $isImage,
+        //     'image_url'     => $imageUrl,
+        // ]);
+
+         return FeedbackReplies::create([
+        'feedback_id'  => $feedbackId,
+        'user_id'      => $user->id,
+        'message'      => $message,        // legacy fallback
+        'text_message' => $message,        // new text field
+        'is_image'     => $isImage,
+        'image_url'    => $imageUrl,
+    ]);
     }
 
     public function getReplies($feedbackId, $page = null)

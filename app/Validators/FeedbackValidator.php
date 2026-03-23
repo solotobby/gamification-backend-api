@@ -24,15 +24,19 @@ class FeedbackValidator
 
     public static function validateMessageSending($request)
     {
-        $validationRules = [
-            'message'   => 'required_without:image|nullable|string',
-            'image'     => 'required_without:message|nullable|string',
-        ];
+        $request->validate([
+            'message' => 'nullable|string|max:5000',
+            'image'   => 'nullable|string', // base64
+        ], [
+            'message.max' => 'Message cannot exceed 5000 characters.',
+        ]);
 
-        $validator = Validator::make($request->all(), $validationRules);
-
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
+        // Custom: at least one must be present
+        if (!$request->filled('message') && !$request->filled('image')) {
+            abort(response()->json([
+                'status'  => false,
+                'message' => 'Reply must contain a message, an image, or both.',
+            ], 422));
         }
     }
 }

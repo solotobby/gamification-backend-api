@@ -46,7 +46,7 @@ class FeedbackService
                 'user_id'  => $user->id,
                 'category' => $request->category,
                 'message'  => $request->message,
-                'proof_url'=> $proofUrl,
+                'proof_url' => $proofUrl,
                 'status'   => true,
             ];
 
@@ -60,7 +60,6 @@ class FeedbackService
                 'message' => 'Feedback submitted successfully.',
                 'data'    => $feedback,
             ], 201);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -87,7 +86,6 @@ class FeedbackService
                 'data'       => $data,
                 'pagination' => $this->buildPagination($feedbacks),
             ], 200);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -131,18 +129,33 @@ class FeedbackService
                 ], 404);
             }
 
+            $textMessage = $request->filled('message') ? $request->message : null;
+
             $isImage  = false;
             $imageUrl = null;
-            $message  = $request->message;
+            // $message  = $request->message;
 
             if ($request->filled('image')) {
                 $image    = $request->image;
                 $imageUrl = $this->cloudinary->uploadBase64Image($image);
                 $isImage  = true;
-                $message  = $imageUrl;
+                // $message  = $imageUrl;
             }
 
-            $this->feedbackModel->sendReply($user, $feedback->id, $message, $isImage, $imageUrl);
+            if (!$textMessage && !$imageUrl) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Reply must contain a message or an image.',
+                ], 422);
+            }
+
+            $this->feedbackModel->sendReply(
+                $user,
+                $feedback->id,
+                $textMessage,
+                $isImage,
+                $imageUrl
+            );
 
             $replies = $this->getRepliesFormatted($feedbackId);
 
@@ -151,7 +164,6 @@ class FeedbackService
                 'message' => 'Reply sent successfully',
                 'data'    => $replies,
             ], 201);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -188,14 +200,22 @@ class FeedbackService
 
         $data = [];
         foreach ($replies as $reply) {
+
+            $type = 'text';
+            if ($reply->image_url && $reply->text_message) {
+                $type = 'mixed';    // both text and image
+            } elseif ($reply->image_url) {
+                $type = 'image';    // image only
+            }
             $data[] = [
                 'id'          => $reply->id,
                 'sender_id'   => $reply->user_id,
                 'sender_name' => $reply->user->name,
                 'sender_role' => $reply->user->role,
-                'message'     => $reply->is_image ? $reply->image_url : $reply->message,
-                'is_image'    => (bool) $reply->is_image,
-                // 'image_url'   => $reply->image_url,
+                'type'        => $type,
+                'message'     => $reply->text_message ?? $reply->message,
+                // 'is_image'    => (bool) $reply->is_image,
+                'image_url'   => $reply->image_url,
                 'created_at'  => $reply->created_at,
                 'updated_at'  => $reply->updated_at,
             ];

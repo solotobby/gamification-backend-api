@@ -13,6 +13,7 @@ class VirtualAccountService
     public function __construct(
         protected PaystackServiceProvider $paystack,
         protected BankRepositoryModel $bankRepo,
+        protected NotificationService $notification
     ) {}
 
     public function generateVirtualAccount()
@@ -75,12 +76,13 @@ class VirtualAccountService
                 'status'               => true,
             ]);
 
-            event(new NotificationEvent(
-                user: $user,
-                title: 'Virtual Account Created',
-                body: "Your virtual account {$virtual->account_number} ({$virtual->bank_name}) is ready.",
-                type: 'wallet',
-            ));
+            $this->notification->createNotification(
+                $user,
+                'Virtual Account Created',
+                "Your virtual account {$virtual->account_number} ({$virtual->bank_name}) is ready.",
+                'wallet'
+            );
+
 
             return response()->json([
                 'status'  => true,
