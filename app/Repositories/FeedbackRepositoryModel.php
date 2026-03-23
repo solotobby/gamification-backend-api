@@ -61,7 +61,7 @@ class FeedbackRepositoryModel
     {
         return FeedbackReplies::where('feedback_id', $feedbackId)
             ->with('user:id,name,role')
-            ->orderBy('created_at', 'asc')
+            ->latest()
             ->paginate(10, ['*'], 'page', $page);
     }
 }
