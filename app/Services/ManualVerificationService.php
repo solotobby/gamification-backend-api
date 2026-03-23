@@ -6,6 +6,7 @@ use App\Events\NotificationEvent;
 use App\Models\ManualVerification;
 use App\Repositories\WalletRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
+use App\Services\Providers\CloudinaryService;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
@@ -14,13 +15,14 @@ class ManualVerificationService
     public function __construct(
         protected WalletRepositoryModel $walletModel,
         protected AuthRepositoryModel $authModel,
+        protected CloudinaryService $cloudinary
     ) {}
 
     public function submit($request)
     {
         $request->validate([
             'amount'         => 'required|numeric|min:1',
-            'payment_method' => 'required|in:bank_transfer,crypto,paystack,korapay',
+            'payment_method' => 'required|in:manual,bank_transfer,crypto,paystack,korapay',
             'reference'      => 'nullable|string',
             'proof_image'    => 'required|image|max:2048',
         ]);
@@ -28,23 +30,24 @@ class ManualVerificationService
         try {
             $user = auth()->user();
 
-            if ($user->is_verified) {
-                return response()->json(['status' => false, 'message' => 'Account is already verified.'], 422);
-            }
+            // if ($user->is_verified) {
+            //     return response()->json(['status' => false, 'message' => 'Account is already verified.'], 422);
+            // }
 
             // Check no pending verification
-            $pending = ManualVerification::where('user_id', $user->id)
-                ->where('status', 'pending')
-                ->exists();
+            // $pending = ManualVerification::where('user_id', $user->id)
+            //     ->where('status', 'pending')
+            //     ->exists();
 
-            if ($pending) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'You already have a pending verification. Please wait for admin review.',
-                ], 422);
-            }
+            // if ($pending) {
+            //     return response()->json([
+            //         'status'  => false,
+            //         'message' => 'You already have a pending verification. Please wait for admin review.',
+            //     ], 422);
+            // }
 
-            $imagePath = $request->file('proof_image')->store('verifications', 'public');
+            $file = $request->file('proof_image');
+            $imagePath = $this->cloudinary->uploadImage($file);
 
             ManualVerification::create([
                 'user_id'        => $user->id,
@@ -68,7 +71,11 @@ class ManualVerificationService
                 'message' => 'Verification submitted. Admin will review within 24 hours.',
             ]);
         } catch (Throwable $e) {
-            return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error submitting verification.'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Error submitting verification.'
+            ], 500);
         }
     }
 
