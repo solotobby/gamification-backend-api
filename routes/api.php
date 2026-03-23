@@ -30,9 +30,9 @@ Route::get('/unauthenticated', function () {
 })->name('unauthenticated');
 
 Route::prefix('webhooks')->group(function () {
-    Route::post('/paystack',  [WebhookController::class, 'handlePaystack'])->name('webhook.paystack');
-    Route::post('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
-    Route::post('/stripe',    [WebhookController::class, 'handleStripe'])->name('webhook.stripe');
+    Route::get('/paystack',  [WebhookController::class, 'handlePaystack'])->name('webhook.paystack');
+    Route::get('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
+    Route::get('/stripe',    [WebhookController::class, 'handleStripe'])->name('webhook.stripe');
 });
 
 // Admin routes

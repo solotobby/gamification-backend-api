@@ -29,7 +29,7 @@ Route::middleware([
     Route::post('/create-user/bank-detail', [WalletController::class, 'createBankDetails']);
 
     // Deposit
-    Route::post('/initiate-deposit',           [DepositController::class, 'initiate']);
+    Route::post('/fund-wallet',           [DepositController::class, 'initiate']);
     Route::post('/generate-virtual-account',   [VirtualAccountController::class, 'generate']);
     Route::post('/manual-verification/submit', [ManualVerificationController::class, 'submit']);
 

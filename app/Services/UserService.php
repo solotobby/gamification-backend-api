@@ -33,7 +33,11 @@ class  UserService
             $data['wallet'] = $this->wallet->walletDetails($user);
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
             $data['profile'] = setProfile($user);
-            $data['virtual_account'] = $this->bank->getVirtualBank($user->id) ?? null;
+            $data['virtual_account'] =
+                ($user->wallet->base_currency ?? 'NGN') === 'NGN'
+                ? $this->bank->getVirtualBank($user->id)
+                : null;
+                
             return response()->json([
                 'status' => true,
                 'message' => 'User Details Successfully Retrieved',

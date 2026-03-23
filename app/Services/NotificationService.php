@@ -63,9 +63,9 @@ class NotificationService
         }
     }
 
-    // Register/update FCM token for authenticated user
     public function updateFcmToken(string $token)
     {
+        
         auth()->user()->update(['fcm_token' => $token]);
         return response()->json(['status' => true, 'message' => 'FCM token updated.']);
     }

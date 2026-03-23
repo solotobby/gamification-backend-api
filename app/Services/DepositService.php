@@ -17,7 +17,7 @@ class DepositService
 {
     // Crypto wallet addresses (stable — admin-configured)
     const CRYPTO_WALLETS = [
-        'USDT_TRC20' => 'TYOUR_TRON_WALLET_ADDRESS_HERE',
+        'USDT_TRC20' => 'YOUR_TRON_WALLET_ADDRESS_HERE',
         'USDT_ERC20' => '0xYOUR_ETH_WALLET_ADDRESS_HERE',
         'BTC'        => 'YOUR_BTC_WALLET_ADDRESS_HERE',
     ];
@@ -28,6 +28,7 @@ class DepositService
         protected PaystackServiceProvider $paystack,
         protected KoraPayServiceProvider  $korapay,
         protected StripeServiceProvider   $stripe,
+        protected VirtualAccountService $virtual
     ) {}
 
     /**
@@ -42,8 +43,8 @@ class DepositService
     {
         $request->validate([
             'amount' => 'required|numeric|min:1',
-            'method' => 'required|in:korapay,paystack,stripe,crypto,virtual_account',
-            'crypto_type' => 'required_if:method,crypto|in:USDT_TRC20,USDT_ERC20,BTC',
+            'method' => 'required|in:korapay,paystack,stripe,crypto,virtual_account,manual',
+            // 'crypto_type' => 'required_if:method,crypto|in:USDT_TRC20,USDT_ERC20,BTC',
         ]);
 
         try {
@@ -58,12 +59,20 @@ class DepositService
                 'korapay'         => $this->handleKoraPay($user, $amount, $ref, $baseCurrency),
                 'paystack'        => $this->handlePaystack($user, $amount, $ref, $baseCurrency),
                 'stripe'          => $this->handleStripe($user, $amount, $ref, $baseCurrency),
-                'crypto'          => $this->handleCrypto($user, $amount, $ref, $baseCurrency, $request->crypto_type),
+                'crypto'          => $this->handleCrypto($user, $amount, $ref, $baseCurrency, 'USDT_TRC20'),
                 'virtual_account' => $this->handleVirtualAccount($user),
-                default           => response()->json(['status' => false, 'message' => 'Invalid method.'], 422),
+                'manual' => $this->handleManualAccount($user, $baseCurrency),
+                default           => response()->json([
+                    'status' => false,
+                    'message' => 'Invalid method.'
+                ], 422),
             };
         } catch (Throwable $e) {
-            return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error initiating deposit.'], 500);
+            return response()->json([
+                'status' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Error initiating deposit.'
+            ], 500);
         }
     }
 
@@ -78,7 +87,7 @@ class DepositService
             'currency'         => 'NGN',
             'reference'        => $ref,
             'narration'        => 'Wallet Top Up',
-            'redirect_url'     => config('app.url') . '/api/wallet/deposit/korapay/callback',
+            'redirect_url'     => route('webhook.korapay'),
             'notification_url' => route('webhook.korapay'),
             'channels'         => ['card', 'bank_transfer', 'pay_with_bank'],
             'customer'         => ['name' => $user->name, 'email' => $user->email],
@@ -87,7 +96,10 @@ class DepositService
         $link = $this->korapay->initializeCharge($payload);
 
         if (!$link) {
-            return response()->json(['status' => false, 'message' => 'Failed to initialize KoraPay payment.'], 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to initialize KoraPay payment.'
+            ], 500);
         }
 
         $this->createPendingTransaction($user, $amount, $ref, $currency, 'korapay');
@@ -95,25 +107,37 @@ class DepositService
         return response()->json([
             'status'  => true,
             'message' => 'Redirect user to payment link.',
-            'data'    => ['method' => 'korapay', 'link' => $link, 'reference' => $ref],
+            'data'    => [
+                'method' => 'korapay',
+                'link' => $link,
+                'reference' => $ref,
+                'manual_verification' => false
+
+            ],
         ]);
     }
 
     private function handlePaystack($user, float $amount, string $ref, string $currency)
     {
         if ($currency !== 'NGN') {
-            return response()->json(['status' => false, 'message' => 'Paystack is only available for NGN accounts.'], 422);
+            return response()->json([
+                'status' => false,
+                'message' => 'Paystack is only available for NGN accounts.'
+            ], 422);
         }
 
         $link = $this->paystack->initializeTransaction(
             $ref,
             $amount,
-            config('app.url') . '/api/wallet/deposit/paystack/callback',
+            route('webhook.paystack'),
             $user->email
         );
 
         if (!$link) {
-            return response()->json(['status' => false, 'message' => 'Failed to initialize Paystack payment.'], 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to initialize Paystack payment.'
+            ], 500);
         }
 
         $this->createPendingTransaction($user, $amount, $ref, $currency, 'paystack');
@@ -121,21 +145,28 @@ class DepositService
         return response()->json([
             'status'  => true,
             'message' => 'Redirect user to payment link.',
-            'data'    => ['method' => 'paystack', 'link' => $link, 'reference' => $ref],
+            'data'    => [
+                'method' =>
+                'paystack',
+                'link' => $link,
+                'reference' => $ref,
+                'manual_verification' => false
+
+            ],
         ]);
     }
 
     private function handleStripe($user, float $amount, string $ref, string $currency)
     {
-        if ($currency !== 'USF') {
+        if ($currency !== 'USD') {
             return response()->json(['status' => false, 'message' => 'Stripe is only available for USD accounts.'], 422);
         }
         $session = $this->stripe->createCheckoutSession([
             'payment_method_types' => ['card'],
             'customer_email'       => $user->email,
             'client_reference_id'  => $ref,
-            'success_url'          => config('app.url') . '/api/wallet/deposit/stripe/callback?session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url'           => config('app.url') . '/api/wallet/deposit/cancelled',
+            'success_url'          => route('webhook.stripe'),
+            'cancel_url'           => route('webhook.stripe'),
             'mode'                 => 'payment',
             'expires_at'           => time() + 3600,
             'line_items'           => [[
@@ -157,7 +188,13 @@ class DepositService
         return response()->json([
             'status'  => true,
             'message' => 'Redirect user to Stripe checkout.',
-            'data'    => ['method' => 'stripe', 'link' => $session['url'], 'reference' => $ref],
+            'data'    => [
+                'method' => 'stripe',
+                'link' => $session['url'],
+                'reference' => $ref,
+                'manual_verification' => false
+
+            ],
         ]);
     }
 
@@ -166,7 +203,10 @@ class DepositService
         $wallet = self::CRYPTO_WALLETS[$cryptoType] ?? null;
 
         if (!$wallet) {
-            return response()->json(['status' => false, 'message' => 'Unsupported crypto type.'], 422);
+            return response()->json([
+                'status' => false,
+                'message' => 'Unsupported crypto type.'
+            ], 422);
         }
 
         // Log pending transaction
@@ -181,7 +221,9 @@ class DepositService
                 'wallet'       => $wallet,
                 'amount'       => $amount,
                 'reference'    => $ref,
-                'note'         => 'After payment, contact admin with your transaction hash and reference number for manual verification.',
+                'note'         => 'After payment, contact admin with your transaction hash, transaction screenshot and reference number for manual verification.',
+                'manual_verification' => true
+
             ],
         ]);
     }
@@ -191,21 +233,73 @@ class DepositService
         $virtualAccount = $user->virtualAccount;
 
         if (!$virtualAccount) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'No virtual account found. Generate one first via /wallet/generate-virtual-account.',
-            ], 404);
+            $response = $this->virtual->generateVirtualAccount();
+
+            $virtual = $response->getData(true);
+
+            if (!($virtual['status'] ?? false)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => $virtual['message'] ?? 'Unable to generate virtual account',
+                ], $response->status());
+            }
+
+            $virtualAccount = $virtual['data'] ?? null;
         }
+
+        // Normalize (handle both array and object)
+        $bankName = is_array($virtualAccount)
+            ? ($virtualAccount['bank_name'] ?? null)
+            : $virtualAccount->bank_name;
+
+        $accountName = is_array($virtualAccount)
+            ? ($virtualAccount['account_name'] ?? null)
+            : $virtualAccount->account_name;
+
+        $accountNumber = is_array($virtualAccount)
+            ? ($virtualAccount['account_number'] ?? null)
+            : $virtualAccount->account_number;
 
         return response()->json([
             'status'  => true,
             'message' => 'Transfer to this account to fund your wallet.',
             'data'    => [
                 'method'         => 'virtual_account',
-                'bank_name'      => $virtualAccount->bank_name,
-                'account_name'   => $virtualAccount->account_name,
-                'account_number' => $virtualAccount->account_number,
+                'bank_name'      => $bankName,
+                'account_name'   => $accountName,
+                'account_number' => $accountNumber,
                 'note'           => 'Funds will be credited automatically once payment is confirmed.',
+                'manual_verification' => false
+            ],
+        ]);
+    }
+
+    private function handleManualAccount($user, $currency)
+    {
+        // $virtualAccount = $user->virtualAccount;
+
+        // if (!$virtualAccount) {
+        //     return response()->json([
+        //         'status'  => false,
+        //         'message' => 'No virtual account found. Generate one first via /wallet/generate-virtual-account.',
+        //     ], 404);
+        // }
+
+        if ($currency !== 'NGN') {
+            return response()->json(['status' => false, 'message' => 'Paystack is only available for NGN accounts.'], 422);
+        }
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Transfer to this account to fund your wallet.',
+            'data'    => [
+                'method'         => 'manual',
+                'bank_name'      => 'Moniepoint BANK',
+                'account_name'   => 'Freebyz Technologies LTD',
+                'account_number' => '6667335193',
+                'note'           => 'After payment, contact admin with your transaction screenshot and reference number for manual verification.',
+                'manual_verification' => true
+
             ],
         ]);
     }

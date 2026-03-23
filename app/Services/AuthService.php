@@ -111,8 +111,10 @@ class AuthService
             $data['wallet'] = $this->walletModel->walletDetails($user);
             $data['token'] = $user->createToken('freebyz')->accessToken;
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
-            $data['virtual_account'] = $this->bank->getVirtualBank($user->id) ?? null;
-
+            $data['virtual_account'] =
+                ($user->wallet->base_currency ?? 'NGN') === 'NGN'
+                ? $this->bank->getVirtualBank($user->id)
+                : null;
             //    Log Activities
             $this->log->createLogForLogin($user);
 
@@ -122,7 +124,7 @@ class AuthService
                 'data' => $data,
             ], 200);
         } catch (Throwable $e) {
-              return $e;
+            return $e;
             throw new BadRequestException('Error processing request');
         }
     }

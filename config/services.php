@@ -40,7 +40,7 @@ return [
     ],
 
     'korapay' => [
-        'secret_key' => env('KORAPAY_SECRET_KEY'),
+        'secret_key' => env('KORA_SEC'),
     ],
     'stripe' => [
         'secret'         => env('STRIPE_SECRET'),

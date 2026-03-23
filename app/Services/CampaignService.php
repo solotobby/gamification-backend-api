@@ -167,6 +167,7 @@ class CampaignService
 
         return strtolower($campaign->status);
     }
+
     public function currencyConversion($from, $to)
     {
         $currencyRate = $this->currencyModel->convertCurrency($from, $to);
@@ -269,7 +270,6 @@ class CampaignService
             ], 500);
         }
     }
-
 
     public function updateCampaignWorker($request)
     {
@@ -405,6 +405,30 @@ class CampaignService
 
     private function getUtilityData(): array
     {
+
+        $currency = auth()->user()->wallet->base_currency;
+
+        $paymentProcessors = [];
+
+        if ($currency === 'NGN') {
+            $paymentProcessors = [
+                'Paystack' => 'paystack',
+                'KoraPay' => 'korapay',
+                'Virtual Account' => 'virtual_account',
+                'Crypto (USDT_TRC20)' => 'crypto',
+                'Manual Account' => 'manual',
+            ];
+        } elseif ($currency === 'USD') {
+            $paymentProcessors = [
+                'Stripe' => 'stripe',
+                'Crypto (USDT_TRC20)' => 'crypto',
+            ];
+        } else {
+            $paymentProcessors = [
+                'Paystack' => 'paystack',
+                'Crypto (USDT_TRC20)' => 'crypto',
+            ];
+        }
         return [
             'dashboard' => [
                 'info' => [
@@ -439,11 +463,14 @@ class CampaignService
             'withdraw' => [
                 'info' => 'Withdrawals are made every Friday of the week. Only verified users can withdraw',
                 'payment_processor' => [
-                    'paystack',
-                    'koraPay',
-                    'virtual-account'
+                    'Local Withdrawal' => 'wallet',
                 ]
 
+            ],
+            'wallet' => [
+                'info' => 'Fund your wallet through any means of payment below. Your wallet gets credited in less than 1 min for all except the Manual Account funding',
+                'note' => 'If you paid using manual account number, drop your evidence of payment',
+                'payment_processor' => $paymentProcessors,
             ],
             'tasks' => [
                 'created_tasks' => [
