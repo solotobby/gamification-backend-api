@@ -87,8 +87,8 @@ class DepositService
             'currency'         => 'NGN',
             'reference'        => $ref,
             'narration'        => 'Wallet Top Up',
-            'redirect_url'     => route('webhook.korapay'),
-            'notification_url' => route('webhook.korapay'),
+            'redirect_url'     => route('webhook.korapay.callback'),
+            'notification_url' => route('webhook.korapay.callback'),
             'channels'         => ['card', 'bank_transfer', 'pay_with_bank'],
             'customer'         => ['name' => $user->name, 'email' => $user->email],
         ];
@@ -129,7 +129,7 @@ class DepositService
         $link = $this->paystack->initializeTransaction(
             $ref,
             $amount,
-            route('webhook.paystack'),
+            route('webhook.paystack.callback'),
             $user->email
         );
 

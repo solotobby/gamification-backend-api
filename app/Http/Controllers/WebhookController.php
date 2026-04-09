@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use App\Services\NotificationService;
+use Illuminate\Support\Facades\Http;
 
 class WebhookController extends Controller
 {
@@ -32,13 +33,127 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     // PAYSTACK WEBHOOK
     // ---------------------------------------------------------------
-    public function handlePaystack(Request $request)
+    public function handlePaystackCallback(Request $request)
     {
+        $reference = $request->query('reference');
+
+        if (!$reference) {
+            return response()->json(['status' => 'no reference'], 400);
+        }
+
+        // Verify transaction from Paystack
+        $response = Http::withToken(config('services.paystack.secretKey'))
+            ->get("https://api.paystack.co/transaction/verify/{$reference}");
+
+        if (!$response->successful() || $response['data']['status'] !== 'success') {
+            return response()->json(['status' => 'failed'], 400);
+        }
+
+        $data = $response['data'];
+
+        $amount       = $data['amount'] / 100;
+        $reference    = $data['reference'];
+        $currency     = $data['currency'] ?? 'NGN';
+        $channel      = $data['channel'] ?? 'paystack';
+        $customerCode = $data['customer']['customer_code'] ?? null;
+
+        DB::beginTransaction();
+
+        try {
+            $existingTransaction = PaymentTransaction::where('reference', $reference)->first();
+
+            if ($existingTransaction) {
+                // Prevent double processing
+                if ($existingTransaction->status === 'successful') {
+                    DB::rollBack();
+                    return response()->json(['status' => 'already processed'], 200);
+                }
+
+                $user = User::find($existingTransaction->user_id);
+                if (!$user) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'user not found'], 200);
+                }
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+
+                $existingTransaction->update([
+                    'status'  => 'successful',
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                ]);
+
+                $this->attemptAutoUpgrade($user, $currency, $amount);
+            } else {
+                // Virtual account flow
+                if (!$customerCode) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'no customer code'], 200);
+                }
+
+                $virtualAccount = VirtualAccount::where('customer_id', $customerCode)->first();
+
+                if (!$virtualAccount) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'virtual account not found'], 200);
+                }
+
+                $user = User::find($virtualAccount->user_id);
+
+                if (!$user) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'user not found'], 200);
+                }
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+
+                PaymentTransaction::create([
+                    'user_id'     => $user->id,
+                    'campaign_id' => 1,
+                    'reference'   => $reference,
+                    'amount'      => $amount,
+                    'balance'     => $this->walletModel->getWalletBalance($user->id),
+                    'status'      => 'successful',
+                    'currency'    => $currency,
+                    'channel'     => $channel,
+                    'type'        => 'transfer_topup',
+                    'description' => 'Wallet topup via Paystack',
+                    'tx_type'     => 'Credit',
+                    'user_type'   => 'regular',
+                ]);
+
+                $this->attemptAutoUpgrade($user, $currency, $amount);
+            }
+
+            DB::commit();
+
+            $this->notification->createNotification(
+                $user,
+                'Wallet Funding Successful!',
+                "{$currency} {$amount} has been added to your wallet.",
+                'wallet'
+            );
+
+            return response()->json(['status' => 'success'], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Paystack callback error: ' . $e->getMessage());
+
+            return response()->json(['status' => 'error'], 500);
+        }
+    }
+
+    public function handlePaystackWebhook(Request $request)
+    {
+
         // Verify signature
         $signature = $request->header('x-paystack-signature');
         $computed  = hash_hmac('sha512', $request->getContent(), config('services.paystack.secretKey'));
 
         if ($signature !== $computed) {
+            Log::info('Signature verification', [
+                'signature' => $signature,
+                'computed'  => $computed
+            ]);
             Log::warning('Invalid Paystack webhook signature');
             return response()->json([
                 'status' => 'invalid signature'
@@ -164,10 +279,13 @@ class WebhookController extends Controller
 
         $computedSignature = hash_hmac('sha256', $rawBody, $secret);
 
+        $payload = json_decode($rawBody, true);
+
         if (!hash_equals($computedSignature, $signature ?? '')) {
             Log::warning('Invalid KoraPay webhook signature', [
                 'received' => $signature,
                 'expected' => $computedSignature,
+                'rawBody' => $payload
             ]);
             return response()->json([
                 'status' => 'invalid signature'
@@ -342,6 +460,109 @@ class WebhookController extends Controller
             DB::rollBack();
             Log::error('KoraPay webhook error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             $webhook->update(['status' => 'failed', 'message' => $e->getMessage()]);
+            return response()->json(['status' => 'error'], 500);
+        }
+    }
+
+    public function handleKoraPayCallback(Request $request)
+    {
+        $reference = $request->query('reference');
+
+        if (!$reference) {
+            return response()->json(['status' => 'no reference'], 400);
+        }
+
+        // Verify transaction from KoraPay
+        $response = Http::withToken(config('services.korapay.secret_key'))
+            ->get("https://api.korapay.com/merchant/api/v1/charges/{$reference}");
+
+        Log::info('KoraPay Callback Verify', [
+            'reference' => $reference,
+            'response'  => $response->json()
+        ]);
+
+        if (!$response->successful() || ($response['data']['status'] ?? null) !== 'success') {
+            return response()->json(['status' => 'failed'], 400);
+        }
+
+        $data = $response['data'];
+
+        $amount   = $data['amount'] ?? 0;
+        $currency = $data['currency'] ?? 'NGN';
+
+        DB::beginTransaction();
+
+        try {
+            $transaction = PaymentTransaction::where('reference', $reference)->first();
+
+            // 🔒 Prevent double credit
+            if ($transaction && $transaction->status === 'successful') {
+                DB::rollBack();
+                return response()->json(['status' => 'already processed'], 200);
+            }
+
+            if ($transaction) {
+                $user = User::find($transaction->user_id);
+
+                if (!$user) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'user not found'], 200);
+                }
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+
+                $transaction->update([
+                    'status'  => 'successful',
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                ]);
+
+                $this->attemptAutoUpgrade($user, $currency, $amount);
+            } else {
+                // Virtual account / fallback
+                $userId = $this->getUserFromVirtualAccount($data);
+
+                if (!$userId) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'user not found'], 200);
+                }
+
+                $user = User::find($userId);
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+
+                PaymentTransaction::create([
+                    'user_id'     => $user->id,
+                    'campaign_id' => 1,
+                    'reference'   => $reference,
+                    'amount'      => $amount,
+                    'balance'     => $this->walletModel->getWalletBalance($user->id),
+                    'status'      => 'successful',
+                    'currency'    => $currency,
+                    'channel'     => 'kora',
+                    'type'        => 'transfer_topup',
+                    'description' => 'Wallet topup via KoraPay',
+                    'tx_type'     => 'Credit',
+                    'user_type'   => 'regular',
+                ]);
+
+                $this->attemptAutoUpgrade($user, $currency, $amount);
+            }
+
+            DB::commit();
+
+            $this->notification->createNotification(
+                $user,
+                'Wallet Funding Successful!',
+                "{$currency} {$amount} has been added to your wallet.",
+                'wallet'
+            );
+
+            return response()->json(['status' => 'success'], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('KoraPay callback error: ' . $e->getMessage());
+
             return response()->json(['status' => 'error'], 500);
         }
     }

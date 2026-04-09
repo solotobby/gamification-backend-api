@@ -31,9 +31,13 @@ Route::get('/unauthenticated', function () {
 
 Route::prefix('webhooks')->group(function () {
     Route::get('/paystack',  [WebhookController::class, 'handlePaystack'])->name('webhook.paystack');
+    Route::get('/paystack/callback',  [WebhookController::class, 'handlePaystackCallback'])->name('webhook.paystack.callback');
     Route::get('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
+    Route::get('/korapay/callback',   [WebhookController::class, 'handleKoraPayCallback'])->name('webhook.korapay.callback');
     Route::get('/stripe',    [WebhookController::class, 'handleStripe'])->name('webhook.stripe');
+
 });
+
 
 // Admin routes
 // Route::middleware(['auth:api', 'isAdmin'])->prefix('admin')->group(function () {
