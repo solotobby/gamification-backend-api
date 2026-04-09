@@ -38,7 +38,7 @@ class WebhookController extends Controller
         $signature = $request->header('x-paystack-signature');
         $computed  = hash_hmac('sha512', $request->getContent(), config('services.paystack.secretKey'));
 
-        if (!hash_equals($computed, $signature)) {
+        if ($signature !== $computed) {
             Log::warning('Invalid Paystack webhook signature');
             return response()->json([
                 'status' => 'invalid signature'
@@ -157,7 +157,7 @@ class WebhookController extends Controller
     {
         ini_set('serialize_precision', '-1');
 
-        
+
         $rawBody   = $request->getContent();
         $signature = $request->header('x-korapay-signature');
         $secret    = config('services.korapay.secret_key');
