@@ -12,6 +12,9 @@ class VerifyCsrfToken extends Middleware
      * @var array
      */
     protected $except = [
-        'virtual/account/webhook'
+        'virtual/account/webhook',
+        'webhooks/paystack',
+        'webhooks/korapay',
+        'webhooks/stripe',
     ];
 }

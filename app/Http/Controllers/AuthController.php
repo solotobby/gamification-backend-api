@@ -27,6 +27,10 @@ class AuthController extends Controller
     {
         return $this->authService->loginUser($request);
     }
+    public function googleAuth(Request $request)
+{
+    return $this->authService->googleAuth($request);
+}
 
     public function sendEmailOTP(Request $request)
     {

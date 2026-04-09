@@ -21,6 +21,7 @@ use App\Services\Providers\CloudinaryService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class CampaignService
 {
@@ -191,6 +192,8 @@ class CampaignService
         $this->validator->validateCampaignCreation($request);
 
         try {
+
+        DB::beginTransaction();
             $user = auth()->user();
             $baseCurrency = $user->wallet->base_currency;
 
@@ -263,6 +266,7 @@ class CampaignService
                 "Task with ID {$jobId} Created Successfully and pending approval from the admin",
                 'task'
             );
+            DB::commit();
             // Notify user via email
             Mail::to($user->email)->send(new CreateCampaign($campaign));
 
@@ -272,6 +276,7 @@ class CampaignService
                 'data' => $campaign,
             ], 201);
         } catch (Throwable $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => false,
                 'error' => $e->getMessage(),
@@ -865,7 +870,7 @@ class CampaignService
         $approvalTime = $user->is_business
             ? $request->approval_time
             : 24;
-        Log::info('Base64 input', ['image' => $request->expected_result_image]);
+        // Log::info('Base64 input', ['image' => $request->expected_result_image]);
 
         if ($request->filled('expected_result_image')) {
             $expectedURL = app(CloudinaryService::class)->uploadBase64Image($request->expected_result_image);

@@ -18,6 +18,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Repositories\LogRepositoryModel;
 use Illuminate\Support\Facades\Auth;
+use Google\Client;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
+use Kreait\Firebase\Contract\Auth as FirebaseAuth;
+use Kreait\Firebase\Exception\Auth\FailedToVerifyToken;
 
 class AuthService
 {
@@ -28,6 +33,7 @@ class AuthService
     protected $refer;
     protected $log;
     protected $walletModel;
+    protected $firebaseAuth;
 
     public function __construct(
         AuthValidator $validator,
@@ -37,6 +43,8 @@ class AuthService
         LogRepositoryModel $log,
         WalletRepositoryModel $walletModel,
         BankRepositoryModel $bank,
+        FirebaseAuth  $firebaseAuth,
+
     ) {
         $this->validator = $validator;
         $this->auth = $auth;
@@ -45,6 +53,7 @@ class AuthService
         $this->log = $log;
         $this->bank = $bank;
         $this->walletModel = $walletModel;
+        $this->firebaseAuth = $firebaseAuth;
     }
 
     public function registerUser($request)
@@ -79,6 +88,82 @@ class AuthService
         }
     }
 
+
+
+    public function googleAuth($request)
+    {
+        $request->validate([
+            'id_token' => 'required|string',
+            // 'fcm_token' => 'nullable|string',
+        ]);
+
+        try {
+            $verifiedToken = $this->firebaseAuth->verifyIdToken($request->id_token);
+
+            $email = $verifiedToken->claims()->get('email');
+            $name  = $verifiedToken->claims()->get('name');
+
+            if (!$email) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid Google token'
+                ], 401);
+            }
+
+            DB::beginTransaction();
+
+            // Find or create user
+            $user = $this->auth->findUser($email);
+
+            if (!$user) {
+                // optional: create user if not found
+                // $user = $this->auth->createUser(['email' => $email, 'name' => $name, ...]);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            $this->ensureUserHasRole($user);
+            $this->ensureUserHasReferralCode($user);
+
+            // if ($request->fcm_token) {
+            //     $this->auth->updateUser($user->id, ['fcm_token' => $request->fcm_token]);
+            // }
+
+            $data['user']            = $this->auth->findUserWithRole($user->email);
+            $data['wallet']          = $this->walletModel->walletDetails($user);
+            $data['token']           = $user->createToken('freebyz')->accessToken;
+            $data['dashboard']       = $this->auth->dashboardStat($user->id);
+            $data['virtual_account'] = ($user->wallet->base_currency ?? 'NGN') === 'NGN'
+                ? $this->bank->getVirtualBank($user->id)
+                : null;
+
+            $this->log->createLogForLogin($user);
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Google authentication successful',
+                'data'    => $data,
+            ]);
+        } catch (FailedToVerifyToken $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid or expired Google token'
+            ], 401);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Google authentication failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function loginUser($request)
     {
         // Validate request data
@@ -94,6 +179,8 @@ class AuthService
                     'message' => 'User not found'
                 ], 404);
             }
+            DB::beginTransaction();
+
 
             // Ensure user has a role
             $this->ensureUserHasRole($user);
@@ -117,6 +204,7 @@ class AuthService
                 : null;
             //    Log Activities
             $this->log->createLogForLogin($user);
+            DB::commit();
 
             return response()->json([
                 'status' => true,
@@ -124,7 +212,8 @@ class AuthService
                 'data' => $data,
             ], 200);
         } catch (Throwable $e) {
-            return $e;
+            // return $e;
+            DB::rollBack();
             throw new BadRequestException('Error processing request');
         }
     }

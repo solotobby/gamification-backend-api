@@ -46,7 +46,13 @@ return [
         'secret'         => env('STRIPE_SECRET'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
-    'firebase' => [
-        'server_key' => env('FIREBASE_SERVER_KEY'),
-    ],
+    // 'firebase' => [
+    //     'server_key' => env('FIREBASE_SERVER_KEY'),
+    // ],
+
+    'google' => [
+    'client_id' => env('GOOGLE_CLIENT_ID'),
+    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    'redirect' => env('GOOGLE_REDIRECT_URI'),
+],
 ];

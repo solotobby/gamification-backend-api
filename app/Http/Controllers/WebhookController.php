@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use App\Services\NotificationService;
 
 class WebhookController extends Controller
 {
@@ -25,6 +26,7 @@ class WebhookController extends Controller
         protected AuthRepositoryModel     $authModel,
         protected CurrencyRepositoryModel $currencyModel,
         protected WalletService           $walletService,
+        protected NotificationService $notification,
     ) {}
 
     // ---------------------------------------------------------------
@@ -36,16 +38,20 @@ class WebhookController extends Controller
         $signature = $request->header('x-paystack-signature');
         $computed  = hash_hmac('sha512', $request->getContent(), config('services.paystack.secretKey'));
 
-        if ($signature !== $computed) {
+        if (!hash_equals($computed, $signature)) {
             Log::warning('Invalid Paystack webhook signature');
-            return response()->json(['status' => 'invalid signature'], 200);
+            return response()->json([
+                'status' => 'invalid signature'
+            ], 200);
         }
 
         $event = $request->input('event');
         $data  = $request->input('data');
 
         if ($event !== 'charge.success') {
-            return response()->json(['status' => 'ignored'], 200);
+            return response()->json([
+                'status' => 'ignored'
+            ], 200);
         }
 
         $amount        = $data['amount'] / 100; // kobo to naira
@@ -79,7 +85,6 @@ class WebhookController extends Controller
 
                 // Auto-upgrade if unverified and amount qualifies
                 $this->attemptAutoUpgrade($user, $currency, $amount);
-
             } else {
                 // Virtual account transfer (no prior transaction record)
                 if (!$customerCode) {
@@ -123,17 +128,21 @@ class WebhookController extends Controller
 
             DB::commit();
 
-            // Fire in-app + Firebase notification
-            event(new NotificationEvent(
+            $this->notification->createNotification(
                 user: $user,
                 title: 'Wallet Credited',
                 body: "{$currency} {$amount} has been added to your wallet.",
                 type: 'wallet',
-                data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
-            ));
+                // data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
+            );
 
+            $this->notification->createNotification(
+                $user,
+                'Wallet Credited',
+                "{$currency} {$amount} has been added to your wallet.",
+                'wallet'
+            );
             return response()->json(['status' => 'success'], 200);
-
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Paystack webhook error: ' . $e->getMessage());
@@ -148,26 +157,31 @@ class WebhookController extends Controller
     {
         ini_set('serialize_precision', '-1');
 
-        // Verify HMAC signature
+        
+        $rawBody   = $request->getContent();
         $signature = $request->header('x-korapay-signature');
         $secret    = config('services.korapay.secret_key');
-        $data      = $request->input('data');
 
-        $computedSignature = hash_hmac('sha256', json_encode($data, JSON_UNESCAPED_SLASHES), $secret);
+        $computedSignature = hash_hmac('sha256', $rawBody, $secret);
 
-        if ($signature !== $computedSignature) {
+        if (!hash_equals($computedSignature, $signature ?? '')) {
             Log::warning('Invalid KoraPay webhook signature', [
                 'received' => $signature,
                 'expected' => $computedSignature,
             ]);
-            return response()->json(['status' => 'invalid signature'], 200);
+            return response()->json([
+                'status' => 'invalid signature'
+            ], 200);
         }
 
-        // Log webhook before processing
+        $payload = json_decode($rawBody, true);
+        $event   = $payload['event'] ?? null;
+        $data    = $payload['data'] ?? [];
+
         $webhook = Webhook::create([
             'provider' => 'korapay',
-            'event'    => $request->input('event'),
-            'payload'  => $request->all(),
+            'event'    => $event,
+            'payload'  => $payload,
             'status'   => 'pending',
         ]);
 
@@ -181,9 +195,15 @@ class WebhookController extends Controller
                     $reference = $payload['reference'] ?? null;
 
                     if (!$reference) {
-                        $webhook->update(['status' => 'failed', 'message' => 'No reference in payload']);
+                        $webhook->update([
+                            'status' => 'failed',
+                            'message' => 'No reference in payload'
+                        ]);
                         DB::rollBack();
-                        return response()->json(['status' => 'error', 'message' => 'Missing reference'], 200);
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'Missing reference'
+                        ], 200);
                     }
 
                     $transaction = PaymentTransaction::where('reference', $reference)->first();
@@ -195,9 +215,15 @@ class WebhookController extends Controller
                         $userId = $this->getUserFromVirtualAccount($payload);
 
                         if (!$userId) {
-                            $webhook->update(['status' => 'failed', 'message' => 'User not found for virtual account']);
+                            $webhook->update([
+                                'status' => 'failed',
+                                'message' => 'User not found for virtual account'
+                            ]);
                             DB::rollBack();
-                            return response()->json(['status' => 'error', 'message' => 'User not found'], 200);
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'User not found'
+                            ], 200);
                         }
 
                         $transaction = PaymentTransaction::create([
@@ -217,16 +243,26 @@ class WebhookController extends Controller
                     }
 
                     if ($transaction->status === 'successful') {
-                        $webhook->update(['status' => 'ignored', 'message' => 'Already processed']);
+                        $webhook->update([
+                            'status' => 'ignored',
+                            'message' => 'Already processed'
+                        ]);
                         DB::rollBack();
-                        return response()->json(['status' => 'already processed'], 200);
+                        return response()->json(['
+                        status' => 'already processed'], 200);
                     }
 
                     $user = User::find($transaction->user_id);
                     if (!$user) {
-                        $webhook->update(['status' => 'failed', 'message' => 'Linked user not found']);
+                        $webhook->update([
+                            'status' => 'failed',
+                            'message' => 'Linked user not found'
+                        ]);
                         DB::rollBack();
-                        return response()->json(['status' => 'error', 'message' => 'User not found'], 200);
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'User not found'
+                        ], 200);
                     }
 
                     $this->walletModel->creditWallet($user, $currency, $amount);
@@ -237,17 +273,20 @@ class WebhookController extends Controller
 
                     $this->attemptAutoUpgrade($user, $currency, $amount);
 
-                    $webhook->update(['status' => 'processed', 'message' => 'Pay-in successful']);
+                    $webhook->update([
+                        'status' => 'processed',
+                        'message' => 'Pay-in successful'
+                    ]);
 
                     DB::commit();
 
-                    event(new NotificationEvent(
+                    $this->notification->createNotification(
                         user: $user,
                         title: 'Wallet Credited',
                         body: "{$currency} {$amount} has been added to your wallet.",
                         type: 'wallet',
-                        data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
-                    ));
+                        // data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
+                    );
 
                     break;
 
@@ -278,12 +317,13 @@ class WebhookController extends Controller
                         $transaction->update(['status' => 'failed']);
 
                         if ($user) {
-                            event(new NotificationEvent(
+                            $this->notification->createNotification(
                                 user: $user,
                                 title: 'Transfer Failed',
                                 body: "Your transfer of {$transaction->currency} {$transaction->amount} failed. Your wallet has been refunded.",
                                 type: 'wallet',
-                            ));
+
+                            );
                         }
                     }
 
@@ -298,7 +338,6 @@ class WebhookController extends Controller
             }
 
             return response()->json(['status' => 'success'], 200);
-
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('KoraPay webhook error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
@@ -364,16 +403,15 @@ class WebhookController extends Controller
 
             DB::commit();
 
-            event(new NotificationEvent(
+            $this->notification->createNotification(
                 user: $user,
                 title: 'Wallet Credited',
                 body: "{$transaction->currency} {$amountPaid} has been added to your wallet.",
                 type: 'wallet',
-                data: ['amount' => $amountPaid, 'currency' => $transaction->currency, 'reference' => $reference],
-            ));
+                // data: ['amount' => $amountPaid, 'currency' => $transaction->currency, 'reference' => $reference],
+            );
 
             return response()->json(['status' => 'success'], 200);
-
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Stripe webhook error: ' . $e->getMessage());
@@ -444,12 +482,12 @@ class WebhookController extends Controller
         $this->authModel->updateUserVerification($user);
         $this->walletService->referralInUpgradeUser($user);
 
-        event(new NotificationEvent(
+        $this->notification->createNotification(
             user: $user,
             title: 'Account Verified!',
             body: 'Your account has been verified successfully. You can now make withdrawals.',
             type: 'verification',
-        ));
+        );
     }
 
     /**

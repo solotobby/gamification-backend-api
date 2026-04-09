@@ -13,13 +13,14 @@ use App\Models\AccountInformation;
 use App\Providers\RouteServiceProvider;
 use App\Models\User;
 use App\Models\Wallet;
-use Illuminate\Foundation\Auth\RegistersUsers;
+// use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use App\Http\Controllers\Auth\RegistersUsers;
 
 class RegisterController extends Controller
 {
@@ -34,7 +35,6 @@ class RegisterController extends Controller
     |
     */
 
-    use RegistersUsers;
 
     /**
      * Where to redirect users after registration.
@@ -76,7 +76,7 @@ class RegisterController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
        }
-     
+
 
         $user = $this->createUser($request);
         if($user){
@@ -85,7 +85,7 @@ class RegisterController extends Controller
             setProfile($user);//set profile page
             return redirect('/home');
         }
-       
+
 
     //    $payload = [
     //         'first_name' =>  $request->first_name,
@@ -125,7 +125,7 @@ class RegisterController extends Controller
         //     }
         // }
 
-        
+
     }
 
     public function createUser($request){
@@ -198,12 +198,12 @@ class RegisterController extends Controller
         ]);
         // $location = PaystackHelpers::getLocation(); //get user location dynamically
         $user = User::where('email', $request->email)->first();
-       
+
         if($user){
             if($user->is_blacklisted == true){
                 return view('blocked');
             }
-            
+
              if($user->referral_code == null){
                 $user->referral_code = Str::random(7);
                 $user->save();
@@ -214,9 +214,9 @@ class RegisterController extends Controller
                 //     if($location == "United States"){ //check if the person is in Nigeria
                 //         if($user->is_wallet_transfered == false){
                 //             //activate sendmonny wallet and fund wallet
-                //             if(walletHandler() == 'sendmonny'){ 
+                //             if(walletHandler() == 'sendmonny'){
                 //                 if($user->is_wallet_transfered == false){
-                //                     activateSendmonnyWallet($user, $request->password); //hand sendmonny 
+                //                     activateSendmonnyWallet($user, $request->password); //hand sendmonny
                 //                 }
                 //             }
                 //         }
@@ -231,16 +231,16 @@ class RegisterController extends Controller
                     setWalletBaseCurrency();
                 }
 
-                setProfile($user);//set profile page 
-               
+                setProfile($user);//set profile page
+
 
                  //set base currency if not set
                 PaystackHelpers::userLocation('Login');
                 // SystemActivities::loginPoints($user);
-               
+
                  SystemActivities::activityLog($user, 'login', $user->name .' Logged In', 'regular');
                 return redirect('home'); //redirect to home
-                
+
             }else{
                 return back()->with('error', 'Email or Password is incorrect');
             }
@@ -289,7 +289,7 @@ class RegisterController extends Controller
         if($ref_id != 'null'){
             \DB::table('referral')->insert(['user_id' => $user->id, 'referee_id' => $ref_id]);
         }
-       
+
         return $user;
     }
 
@@ -302,5 +302,5 @@ class RegisterController extends Controller
         return view('auth.ref_register', ['name' => $name]);
     }
 
-    
+
 }

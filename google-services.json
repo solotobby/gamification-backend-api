@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "589805256188",
+    "project_id": "freebyzapp",
+    "storage_bucket": "freebyzapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:589805256188:android:2ee779b3eb27ac33788679",
+        "android_client_info": {
+          "package_name": "com.mobile.freebyz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAi8PThbU9vxWGE50LHaxwuOqBHRy4mpBo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

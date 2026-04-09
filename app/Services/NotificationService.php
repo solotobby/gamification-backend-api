@@ -46,20 +46,29 @@ class NotificationService
 
             ]);
         } catch (Throwable $e) {
-            return response()->json(['status' => false, 'message' => 'Error fetching notifications.'], 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Error fetching notifications.'
+            ], 500);
         }
     }
 
     public function markRead(int $notificationId)
     {
         $this->notifRepo->markOneRead($notificationId, auth()->id());
-        return response()->json(['status' => true, 'message' => 'Marked as read.']);
+        return response()->json([
+            'status' => true,
+            'message' => 'Marked as read.'
+        ]);
     }
 
     public function markAllRead()
     {
         $this->notifRepo->markAllRead(auth()->id());
-        return response()->json(['status' => true, 'message' => 'All notifications marked as read.']);
+        return response()->json([
+            'status' => true,
+            'message' => 'All notifications marked as read.'
+        ]);
     }
 
     // Admin: broadcast to all users via Firebase
@@ -73,9 +82,15 @@ class NotificationService
                 $this->firebase->sendToMultiple($tokens, $title, $body);
             }
 
-            return response()->json(['status' => true, 'message' => 'Broadcast sent.']);
+            return response()->json([
+                'status' => true,
+                'message' => 'Broadcast sent.'
+            ]);
         } catch (Throwable $e) {
-            return response()->json(['status' => false, 'message' => 'Broadcast failed.'], 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Broadcast failed.'
+            ], 500);
         }
     }
 
@@ -83,7 +98,10 @@ class NotificationService
     {
 
         auth()->user()->update(['fcm_token' => $token]);
-        return response()->json(['status' => true, 'message' => 'FCM token updated.']);
+        return response()->json([
+            'status' => true,
+            'message' => 'FCM token updated.'
+        ]);
     }
 
     private function buildPagination($paginator)
