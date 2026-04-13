@@ -160,7 +160,7 @@ class HireWorkerService
                 ],
             ], 200);
         } catch (Throwable $e) {
-            DB::rollBack(); // 🔥 VERY IMPORTANT
+            DB::rollBack(); 
 
             return response()->json([
                 'status'  => false,
