@@ -6,6 +6,7 @@ use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\HireWorkerRepository;
 use App\Repositories\WalletRepositoryModel;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class HireWorkerService
@@ -96,6 +97,7 @@ class HireWorkerService
         }
     }
 
+
     public function purchasePoint($id)
     {
         try {
@@ -110,14 +112,12 @@ class HireWorkerService
                 ], 409);
             }
 
-            // $currency = baseCurrency();
-            // $amount   = currencyConverter('NGN', $currency, 500);
-
-
             $baseCurrency = $user->wallet->base_currency;
-            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
-            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            $mapCurrency  = $this->walletModel->mapCurrency($baseCurrency);
+            $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
             $unitPrice = 500;
+
             if ($currency->code !== 'NGN') {
                 $rate = $this->campaignService->currencyConversion('NGN', $currency->code);
                 $unitPrice *= $rate;
@@ -133,18 +133,24 @@ class HireWorkerService
                 ], 402);
             }
 
+            DB::beginTransaction();
+
+            // 🔹 Debit wallet
             $debit = debitWallet($user, $currency, $amount);
 
             if (!$debit) {
+                DB::rollBack();
                 return response()->json([
                     'status'  => false,
                     'message' => 'Failed to debit wallet. Please try again.',
                 ], 500);
             }
 
+            // 🔹 Save purchase
             $this->repo->purchasePoint($worker->id, $user->id, $amount, $currency);
 
-            // Return contact info immediately after purchase
+            DB::commit();
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Point purchased successfully.',
@@ -154,6 +160,8 @@ class HireWorkerService
                 ],
             ], 200);
         } catch (Throwable $e) {
+            DB::rollBack(); // 🔥 VERY IMPORTANT
+
             return response()->json([
                 'status'  => false,
                 'message' => 'Error processing point purchase.',

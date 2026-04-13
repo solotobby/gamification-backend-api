@@ -72,7 +72,11 @@ class WebhookController extends Controller
                 $user = User::find($existingTransaction->user_id);
                 if (!$user) {
                     DB::rollBack();
-                    return response()->json(['status' => 'user not found'], 200);
+                    // return response()->json(['status' => 'user not found'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Payment processing failed',
+                    ], 402);
                 }
 
                 $this->walletModel->creditWallet($user, $currency, $amount);
@@ -94,7 +98,11 @@ class WebhookController extends Controller
 
                 if (!$virtualAccount) {
                     DB::rollBack();
-                    return response()->json(['status' => 'virtual account not found'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'virtual account not found',
+                    ], 402);
+                    // return response()->json(['status' => 'virtual account not found'], 200);
                 }
 
                 $user = User::find($virtualAccount->user_id);
@@ -133,12 +141,20 @@ class WebhookController extends Controller
                 'wallet'
             );
 
-            return response()->json(['status' => 'success'], 200);
+            return response()->json([
+                'status'  => true,
+                'message' => 'Payment successful',
+            ], 200);
+            // return response()->json(['status' => 'success'], 200);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Paystack callback error: ' . $e->getMessage());
 
-            return response()->json(['status' => 'error'], 500);
+            return response()->json([
+                'status'  => false,
+                'message' => 'Payment processing failed',
+            ], 402);
+            // return response()->json(['status' => 'error'], 500);
         }
     }
 
@@ -155,18 +171,26 @@ class WebhookController extends Controller
                 'computed'  => $computed
             ]);
             Log::warning('Invalid Paystack webhook signature');
+            // return response()->json([
+            //     'status' => 'invalid signature'
+            // ], 200);
             return response()->json([
-                'status' => 'invalid signature'
-            ], 200);
+                'status'  => false,
+                'message' => 'Payment processing failed',
+            ], 402);
         }
 
         $event = $request->input('event');
         $data  = $request->input('data');
 
         if ($event !== 'charge.success') {
+            // return response()->json([
+            //     'status' => 'ignored'
+            // ], 200);
             return response()->json([
-                'status' => 'ignored'
-            ], 200);
+                'status'  => false,
+                'message' => 'Payment processing failed',
+            ], 402);
         }
 
         $amount        = $data['amount'] / 100; // kobo to naira
@@ -183,13 +207,21 @@ class WebhookController extends Controller
                 // Standard card/bank payment initiated from app
                 if ($existingTransaction->status === 'successful') {
                     DB::rollBack();
-                    return response()->json(['status' => 'already processed'], 200);
+                    // return response()->json(['status' => 'already processed'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Payment already processed',
+                    ], 402);
                 }
 
                 $user = User::find($existingTransaction->user_id);
                 if (!$user) {
                     DB::rollBack();
-                    return response()->json(['status' => 'user not found'], 200);
+                    // return response()->json(['status' => 'user not found'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Payment processing failed',
+                    ], 402);
                 }
 
                 $this->walletModel->creditWallet($user, $currency, $amount);
@@ -204,20 +236,32 @@ class WebhookController extends Controller
                 // Virtual account transfer (no prior transaction record)
                 if (!$customerCode) {
                     DB::rollBack();
-                    return response()->json(['status' => 'no customer code'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'no customer code',
+                    ], 402);
+                    // return response()->json(['status' => 'no customer code'], 200);
                 }
 
                 $virtualAccount = VirtualAccount::where('customer_id', $customerCode)->first();
                 if (!$virtualAccount) {
                     DB::rollBack();
                     Log::warning('Paystack: No virtual account for customer', ['code' => $customerCode]);
-                    return response()->json(['status' => 'virtual account not found'], 200);
+                    // return response()->json(['status' => 'virtual account not found'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'virtual account not found',
+                    ], 402);
                 }
 
                 $user = User::find($virtualAccount->user_id);
                 if (!$user) {
                     DB::rollBack();
-                    return response()->json(['status' => 'user not found'], 200);
+                    // return response()->json(['status' => 'user not found'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Payment processing failed',
+                    ], 402);
                 }
 
                 $this->walletModel->creditWallet($user, $currency, $amount);
@@ -257,11 +301,19 @@ class WebhookController extends Controller
                 "{$currency} {$amount} has been added to your wallet.",
                 'wallet'
             );
-            return response()->json(['status' => 'success'], 200);
+            // return response()->json(['status' => 'success'], 200);
+            return response()->json([
+                'status'  => true,
+                'message' => 'Payment successful',
+            ], 200);
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Paystack webhook error: ' . $e->getMessage());
-            return response()->json(['status' => 'error'], 500);
+            // return response()->json(['status' => 'error'], 500);
+            return response()->json([
+                'status'  => false,
+                'message' => 'Payment processing error',
+            ], 500);
         }
     }
 
@@ -287,9 +339,14 @@ class WebhookController extends Controller
                 'expected' => $computedSignature,
                 'rawBody' => $payload
             ]);
+            // return response()->json([
+            //     'status' => 'invalid signature'
+            // ], 200);
+
             return response()->json([
-                'status' => 'invalid signature'
-            ], 200);
+                'status'  => false,
+                'message' => 'Payment processing failed',
+            ], 402);
         }
 
         $payload = json_decode($rawBody, true);
@@ -319,7 +376,7 @@ class WebhookController extends Controller
                         ]);
                         DB::rollBack();
                         return response()->json([
-                            'status' => 'error',
+                            'status' => false,
                             'message' => 'Missing reference'
                         ], 200);
                     }
@@ -339,7 +396,7 @@ class WebhookController extends Controller
                             ]);
                             DB::rollBack();
                             return response()->json([
-                                'status' => 'error',
+                                'status' => false,
                                 'message' => 'User not found'
                             ], 200);
                         }
@@ -366,8 +423,12 @@ class WebhookController extends Controller
                             'message' => 'Already processed'
                         ]);
                         DB::rollBack();
-                        return response()->json(['
-                        status' => 'already processed'], 200);
+                        // return response()->json(['
+                        // status' => 'already processed'], 200);
+                        return response()->json([
+                            'status'  => false,
+                            'message' => 'Payment already processed',
+                        ], 402);
                     }
 
                     $user = User::find($transaction->user_id);
@@ -378,7 +439,7 @@ class WebhookController extends Controller
                         ]);
                         DB::rollBack();
                         return response()->json([
-                            'status' => 'error',
+                            'status' => false,
                             'message' => 'User not found'
                         ], 200);
                     }
@@ -455,7 +516,12 @@ class WebhookController extends Controller
                     break;
             }
 
-            return response()->json(['status' => 'success'], 200);
+            // return response()->json(['status' => 'success'], 200);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Payment successful',
+            ], 200);
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('KoraPay webhook error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
@@ -469,7 +535,11 @@ class WebhookController extends Controller
         $reference = $request->query('reference');
 
         if (!$reference) {
-            return response()->json(['status' => 'no reference'], 400);
+            // return response()->json(['status' => 'no reference'], 400);
+            return response()->json([
+                'status'  => false,
+                'message' => 'No Reference',
+            ], 402);
         }
 
         // Verify transaction from KoraPay
@@ -482,7 +552,12 @@ class WebhookController extends Controller
         ]);
 
         if (!$response->successful() || ($response['data']['status'] ?? null) !== 'success') {
-            return response()->json(['status' => 'failed'], 400);
+            // return response()->json(['status' => 'failed'], 400);
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Payment processing failed',
+            ], 402);
         }
 
         $data = $response['data'];
@@ -498,7 +573,11 @@ class WebhookController extends Controller
             // 🔒 Prevent double credit
             if ($transaction && $transaction->status === 'successful') {
                 DB::rollBack();
-                return response()->json(['status' => 'already processed'], 200);
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Payment already processed',
+                ], 402);
+                // return response()->json(['status' => 'already processed'], 200);
             }
 
             if ($transaction) {
@@ -506,7 +585,11 @@ class WebhookController extends Controller
 
                 if (!$user) {
                     DB::rollBack();
-                    return response()->json(['status' => 'user not found'], 200);
+                    // return response()->json(['status' => 'user not found'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Payment processing failed',
+                    ], 402);
                 }
 
                 $this->walletModel->creditWallet($user, $currency, $amount);
@@ -523,7 +606,11 @@ class WebhookController extends Controller
 
                 if (!$userId) {
                     DB::rollBack();
-                    return response()->json(['status' => 'user not found'], 200);
+                    // return response()->json(['status' => 'user not found'], 200);
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Payment processing failed',
+                    ], 402);
                 }
 
                 $user = User::find($userId);
@@ -557,7 +644,11 @@ class WebhookController extends Controller
                 'wallet'
             );
 
-            return response()->json(['status' => 'success'], 200);
+            // return response()->json(['status' => 'success'], 200);
+            return response()->json([
+                'status'  => true,
+                'message' => 'Payment successful',
+            ], 200);
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -632,7 +723,11 @@ class WebhookController extends Controller
                 // data: ['amount' => $amountPaid, 'currency' => $transaction->currency, 'reference' => $reference],
             );
 
-            return response()->json(['status' => 'success'], 200);
+            // return response()->json(['status' => 'success'], 200);
+            return response()->json([
+                'status'  => true,
+                'message' => 'Payment successful',
+            ], 200);
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Stripe webhook error: ' . $e->getMessage());
