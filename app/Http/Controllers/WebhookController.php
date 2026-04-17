@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class WebhookController extends Controller
 {
@@ -793,6 +794,21 @@ class WebhookController extends Controller
         // Debit upgrade fee from wallet
         $debited = $this->walletModel->debitWallet($user, $mappedCurrency, $upgradeAmount);
         if (!$debited) return;
+
+        PaymentTransaction::create([
+            'user_id'     => $user->id,
+            'campaign_id' => 1,
+            'reference'   => Str::upper(Str::random(16)),
+            'amount'      => $upgradeAmount,
+            'balance'     => $this->walletModel->getWalletBalance($user->id),
+            'status'      => 'successful',
+            'currency'    => $mappedCurrency,
+            'channel'     => 'wallet',
+            'type'         => 'upgrade_payment',
+            'description' => 'Upgrade Payment',
+            'tx_type'     => 'Debit',
+            'user_type'   => 'regular',
+        ]);
 
         // Mark verified + process referral bonus
         $this->authModel->updateUserVerification($user);
