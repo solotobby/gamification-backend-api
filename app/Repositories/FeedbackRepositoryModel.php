@@ -50,7 +50,7 @@ class FeedbackRepositoryModel
          return FeedbackReplies::create([
         'feedback_id'  => $feedbackId,
         'user_id'      => $user->id,
-        'message'      => $message,        // legacy fallback
+        'message'      => $message ?? $imageUrl,        // legacy fallback
         'text_message' => $message,        // new text field
         'is_image'     => $isImage,
         'image_url'    => $imageUrl,
