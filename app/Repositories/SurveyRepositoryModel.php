@@ -16,9 +16,9 @@ class SurveyRepositoryModel
         return Preference::orderBy('name', 'ASC')->get();
     }
 
-    public function updateUserAgeAndGender($data)
+    public function updateUserAgeAndGender($auth, $data)
     {
-        $user = User::where('id', $data->id)->first();
+        $user = User::where('id', $auth->id)->first();
 
         $user->age_range = $data->age_range;
         $user->gender = $data->gender;

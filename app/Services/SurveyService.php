@@ -107,7 +107,8 @@ class SurveyService
             // check if survey already done
             //   $check = $this->auth->dashboardStat($user->id);
 
-            $this->survey->updateUserAgeAndGender($user);
+
+            $this->survey->updateUserAgeAndGender($user, $request);
             // Save User Interest
             $this->survey->addUserInterest($user, $request->interest);
 
