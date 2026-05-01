@@ -61,7 +61,7 @@ class HireWorkerRepository
 
     public function purchasePoint($skillAssetId, $userId, $amount, $currency)
     {
-        Log::info($currency);
+        // Log::info($currency);
         PaymentTransaction::create([
             'user_id'     => $userId,
             'campaign_id' => '1',
@@ -80,6 +80,8 @@ class HireWorkerRepository
         DB::table('skill_user')->insert([
             'skill_asset_id' => $skillAssetId,
             'user_id'        => $userId,
+            'created_at'    => now(),
+            'updated_at'    => now(),
         ]);
     }
 

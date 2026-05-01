@@ -65,7 +65,7 @@ class ReferralService
             'verified_user_referred' => $verifiedReferral,
             'pending_user_referred' => $pendingReferral,
             'total_referral_income' => $totalSum + $emptyAmount,
-            'referral_link' => 'https://freebyz.com/register/' . $user->referral_code
+            'referral_link' => 'https://dashboard.freebyz.com/register/' . $user->referral_code
         ];
 
         return response()->json([

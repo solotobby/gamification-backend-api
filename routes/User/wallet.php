@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DepositController;
 use App\Http\Controllers\ManualVerificationController;
+use App\Http\Controllers\StreakController;
 use App\Http\Controllers\VirtualAccountController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WithdrawalController;
@@ -38,4 +39,7 @@ Route::middleware([
     // Withdrawals
     Route::get('/withdrawal-requests',  [WithdrawalController::class, 'getUserWithdrawals']);
     Route::post('/request-withdrawal',  [WithdrawalController::class, 'processWithdrawals']);
+
+    //streak
+    Route::get('/streak/progress', [StreakController::class, 'progress']);
 });

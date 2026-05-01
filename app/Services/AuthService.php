@@ -65,6 +65,12 @@ class AuthService
             $result = $this->createUser($request);
 
             $user = $result['user'];
+
+            $deviceSource = $request->header('X-Device-Source');
+
+            if ($deviceSource === 'app') {
+                app(StreakService::class)->grantBonusIfEligible($user);
+            }
             $wallet = $result['wallet'];
             $profile = $result['profile'];
             $token = $user->createToken('freebyz')->accessToken;
@@ -124,6 +130,12 @@ class AuthService
                 ], 404);
             }
 
+             $deviceSource = $request->header('X-Device-Source');
+
+            if ($deviceSource === 'app') {
+                app(StreakService::class)->grantBonusIfEligible($user);
+            }
+
             $this->ensureUserHasRole($user);
             $this->ensureUserHasReferralCode($user);
 
@@ -170,6 +182,8 @@ class AuthService
         $this->validator->validateLogin($request);
 
         try {
+
+
             // Find user by email
             $user = $this->auth->findUser($request->email);
 
@@ -178,6 +192,11 @@ class AuthService
                     'status' => false,
                     'message' => 'User not found'
                 ], 404);
+            }
+            $deviceSource = $request->header('X-Device-Source');
+
+            if ($deviceSource === 'app') {
+                app(StreakService::class)->grantBonusIfEligible($user);
             }
             DB::beginTransaction();
 
