@@ -130,7 +130,7 @@ class AuthService
                 ], 404);
             }
 
-             $deviceSource = $request->header('X-Device-Source');
+            $deviceSource = $request->header('X-Device-Source');
 
             if ($deviceSource === 'app') {
                 app(StreakService::class)->grantBonusIfEligible($user);
@@ -232,6 +232,10 @@ class AuthService
             ], 200);
         } catch (Throwable $e) {
             // return $e;
+            logger()->error('Login error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             DB::rollBack();
             throw new BadRequestException('Error processing request');
         }

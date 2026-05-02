@@ -15,7 +15,6 @@ class AuthController extends Controller
     public function __construct(AuthService $authService)
     {
         $this->authService = $authService;
-
     }
 
     public function register(Request $request)
@@ -28,9 +27,9 @@ class AuthController extends Controller
         return $this->authService->loginUser($request);
     }
     public function googleAuth(Request $request)
-{
-    return $this->authService->googleAuth($request);
-}
+    {
+        return $this->authService->googleAuth($request);
+    }
 
     public function sendEmailOTP(Request $request)
     {
@@ -55,7 +54,7 @@ class AuthController extends Controller
         return $this->authService->resetPassword($request);
     }
 
-     public function verifyToken(Request $request)
+    public function verifyToken(Request $request)
     {
         return $this->authService->verifyToken($request);
     }
@@ -63,6 +62,6 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
 
-    return $this->authService->logout($request);
+        return $this->authService->logout($request);
     }
 }
