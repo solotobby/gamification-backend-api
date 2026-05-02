@@ -466,9 +466,9 @@ class JobService
             return "You cannot perform your own campaign.";
         }
 
-        if ($isVerified) {
-            return true;
-        }
+        // if ($isVerified) {
+        //     return true;
+        // }
 
         if ($isBelowThreshold) {
             return true;
