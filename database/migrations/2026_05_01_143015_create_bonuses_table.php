@@ -1,19 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('bonuses', function (Blueprint $table) {
+        $this->create('bonuses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+
+            $table->foreignId('user_id')
+                ->constrained()
+                ->onDelete('cascade');
+
             $table->decimal('amount', 15, 2)->default(50000);
             $table->string('currency')->default('NGN');
             $table->boolean('is_unlocked')->default(false);
@@ -23,11 +23,8 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('bonuses');
+        $this->drop('bonuses');
     }
 };

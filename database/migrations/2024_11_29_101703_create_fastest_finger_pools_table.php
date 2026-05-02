@@ -1,17 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('fastest_finger_pools', function (Blueprint $table) {
+        $this->create('fastest_finger_pools', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('date');
@@ -20,11 +16,8 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('fastest_finger_pools');
+        $this->drop('fastest_finger_pools');
     }
 };

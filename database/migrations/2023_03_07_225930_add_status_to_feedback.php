@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddStatusToFeedback extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('feedback', function (Blueprint $table) {
+        $this->addColumn('feedback', 'status', function (Blueprint $table) {
             $table->boolean('status')->default(false);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('feedback', function (Blueprint $table) {
-            $table->dropColumn('status');
-        });
+        $this->dropColumn('feedback', 'status');
     }
-}
+};

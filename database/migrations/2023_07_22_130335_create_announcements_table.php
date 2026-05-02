@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateAnnouncementsTable extends Migration
+class CreateAnnouncementsTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('announcements', function (Blueprint $table) {
+        $this->create('announcements', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->longText('content');
@@ -22,13 +16,8 @@ class CreateAnnouncementsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('announcements');
+        $this->drop('announcements');
     }
 }

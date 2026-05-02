@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateRewardsTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::create('rewards', function (Blueprint $table) {
+        $this->create('rewards', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('amount');
@@ -21,13 +15,8 @@ class CreateRewardsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('rewards');
+        $this->drop('rewards');
     }
-}
+};

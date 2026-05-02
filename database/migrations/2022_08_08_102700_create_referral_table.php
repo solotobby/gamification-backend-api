@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateReferralTable extends Migration
+class CreateReferralTable extends BaseMigration
 {
     /**
      * Run the migrations.
@@ -13,7 +13,7 @@ class CreateReferralTable extends Migration
      */
     public function up()
     {
-        Schema::create('referral', function (Blueprint $table) {
+        $this->create('referral', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('referee_id');
@@ -28,6 +28,6 @@ class CreateReferralTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('referral');
+        $this->drop('referral');
     }
 }

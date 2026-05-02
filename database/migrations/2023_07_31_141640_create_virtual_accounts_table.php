@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateVirtualAccountsTable extends Migration
+class CreateVirtualAccountsTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('virtual_accounts', function (Blueprint $table) {
+        $this->create('virtual_accounts', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('channel');
@@ -28,13 +22,8 @@ class CreateVirtualAccountsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('virtual_accounts');
+        $this->drop('virtual_accounts');
     }
 }

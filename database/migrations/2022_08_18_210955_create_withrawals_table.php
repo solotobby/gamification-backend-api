@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateWithrawalsTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::create('withrawals', function (Blueprint $table) {
+        $this->create('withrawals', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('amount');
@@ -23,13 +17,8 @@ class CreateWithrawalsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('withrawals');
+        $this->drop('withrawals');
     }
-}
+};

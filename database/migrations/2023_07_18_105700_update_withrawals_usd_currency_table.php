@@ -1,32 +1,23 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class UpdateWithrawalsUsdCurrencyTable extends Migration
+class UpdateWithrawalsUsdCurrencyTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('withrawals', function (Blueprint $table) {
-            $table->string('base_currency')->nullable();
+        $this->table('withrawals', function (Blueprint $table) {
+            if (!$this->columnExists('withrawals', 'base_currency')) {
+                $table->string('base_currency')->nullable();
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('withrawals', function (Blueprint $table) {
-            $table->dropColumn(['base_currency']);
+        $this->table('withrawals', function (Blueprint $table) {
+            $this->dropColumn('withrawals', 'base_currency');
         });
     }
 }

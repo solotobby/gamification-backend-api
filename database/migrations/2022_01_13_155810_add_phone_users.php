@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddPhoneUsers extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        $this->addColumn('users', 'phone', function (Blueprint $table) {
             $table->string('phone')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('phone');
-        });
+        $this->dropColumn('users', 'phone');
     }
-}
+};

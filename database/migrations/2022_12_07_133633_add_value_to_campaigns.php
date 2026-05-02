@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddValueToCampaigns extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('campaigns', function (Blueprint $table) {
+        $this->addColumn('campaigns', 'extension_references', function (Blueprint $table) {
             $table->string('extension_references')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('campaigns', function (Blueprint $table) {
-            $table->dropColumn('extension_references');
-        });
+        $this->dropColumn('campaigns', 'extension_references');
     }
-}
+};

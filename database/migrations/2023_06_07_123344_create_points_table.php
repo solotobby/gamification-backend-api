@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreatePointsTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::create('points', function (Blueprint $table) {
+        $this->create('points', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->integer('point');
@@ -22,13 +16,8 @@ class CreatePointsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('points');
+        $this->drop('points');
     }
-}
+};

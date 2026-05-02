@@ -1,17 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('currencies', function (Blueprint $table) {
+        $this->create('currencies', function (Blueprint $table) {
             $table->id();
             $table->string('code');
             $table->string('country');
@@ -26,11 +22,8 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('currencies');
+        $this->drop('currencies');
     }
 };

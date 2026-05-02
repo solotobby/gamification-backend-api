@@ -1,10 +1,11 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+// use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateBankInformationTable extends Migration
+class CreateBankInformationTable extends BaseMigration
 {
     /**
      * Run the migrations.
@@ -13,7 +14,7 @@ class CreateBankInformationTable extends Migration
      */
     public function up()
     {
-        Schema::create('bank_information', function (Blueprint $table) {
+        $this->create('bank_information', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('name');
@@ -34,6 +35,6 @@ class CreateBankInformationTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('bank_information');
+        $this->drop('bank_information');
     }
 }

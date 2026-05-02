@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateStatisticsTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::create('statistics', function (Blueprint $table) {
+        $this->create('statistics', function (Blueprint $table) {
             $table->id();
             $table->string('type');
             $table->bigInteger('count');
@@ -21,13 +15,8 @@ class CreateStatisticsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('statistics');
+        $this->drop('statistics');
     }
-}
+};

@@ -1,30 +1,27 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
     /**
      * Run the migrations.
      */
-   public function up()
+    public function up(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            $table->string('type')->default('promotion')->after('is_active');
+        $this->addColumn('categories', 'type', function (Blueprint $table) {
+            $table->string('type')
+                ->default('promotion')
+                ->after('is_active');
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            $table->dropColumn(['type']);
-        });
+        $this->dropColumn('categories', 'type');
     }
 };

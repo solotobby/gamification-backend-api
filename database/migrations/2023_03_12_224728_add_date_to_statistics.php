@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddDateToStatistics extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('statistics', function (Blueprint $table) {
+        $this->addColumn('statistics', 'date', function (Blueprint $table) {
             $table->string('date')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('statistics', function (Blueprint $table) {
-            $table->dropColumn('date');
-        });
+        $this->dropColumn('statistics', 'date');
     }
-}
+};

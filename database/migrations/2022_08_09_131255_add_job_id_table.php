@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddJobIdTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('campaigns', function (Blueprint $table) {
+        $this->addColumn('campaigns', 'job_id', function (Blueprint $table) {
             $table->string('job_id')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('campaigns', function (Blueprint $table) {
-            $table->dropColumn('job_id');
-        });
+        $this->dropColumn('campaigns', 'job_id');
     }
-}
+};

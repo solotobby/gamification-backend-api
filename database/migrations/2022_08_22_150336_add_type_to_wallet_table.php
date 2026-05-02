@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddTypeToWalletTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('wallets', function (Blueprint $table) {
+        $this->addColumn('wallets', 'user_type', function (Blueprint $table) {
             $table->string('user_type')->default('regular');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('wallets', function (Blueprint $table) {
-            $table->dropColumn('user_type');
-        });
+        $this->dropColumn('wallets', 'user_type');
     }
-}
+};

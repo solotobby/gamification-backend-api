@@ -1,36 +1,38 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class UpdateProfilesInfo extends Migration
+class UpdateProfilesInfo extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            // 'country', 'country_code', 'currency', 'currency_code'
-            $table->string('country')->nullable();
-            $table->string('country_code')->nullable();
-            $table->string('currency')->nullable();
-            $table->string('currency_code')->nullable();
+        $this->table('profiles', function (Blueprint $table) {
+            if (!$this->columnExists('profiles', 'country')) {
+                $table->string('country')->nullable();
+            }
+
+            if (!$this->columnExists('profiles', 'country_code')) {
+                $table->string('country_code')->nullable();
+            }
+
+            if (!$this->columnExists('profiles', 'currency')) {
+                $table->string('currency')->nullable();
+            }
+
+            if (!$this->columnExists('profiles', 'currency_code')) {
+                $table->string('currency_code')->nullable();
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->dropColumn(['country', 'country_code', 'currency', 'currency_code']);
+        $this->table('profiles', function (Blueprint $table) {
+            $this->dropColumn('profiles', 'country');
+            $this->dropColumn('profiles', 'country_code');
+            $this->dropColumn('profiles', 'currency');
+            $this->dropColumn('profiles', 'currency_code');
         });
     }
 }

@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateProductTypesTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::create('product_types', function (Blueprint $table) {
+        $this->create('product_types', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->boolean('status')->default(true);
@@ -21,13 +15,8 @@ class CreateProductTypesTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('product_types');
+        $this->drop('product_types');
     }
-}
+};

@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateKnowledgeBasesTable extends Migration
+class CreateKnowledgeBasesTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('knowledge_bases', function (Blueprint $table) {
+        $this->create('knowledge_bases', function (Blueprint $table) {
             $table->id();
             $table->string('category');
             $table->string('question');
@@ -24,13 +18,8 @@ class CreateKnowledgeBasesTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('knowledge_bases');
+        $this->drop('knowledge_bases');
     }
 }

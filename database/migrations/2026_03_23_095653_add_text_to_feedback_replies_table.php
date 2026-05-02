@@ -1,22 +1,21 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
     public function up(): void
     {
-        Schema::table('feedback_replies', function (Blueprint $table) {
-            $table->text('text_message')->nullable()->after('message');
+        $this->addColumn('feedback_replies', 'text_message', function (Blueprint $table) {
+            $table->text('text_message')
+                ->nullable()
+                ->after('message');
         });
     }
 
     public function down(): void
     {
-        Schema::table('feedback_replies', function (Blueprint $table) {
-            $table->dropColumn('text_message');
-        });
+        $this->dropColumn('feedback_replies', 'text_message');
     }
 };

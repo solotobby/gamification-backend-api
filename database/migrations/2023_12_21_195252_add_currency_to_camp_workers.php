@@ -1,32 +1,23 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddCurrencyToCampWorkers extends Migration
+class AddCurrencyToCampWorkers extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('campaign_workers', function (Blueprint $table) {
-            $table->string('currency')->nullable();
+        $this->table('campaign_workers', function (Blueprint $table) {
+            if (!$this->columnExists('campaign_workers', 'currency')) {
+                $table->string('currency')->nullable();
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('campaign_workers', function (Blueprint $table) {
-            $table->dropColumn(['currency']);
+        $this->table('campaign_workers', function (Blueprint $table) {
+            $this->dropColumn('campaign_workers', 'currency');
         });
     }
 }

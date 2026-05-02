@@ -1,17 +1,18 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+// use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('oauth_refresh_tokens', function (Blueprint $table) {
+        $this->create('oauth_refresh_tokens', function (Blueprint $table) {
             $table->string('id', 100)->primary();
             $table->string('access_token_id', 100)->index();
             $table->boolean('revoked');
@@ -24,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('oauth_refresh_tokens');
+        $this->drop('oauth_refresh_tokens');
     }
 };

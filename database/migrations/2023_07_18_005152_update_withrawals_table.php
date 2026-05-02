@@ -1,34 +1,33 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class UpdateWithrawalsTable extends Migration
+class UpdateWithrawalsTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('withrawals', function (Blueprint $table) {
-            $table->text('content')->nullable();
-            $table->string('paypal_email')->nullable();
-            $table->boolean('is_usd')->default(false);
+        $this->table('withrawals', function (Blueprint $table) {
+            if (!$this->columnExists('withrawals', 'content')) {
+                $table->text('content')->nullable();
+            }
+
+            if (!$this->columnExists('withrawals', 'paypal_email')) {
+                $table->string('paypal_email')->nullable();
+            }
+
+            if (!$this->columnExists('withrawals', 'is_usd')) {
+                $table->boolean('is_usd')->default(false);
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('withrawals', function (Blueprint $table) {
-            $table->dropColumn(['content', 'paypal_email', 'is_usd']);
+        $this->table('withrawals', function (Blueprint $table) {
+            $this->dropColumn('withrawals', 'content');
+            $this->dropColumn('withrawals', 'paypal_email');
+            $this->dropColumn('withrawals', 'is_usd');
         });
     }
 }

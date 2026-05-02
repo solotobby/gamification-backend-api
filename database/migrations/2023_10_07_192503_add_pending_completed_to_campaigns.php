@@ -1,34 +1,33 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddPendingCompletedToCampaigns extends Migration
+class AddPendingCompletedToCampaigns extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('campaigns', function (Blueprint $table) {
-            $table->bigInteger('pending_count');
-            $table->bigInteger('completed_count');
-            $table->bigInteger('impressions');
+        $this->table('campaigns', function (Blueprint $table) {
+            if (!$this->columnExists('campaigns', 'pending_count')) {
+                $table->bigInteger('pending_count');
+            }
+
+            if (!$this->columnExists('campaigns', 'completed_count')) {
+                $table->bigInteger('completed_count');
+            }
+
+            if (!$this->columnExists('campaigns', 'impressions')) {
+                $table->bigInteger('impressions');
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('campaigns', function (Blueprint $table) {
-            $table->dropColumn(['pending_count', 'completed_count', 'impressions']);
+        $this->table('campaigns', function (Blueprint $table) {
+            $this->dropColumn('campaigns', 'pending_count');
+            $this->dropColumn('campaigns', 'completed_count');
+            $this->dropColumn('campaigns', 'impressions');
         });
     }
 }

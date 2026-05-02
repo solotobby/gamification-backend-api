@@ -1,28 +1,21 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('currencies', function (Blueprint $table) {
-            $table->string('banner_clicks_amount')->after('base_rate')->default('2');
+        $this->addColumn('currencies', 'banner_clicks_amount', function (Blueprint $table) {
+            $table->string('banner_clicks_amount')
+                ->after('base_rate')
+                ->default('2');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('currencies', function (Blueprint $table) {
-             $table->dropColumn('banner_clicks_amount');
-        });
+        $this->dropColumn('currencies', 'banner_clicks_amount');
     }
 };

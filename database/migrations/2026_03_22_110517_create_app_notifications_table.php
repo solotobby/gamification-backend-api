@@ -1,16 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
     public function up(): void
     {
-        Schema::create('app_notifications', function (Blueprint $table) {
+        $this->create('app_notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade'); 
+            $table->foreignId('user_id')
+                ->nullable()
+                ->constrained()
+                ->onDelete('cascade');
+
             $table->string('title');
             $table->text('body');
             $table->string('type')->default('general'); // general|wallet|verification|withdrawal
@@ -23,6 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('app_notifications');
+        $this->drop('app_notifications');
     }
 };

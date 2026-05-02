@@ -1,28 +1,21 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('portfolio_tools', function (Blueprint $table) {
+        $this->create('portfolio_tools', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('portfolio_id');
             $table->unsignedBigInteger('tool_id');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('portfolio_tools');
+        $this->drop('portfolio_tools');
     }
 };

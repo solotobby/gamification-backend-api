@@ -1,32 +1,23 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class UpdateSubCategoriesTables extends Migration
+class UpdateSubCategoriesTables extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('sub_categories', function (Blueprint $table) {
-            $table->string('usd')->nullable();
+        $this->table('sub_categories', function (Blueprint $table) {
+            if (!$this->columnExists('sub_categories', 'usd')) {
+                $table->string('usd')->nullable();
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('sub_categories', function (Blueprint $table) {
-            $table->dropColumn(['usd']);
+        $this->table('sub_categories', function (Blueprint $table) {
+            $this->dropColumn('sub_categories', 'usd');
         });
     }
 }

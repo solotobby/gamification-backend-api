@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateConversionRatesTable extends Migration
+class CreateConversionRatesTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('conversion_rates', function (Blueprint $table) {
+        $this->create('conversion_rates', function (Blueprint $table) {
             $table->id();
             $table->string('from');
             $table->string('to');
@@ -23,13 +17,8 @@ class CreateConversionRatesTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('conversion_rates');
+        $this->drop('conversion_rates');
     }
 }

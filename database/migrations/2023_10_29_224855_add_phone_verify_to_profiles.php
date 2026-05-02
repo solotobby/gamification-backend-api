@@ -1,33 +1,28 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddPhoneVerifyToProfiles extends Migration
+class AddPhoneVerifyToProfiles extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->boolean('phone_verified')->default(false);
-            $table->boolean('email_verified')->default(false);
+        $this->table('profiles', function (Blueprint $table) {
+            if (!$this->columnExists('profiles', 'phone_verified')) {
+                $table->boolean('phone_verified')->default(false);
+            }
+
+            if (!$this->columnExists('profiles', 'email_verified')) {
+                $table->boolean('email_verified')->default(false);
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->dropColumn(['phone_verified', 'email_verified']);
+        $this->table('profiles', function (Blueprint $table) {
+            $this->dropColumn('profiles', 'phone_verified');
+            $this->dropColumn('profiles', 'email_verified');
         });
     }
 }

@@ -1,30 +1,28 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('currencies', function (Blueprint $table) {
-            $table->string('freebyz_withdrawal_percent')->after('withdrawal_percent')->nullable();
-            $table->string('referral_withdrawal_percent')->after('freebyz_withdrawal_percent')->nullable();
+        $this->addColumn('currencies', 'freebyz_withdrawal_percent', function (Blueprint $table) {
+            $table->string('freebyz_withdrawal_percent')
+                ->after('withdrawal_percent')
+                ->nullable();
+        });
+
+        $this->addColumn('currencies', 'referral_withdrawal_percent', function (Blueprint $table) {
+            $table->string('referral_withdrawal_percent')
+                ->after('freebyz_withdrawal_percent')
+                ->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('currencies', function (Blueprint $table) {
-            $table->dropColumn('freebyz_withdrawal_percent');
-            $table->dropColumn('referral_withdrawal_percent');
-        });
+        $this->dropColumn('currencies', 'referral_withdrawal_percent');
+        $this->dropColumn('currencies', 'freebyz_withdrawal_percent');
     }
 };

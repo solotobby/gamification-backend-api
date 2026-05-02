@@ -1,10 +1,11 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+// use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateQuestionsTable extends Migration
+class CreateQuestionsTable extends BaseMigration
 {
     /**
      * Run the migrations.
@@ -13,7 +14,7 @@ class CreateQuestionsTable extends Migration
      */
     public function up()
     {
-        Schema::create('questions', function (Blueprint $table) {
+        $this->create('questions', function (Blueprint $table) {
             $table->id();
             $table->longText('content')->nullable();
             $table->text('asset_url')->nullable();
@@ -33,6 +34,6 @@ class CreateQuestionsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('questions');
+       $this->drop('questions');
     }
 }

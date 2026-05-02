@@ -1,25 +1,21 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            $table->string('url')->nullable()->after('name');
+        $this->addColumn('categories', 'url', function (Blueprint $table) {
+            $table->string('url')
+                ->nullable()
+                ->after('name');
         });
     }
 
     public function down(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            $table->dropColumn('url');
-        });
+        $this->dropColumn('categories', 'url');
     }
 };

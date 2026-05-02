@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddRecipientCodeToStaff extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('staff', function (Blueprint $table) {
+        $this->addColumn('staff', 'recipient_code', function (Blueprint $table) {
             $table->string('recipient_code')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('staff', function (Blueprint $table) {
-            $table->drop('recipient_code');
-        });
+        $this->dropColumn('staff', 'recipient_code');
     }
-}
+};

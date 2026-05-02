@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddDownloadCountToMarketPlacePayment extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('market_place_payments', function (Blueprint $table) {
+        $this->addColumn('market_place_payments', 'download_count', function (Blueprint $table) {
             $table->integer('download_count')->default(0);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('market_place_payments', function (Blueprint $table) {
-            $table->dropColumn('download_count');
-        });
+        $this->dropColumn('market_place_payments', 'download_count');
     }
-}
+};

@@ -1,33 +1,28 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddAddressToProfilesTable extends Migration
+class AddAddressToProfilesTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->string('address')->nullable();
-            $table->boolean('is_xmas')->default(false);
+        $this->table('profiles', function (Blueprint $table) {
+            if (!$this->columnExists('profiles', 'address')) {
+                $table->string('address')->nullable();
+            }
+
+            if (!$this->columnExists('profiles', 'is_xmas')) {
+                $table->boolean('is_xmas')->default(false);
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->dropColumn(['address', 'is_xmas']);
+        $this->table('profiles', function (Blueprint $table) {
+            $this->dropColumn('profiles', 'address');
+            $this->dropColumn('profiles', 'is_xmas');
         });
     }
 }

@@ -1,34 +1,24 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddUserModeTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('payment_transactions', function (Blueprint $table) {
+        $this->addColumn('payment_transactions', 'user_type', function (Blueprint $table) {
             $table->string('user_type')->default('regular');
+        });
+
+        $this->addColumn('payment_transactions', 'tx_type', function (Blueprint $table) {
             $table->string('tx_type')->default('Credit');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('payment_transactions', function (Blueprint $table) {
-            $table->dropColumn('user_type');
-            $table->dropColumn('tx_type');
-        });
+        $this->dropColumn('payment_transactions', 'user_type');
+        $this->dropColumn('payment_transactions', 'tx_type');
     }
-}
+};

@@ -1,33 +1,28 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddGenderAgeToUsersTable extends Migration
+class AddGenderAgeToUsersTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('age_range')->nullable();
-            $table->string('gender')->nullable();
+        $this->table('users', function (Blueprint $table) {
+            if (!$this->columnExists('users', 'age_range')) {
+                $table->string('age_range')->nullable();
+            }
+
+            if (!$this->columnExists('users', 'gender')) {
+                $table->string('gender')->nullable();
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['age_range', 'gender']);
+        $this->table('users', function (Blueprint $table) {
+            $this->dropColumn('users', 'age_range');
+            $this->dropColumn('users', 'gender');
         });
     }
 }

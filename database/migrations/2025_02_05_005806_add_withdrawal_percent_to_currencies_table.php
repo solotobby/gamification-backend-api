@@ -1,29 +1,21 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('currencies', function (Blueprint $table) {
-            $table->string('withdrawal_percent')->after('min_withdrawal_amount')->nullable();
+        $this->addColumn('currencies', 'withdrawal_percent', function (Blueprint $table) {
+            $table->string('withdrawal_percent')
+                ->after('min_withdrawal_amount')
+                ->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('currencies', function (Blueprint $table) {
-            $table->dropColumn('withdrawal_percent');
-
-        });
+        $this->dropColumn('currencies', 'withdrawal_percent');
     }
 };

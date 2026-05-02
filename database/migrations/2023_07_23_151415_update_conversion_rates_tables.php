@@ -1,32 +1,23 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class UpdateConversionRatesTables extends Migration
+class UpdateConversionRatesTables extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('conversion_rates', function (Blueprint $table) {
-            $table->string('amount');
+        $this->table('conversion_rates', function (Blueprint $table) {
+            if (!$this->columnExists('conversion_rates', 'amount')) {
+                $table->string('amount');
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('conversion_rates', function (Blueprint $table) {
-            $table->dropColumn(['amount']);
+        $this->table('conversion_rates', function (Blueprint $table) {
+            $this->dropColumn('conversion_rates', 'amount');
         });
     }
 }

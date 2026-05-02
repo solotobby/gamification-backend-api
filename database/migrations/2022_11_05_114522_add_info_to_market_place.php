@@ -1,34 +1,29 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddInfoToMarketPlace extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('market_place_products', function (Blueprint $table) {
+        $this->addColumn('market_place_products', 'product_id', function (Blueprint $table) {
             $table->string('product_id');
+        });
+
+        $this->addColumn('market_place_products', 'views', function (Blueprint $table) {
             $table->integer('views');
+        });
+
+        $this->addColumn('market_place_products', 'description', function (Blueprint $table) {
             $table->longText('description');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('market_place_products', function (Blueprint $table) {
-            $table->dropColumn(['product_id', 'views', 'description']);
-        });
+        $this->dropColumn('market_place_products', 'product_id');
+        $this->dropColumn('market_place_products', 'views');
+        $this->dropColumn('market_place_products', 'description');
     }
-}
+};

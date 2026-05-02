@@ -1,32 +1,23 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class UpdateProfilesTable extends Migration
+class UpdateProfilesTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->boolean('is_celebrity')->default(false);
+        $this->table('profiles', function (Blueprint $table) {
+            if (!$this->columnExists('profiles', 'is_celebrity')) {
+                $table->boolean('is_celebrity')->default(false);
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->dropColumn(['is_celebrity']);
+        $this->table('profiles', function (Blueprint $table) {
+            $this->dropColumn('profiles', 'is_celebrity');
         });
     }
 }

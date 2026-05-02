@@ -1,17 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('professionals', function (Blueprint $table) {
+        $this->create('professionals', function (Blueprint $table) {
             $table->id();
             $table->string('_link');
             $table->unsignedBigInteger('user_id');
@@ -36,11 +32,8 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('professionals');
+        $this->drop('professionals');
     }
 };

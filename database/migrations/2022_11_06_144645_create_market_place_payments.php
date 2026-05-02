@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateMarketPlacePayments extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::create('market_place_payments', function (Blueprint $table) {
+        $this->create('market_place_payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('market_place_product_id');
             $table->unsignedBigInteger('user_id');
@@ -27,13 +21,8 @@ class CreateMarketPlacePayments extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('market_place_payments');
+        $this->drop('market_place_payments');
     }
-}
+};

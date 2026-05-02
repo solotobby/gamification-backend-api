@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateSafeLocksTable extends Migration
+class CreateSafeLocksTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('safe_locks', function (Blueprint $table) {
+        $this->create('safe_locks', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->decimal('amount_locked', 10, 2);
@@ -29,13 +23,8 @@ class CreateSafeLocksTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('safe_locks');
+        $this->drop('safe_locks');
     }
 }

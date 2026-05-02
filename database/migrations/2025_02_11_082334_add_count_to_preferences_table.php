@@ -1,28 +1,21 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('preferences', function (Blueprint $table) {
-            $table->integer('count')->after('name')->default(1);
+        $this->addColumn('preferences', 'count', function (Blueprint $table) {
+            $table->integer('count')
+                ->after('name')
+                ->default(1);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('preferences', function (Blueprint $table) {
-             $table->dropColumn('count');
-        });
+        $this->dropColumn('preferences', 'count');
     }
 };

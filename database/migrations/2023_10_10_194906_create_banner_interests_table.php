@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreateBannerInterestsTable extends Migration
+class CreateBannerInterestsTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('banner_interests', function (Blueprint $table) {
+        $this->create('banner_interests', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('interest_id');
             $table->unsignedBigInteger('banner_id');
@@ -22,13 +16,8 @@ class CreateBannerInterestsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('banner_interests');
+        $this->drop('banner_interests');
     }
 }

@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreatePartnershipBeneficiariesTable extends Migration
+class CreatePartnershipBeneficiariesTable extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
     public function up()
     {
-        Schema::create('partnership_beneficiaries', function (Blueprint $table) {
+        $this->create('partnership_beneficiaries', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('partnership_subscriptions_id');
             $table->string('firstName');
@@ -26,13 +20,8 @@ class CreatePartnershipBeneficiariesTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
     public function down()
     {
-        Schema::dropIfExists('partnership_beneficiaries');
+        $this->drop('partnership_beneficiaries');
     }
 }

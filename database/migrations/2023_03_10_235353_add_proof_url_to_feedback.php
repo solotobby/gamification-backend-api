@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddProofUrlToFeedback extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('feedback', function (Blueprint $table) {
+        $this->addColumn('feedback', 'proof_url', function (Blueprint $table) {
             $table->string('proof_url')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('feedback', function (Blueprint $table) {
-            $table->dropColumn('proof_url');
-        });
+        $this->dropColumn('feedback', 'proof_url');
     }
-}
+};

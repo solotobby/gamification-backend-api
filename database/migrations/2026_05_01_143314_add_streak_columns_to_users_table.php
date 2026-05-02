@@ -1,29 +1,24 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        $this->addColumn('users', 'auth_device', function (Blueprint $table) {
             $table->string('auth_device')->default('web');
+        });
+
+        $this->addColumn('users', 'streak_redeemed', function (Blueprint $table) {
             $table->boolean('streak_redeemed')->default(false);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            //
-        });
+        $this->dropColumn('users', 'streak_redeemed');
+        $this->dropColumn('users', 'auth_device');
     }
 };

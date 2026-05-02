@@ -1,19 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class CreatePaymentTransactionsTable extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::create('payment_transactions', function (Blueprint $table) {
+        $this->create('payment_transactions', function (Blueprint $table) {
             $table->id();
             $table->string('reference');
             $table->unsignedBigInteger('user_id');
@@ -28,13 +22,8 @@ class CreatePaymentTransactionsTable extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('payment_transactions');
+        $this->drop('payment_transactions');
     }
-}
+};

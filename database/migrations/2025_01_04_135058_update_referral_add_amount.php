@@ -1,31 +1,33 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends BaseMigration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('referral', function (Blueprint $table) {
-            $table->string('referee_id')->change();
+        // change column type safely (only if column exists)
+        if ($this->columnExists('referral', 'referee_id')) {
+            $this->table('referral', function (Blueprint $table) {
+                $table->string('referee_id')->change();
+            });
+        }
+
+        $this->addColumn('referral', 'amount', function (Blueprint $table) {
             $table->string('amount')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('referral', function (Blueprint $table) {
-            $table->unsignedBigInteger('referee_id')->change();
-            $table->dropColumn('amount');
+        $this->table('referral', function (Blueprint $table) {
+            // revert type only if column exists
+            if ($this->columnExists('referral', 'referee_id')) {
+                $table->unsignedBigInteger('referee_id')->change();
+            }
         });
+
+        $this->dropColumn('referral', 'amount');
     }
 };
-

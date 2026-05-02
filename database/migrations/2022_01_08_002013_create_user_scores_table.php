@@ -1,10 +1,11 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+// use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateUserScoresTable extends Migration
+class CreateUserScoresTable extends BaseMigration
 {
     /**
      * Run the migrations.
@@ -13,7 +14,7 @@ class CreateUserScoresTable extends Migration
      */
     public function up()
     {
-        Schema::create('user_scores', function (Blueprint $table) {
+        $this->create('user_scores', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('game_id');
             $table->unsignedBigInteger('user_id');
@@ -31,6 +32,6 @@ class CreateUserScoresTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('user_scores');
+        $this->drop('user_scores');
     }
 }

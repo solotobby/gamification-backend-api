@@ -1,23 +1,37 @@
 <?php
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
-    public function up() {
-        Schema::create('ticket_messages', function (Blueprint $table) {
+use App\Database\Migrations\BaseMigration;
+use Illuminate\Database\Schema\Blueprint;
+
+return new class extends BaseMigration {
+
+    public function up(): void
+    {
+        $this->create('ticket_messages', function (Blueprint $table) {
             $table->id();
+
             $table->unsignedBigInteger('ticket_id');
             $table->unsignedBigInteger('sender_id');
+
             $table->text('message');
+
             $table->timestamps();
 
-            $table->foreign('ticket_id')->references('id')->on('tickets');
-            $table->foreign('sender_id')->references('id')->on('users');
+            // Safe foreign keys
+            $table->foreign('ticket_id')
+                ->references('id')
+                ->on('tickets')
+                ->cascadeOnDelete();
+
+            $table->foreign('sender_id')
+                ->references('id')
+                ->on('users')
+                ->cascadeOnDelete();
         });
     }
 
-    public function down() {
-        Schema::dropIfExists('ticket_messages');
+    public function down(): void
+    {
+        $this->drop('ticket_messages');
     }
 };

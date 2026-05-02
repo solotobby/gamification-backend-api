@@ -1,32 +1,19 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
+use App\Database\Migrations\BaseMigration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
-class AddProofUrlToCampaignWorkers extends Migration
-{
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    public function up()
+return new class extends BaseMigration {
+
+    public function up(): void
     {
-        Schema::table('campaign_workers', function (Blueprint $table) {
+        $this->addColumn('campaign_workers', 'proof_url', function (Blueprint $table) {
             $table->string('proof_url')->nullable();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function down(): void
     {
-        Schema::table('campaign_workers', function (Blueprint $table) {
-            $table->dropColumn('proof_url');
-        });
+        $this->dropColumn('campaign_workers', 'proof_url');
     }
-}
+};
