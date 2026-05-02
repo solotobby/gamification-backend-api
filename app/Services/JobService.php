@@ -459,16 +459,17 @@ class JobService
     public function checkCanPerform($user, $currency, $unitPrice, $campaign)
     {
         $isOwner = $campaign->user_id === $user->id;
-        $isVerified = $user->is_verified;
+        // $isVerified = $user->is_verified;
+        $isVerified = true;
         $isBelowThreshold = (int) $currency->min_upgrade_amount > $unitPrice;
 
         if ($isOwner) {
             return "You cannot perform your own campaign.";
         }
 
-        // if ($isVerified) {
-        //     return true;
-        // }
+        if ($isVerified) {
+            return true;
+        }
 
         if ($isBelowThreshold) {
             return true;
