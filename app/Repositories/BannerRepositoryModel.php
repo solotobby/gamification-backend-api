@@ -98,6 +98,7 @@ class BannerRepositoryModel
     public function getRandomActiveBanners()
     {
         return Banner::where('status', true)
+            ->where('live_state', 'Started')
             ->inRandomOrder()
             ->limit(2)
             ->get();
