@@ -105,12 +105,12 @@ class JobRepositoryModel
             'is_dispute',
             true
         )->latest()
-        ->paginate(
-            10,
-            ['*'],
-            'page',
-            $page
-        );
+            ->paginate(
+                10,
+                ['*'],
+                'page',
+                $page
+            );
     }
 
     public function getCampaignStats($camId)
@@ -222,6 +222,7 @@ class JobRepositoryModel
             ->with(['campaignType', 'campaignCategory'])
             ->where('status', 'Live')
             ->where('is_completed', false)
+            ->whereRaw('(pending_count + completed_count) < number_of_staff')
             ->where(function ($q) use ($userId) {
 
                 // Exclude campaigns already worked on
