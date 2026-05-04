@@ -446,17 +446,12 @@ class CampaignService
         return [
             'dashboard' => [
                 'info' => [
-                    'title' => 'Seasons Greetings from all of us at Freebyz Technologies Ltd!',
+                    'title' => 'Welcome to Freebyz remote jobs, Complete simple tasks to earn in your own Local Currency.',
                     'description' => 'Please update/verify your information before 13th July 2026 to unlock level benefits
-
                                     Get Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job here
-
                                     PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.
-
                                     Learn how to COMPLETE SIMPLE tasks online & earn here.
-
                                     VIRTUAL WALLET Account: We have noticed downtimes from our partner on Virtual wallet account. Please use another payment gateway by going to Wallet > Fund wallet OR pay manually to 0234078694 (UNION BANK-Freebyz Technologies LTD).
-
                                     If you paid manually, drop your evidence of payment here.'
                 ],
                 'ads' => [
@@ -682,7 +677,7 @@ class CampaignService
             if ($campaigns->isEmpty()) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'No campaigns found for the user.'
+                    'message' => 'No task found.'
                 ], 404);
             }
 
