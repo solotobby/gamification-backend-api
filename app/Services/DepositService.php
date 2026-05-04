@@ -17,7 +17,7 @@ class DepositService
 {
     // Crypto wallet addresses (stable — admin-configured)
     const CRYPTO_WALLETS = [
-        'USDT_TRC20' => 'YOUR_TRON_WALLET_ADDRESS_HERE',
+        'USDT_TRC20' => 'TDq4Lg25Vbr9BxZpsWc1WcuW2UmuqnnSZZ',
         'USDT_ERC20' => '0xYOUR_ETH_WALLET_ADDRESS_HERE',
         'BTC'        => 'YOUR_BTC_WALLET_ADDRESS_HERE',
     ];
