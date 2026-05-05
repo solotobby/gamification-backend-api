@@ -88,7 +88,7 @@ class DepositService
             'reference'        => $ref,
             'narration'        => 'Wallet Top Up',
             //  'redirect_url'     => route('webhook.korapay.callback'),
-             'redirect_url'     => "https://app.freebyz.com/wallet",
+            //  'redirect_url'     => "https://app.freebyz.com/wallet",
             // 'notification_url' => route('webhook.korapay.callback'),
             'notification_url' => route('webhook.korapay'),
             'channels'         => ['card', 'bank_transfer', 'pay_with_bank'],
