@@ -30,9 +30,11 @@ Route::get('/unauthenticated', function () {
 })->name('unauthenticated');
 
 Route::prefix('webhooks')->group(function () {
-    Route::get('/paystack',  [WebhookController::class, 'handlePaystack'])->name('webhook.paystack');
+    // Route::get('/paystack',  [WebhookController::class, 'handlePaystack'])->name('webhook.paystack');
+    Route::post('/paystack',  [WebhookController::class, 'handlePaystackWebhook'])->name('webhook.paystack');
     Route::get('/paystack/callback',  [WebhookController::class, 'handlePaystackCallback'])->name('webhook.paystack.callback');
-    Route::get('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
+    // Route::get('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
+    Route::post('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
     Route::get('/korapay/callback',   [WebhookController::class, 'handleKoraPayCallback'])->name('webhook.korapay.callback');
     Route::get('/stripe',    [WebhookController::class, 'handleStripe'])->name('webhook.stripe');
 

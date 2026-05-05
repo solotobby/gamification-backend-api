@@ -87,8 +87,10 @@ class DepositService
             'currency'         => 'NGN',
             'reference'        => $ref,
             'narration'        => 'Wallet Top Up',
-            'redirect_url'     => route('webhook.korapay.callback'),
-            'notification_url' => route('webhook.korapay.callback'),
+            //  'redirect_url'     => route('webhook.korapay.callback'),
+             'redirect_url'     => "https://app.freebyz.com/wallet",
+            // 'notification_url' => route('webhook.korapay.callback'),
+            'notification_url' => route('webhooks.webhook.korapay'),
             'channels'         => ['card', 'bank_transfer', 'pay_with_bank'],
             'customer'         => ['name' => $user->name, 'email' => $user->email],
         ];

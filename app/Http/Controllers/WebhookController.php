@@ -330,24 +330,30 @@ class WebhookController extends Controller
         $signature = $request->header('x-korapay-signature');
         $secret    = config('services.korapay.secret_key');
 
-        $computedSignature = hash_hmac('sha256', $rawBody, $secret);
-
         $payload = json_decode($rawBody, true);
+
+        // Ensure data exists
+        $data = $payload['data'] ?? null;
+
+        if (!$data) {
+            Log::warning('KoraPay webhook missing data field', ['payload' => $payload]);
+            return response()->json(['status' => 'ignored'], 200);
+        }
+
+        // IMPORTANT: match KoraPay's hashing exactly
+        $computedSignature = hash_hmac(
+            'sha256',
+            json_encode($data, JSON_UNESCAPED_SLASHES),
+            $secret
+        );
 
         if (!hash_equals($computedSignature, $signature ?? '')) {
             Log::warning('Invalid KoraPay webhook signature', [
                 'received' => $signature,
                 'expected' => $computedSignature,
-                'rawBody' => $payload
             ]);
-            // return response()->json([
-            //     'status' => 'invalid signature'
-            // ], 200);
 
-            return response()->json([
-                'status'  => false,
-                'message' => 'Payment processing failed',
-            ], 402);
+            return response()->json(['status' => 'invalid signature'], 200);
         }
 
         $payload = json_decode($rawBody, true);
