@@ -226,9 +226,10 @@ class HireWorkerService
 
             if (!$skill) {
                 return response()->json([
-                    'status'  => false,
+                    'status'  => true,
                     'message' => 'You have not created a skill yet.',
-                ], 404);
+                    'data' => [],
+                ], 200);
             }
 
             $portfolio = $this->repo->getWorkerPortfolio(auth()->id());
@@ -293,7 +294,12 @@ class HireWorkerService
             DB::beginTransaction();
 
             // 🔹 Debit wallet
-            $debit = debitWallet($user, $currency, $amount);
+            // $debit = debitWallet($user, $currency, $amount);
+            $debit = app(walletRepositoryModel::class)->debitWallet(
+                $user,
+                $currency->code,
+                $amount
+            );
 
             if (!$debit) {
                 DB::rollBack();
@@ -304,7 +310,7 @@ class HireWorkerService
             }
 
             // 🔹 Save purchase
-            $this->repo->purchasePoint($worker->id, $user->id, $amount, $currency);
+            $this->repo->purchasePoint($worker->id, $user->id, $amount, $currency, $worker);
 
             DB::commit();
 

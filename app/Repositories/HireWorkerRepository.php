@@ -12,9 +12,42 @@ use Illuminate\Support\Facades\Log;
 
 class HireWorkerRepository
 {
+    // public function getWorkers(array $filters = [], $page = null)
+    // {
+    //     $query = SkillAsset::query()->where('status', 'active');
+
+    //     if (!empty($filters['skill_id'])) {
+    //         $query->where('skill_id', $filters['skill_id']);
+    //     }
+
+    //     if (!empty($filters['availability'])) {
+    //         $query->where('availability', $filters['availability']);
+    //     }
+
+    //     if (!empty($filters['year_experience'])) {
+    //         match ($filters['year_experience']) {
+    //             '0-2'  => $query->whereBetween('year_experience', [0, 2]),
+    //             '3-5'  => $query->whereBetween('year_experience', [3, 5]),
+    //             '6-10' => $query->whereBetween('year_experience', [6, 10]),
+    //             '10+'  => $query->where('year_experience', '>=', 10),
+    //             default => null,
+    //         };
+    //     }
+
+    //     return $query->with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])
+    //         ->latest()
+    //         ->paginate(20, ['*'], 'page', $page);
+    // }
+
     public function getWorkers(array $filters = [], $page = null)
     {
-        $query = SkillAsset::query()->where('status', 'active');
+        $purchasedIds = DB::table('skill_user')
+            ->where('user_id', auth()->id())
+            ->pluck('skill_asset_id');
+
+        $query = SkillAsset::query()
+            ->where('status', 'active')
+            ->whereNotIn('id', $purchasedIds);
 
         if (!empty($filters['skill_id'])) {
             $query->where('skill_id', $filters['skill_id']);
@@ -59,7 +92,7 @@ class HireWorkerRepository
             ->exists();
     }
 
-    public function purchasePoint($skillAssetId, $userId, $amount, $currency)
+    public function purchasePoint($skillAssetId, $userId, $amount, $currency, $worker)
     {
         // Log::info($currency);
         PaymentTransaction::create([
@@ -72,7 +105,7 @@ class HireWorkerRepository
             'currency'    => $currency->code,
             'channel'     => 'paystack',
             'type'        => 'point_purchase',
-            'description' => auth()->user()->name . ' purchased point',
+            'description' => $worker->name . ' purchased point',
             'tx_type'     => 'Debit',
             'user_type'   => 'regular',
         ]);
