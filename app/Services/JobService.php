@@ -64,12 +64,14 @@ class JobService
     public function availableJobs($request)
     {
         try {
-            $user = auth()->user();
-            $category = strtolower($request->query('category_id'));
-            $page = strtolower($request->query('page'));
+            $user       = auth()->user();
+            $category   = strtolower($request->query('category_id'));
+            $page       = $request->query('page');
+            $sort       = $request->query('sort');
 
-            // Fetching available jobs
-            $jobs = $this->jobModel->availableJobs($user->id, $category, $page)->appends(['page' => $page]);;
+            $jobs = $this->jobModel->availableJobs($user->id, $category, $page, $sort)
+                ->appends(['page' => $page, 'sort' => $sort, 'category_id' => $category]);
+
             $data = [];
 
             // return $jobs;
@@ -112,7 +114,7 @@ class JobService
                     'campaign_approval_time' => $value->approval_time,
                     'campaign_description' => $value->description,
                     'expected_image_url' => $value->expected_result_image,
-                    'public_link' => "https://stagging.e-portal.com.ng/tasks/".$value->job_id,
+                    'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $value->job_id,
                     'can_perform_task' => $check === true,
                     'can_perform_task_reason' => $check === true ? '' : $check,
                     'created_at' => $value->created_at,
@@ -217,7 +219,7 @@ class JobService
                     'can_dispute' =>  $job->canCreateDispute(),
                     'has_dispute' => $job->is_dispute ? true : false,
                     'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
-                    'public_link' => "https://stagging.e-portal.com.ng/tasks/".$campaignDetails->job_id,
+                    'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaignDetails->job_id,
                 ];
             }
 
@@ -427,7 +429,7 @@ class JobService
                 'campaign_allow_upload' => $job->allow_upload ? true : false,
                 'campaign_instruction' => $job->proof,
                 'created_at' => $job->created_at,
-                'public_link' => "https://stagging.e-portal.com.ng/tasks/".$job->job_id,
+                'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $job->job_id,
 
             ];
             return response()->json([

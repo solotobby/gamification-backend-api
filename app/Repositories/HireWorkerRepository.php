@@ -94,4 +94,64 @@ class HireWorkerRepository
     {
         return ProfessionalProficiencyLevel::where('status', 'active')->get(['id', 'name']);
     }
+
+    public function createSkillAsset(array $data, $userId)
+    {
+        return SkillAsset::create(array_merge($data, ['user_id' => $userId, 'status' => 'active']));
+    }
+
+    public function getPurchasedWorkers($userId, $page = null)
+    {
+        $purchasedSkillAssetIds = DB::table('skill_user')
+            ->where('user_id', $userId)
+            ->pluck('skill_asset_id');
+
+        return SkillAsset::with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])
+            ->whereIn('id', $purchasedSkillAssetIds)
+            ->latest()
+            ->paginate(20, ['*'], 'page', $page);
+    }
+
+    public function getMySkillAsset($userId)
+    {
+        return SkillAsset::with(['skill:id,name', 'profeciencyLevel:id,name'])
+            ->where('user_id', $userId)
+            ->where('status', 'active')
+            ->first();
+    }
+
+    public function updateSkillAsset($id, array $data, $userId)
+    {
+        $skill = SkillAsset::where('id', $id)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+
+        $skill->update($data);
+
+        return $skill->fresh(['skill:id,name', 'profeciencyLevel:id,name']);
+    }
+
+    public function createPortfolio(array $portfolios, $skillAssetId, $userId)
+    {
+        $records = array_map(fn($p) => array_merge($p, [
+            'skill_id'   => $skillAssetId,
+            'user_id'    => $userId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]), $portfolios);
+
+        Portfolio::insert($records);
+    }
+
+    public function updatePortfolio(array $portfolios, $skillAssetId, $userId)
+    {
+        // Delete existing and re-insert (simplest approach)
+        Portfolio::where('skill_id', $skillAssetId)
+            ->where('user_id', $userId)
+            ->delete();
+
+        if (!empty($portfolios)) {
+            $this->createPortfolio($portfolios, $skillAssetId, $userId);
+        }
+    }
 }

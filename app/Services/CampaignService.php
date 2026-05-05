@@ -463,6 +463,14 @@ class CampaignService
                         'link' => 'https://payhankey.com/'
                     ]
                 ],
+                'sorts' => [
+                    'Newest First'              => 'newest',
+                    'Oldest First'              => 'oldest',
+                    'Price: Highest to Lowest'  => 'price_high',
+                    'Price: Lowest to Highest'  => 'price_low',
+                    'Prioritized First'         => 'priority_first',
+                ],
+
             ],
             'withdraw' => [
                 'info' => 'Withdrawals are made every Friday of the week. Only verified users can withdraw',

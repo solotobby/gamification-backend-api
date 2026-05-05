@@ -22,7 +22,11 @@ Route::middleware([
 ])->prefix('hire-workers')->group(function () {
 
     // Route::get('/filters', [HireWorkerController::class, 'filters']);
+    Route::get('/purchased', [HireWorkerController::class, 'purchased']);
+    Route::get('/my-skill', [HireWorkerController::class, 'mySkill']);
     Route::get('/', [HireWorkerController::class, 'index']);
+    Route::post('/create-skill', [HireWorkerController::class, 'store']);
     Route::get('/{id}', [HireWorkerController::class, 'show']);
+    Route::put('/update-skill/{id}', [HireWorkerController::class, 'update']);
     Route::post('/{id}/purchase-point', [HireWorkerController::class, 'purchasePoint']);
 });

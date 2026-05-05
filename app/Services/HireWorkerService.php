@@ -98,6 +98,160 @@ class HireWorkerService
     }
 
 
+    public function createSkillAsset($request)
+    {
+        try {
+            $validated = $request->validate([
+                'title'               => 'required|string|max:255',
+                'skill_id'            => 'required|exists:skills,id',
+                'description'         => 'required|string',
+                'min_price'           => 'required|numeric',
+                'max_price'           => 'required|numeric',
+                'profeciency_level'   => 'required|exists:professionals_proficiency_levels,id',
+                'year_experience'     => 'required|in:0-2,3-5,6-10,10+',
+                'location'            => 'required|string',
+                'availability'        => 'required',
+
+                // Portfolio (optional at creation)
+                'portfolio'           => 'nullable|array',
+                'portfolio.*.title'   => 'required_with:portfolio|string|max:255',
+                'portfolio.*.description' => 'required_with:portfolio|string',
+            ]);
+
+            $skill = $this->repo->createSkillAsset(
+                collect($validated)->except('portfolio')->toArray(),
+                auth()->id()
+            );
+
+            if (!empty($validated['portfolio'])) {
+                $this->repo->createPortfolio($validated['portfolio'], $skill->skill_id, auth()->id());
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Skill created successfully.',
+                'data'    => array_merge(
+                    $this->formatWorkerDetail($skill),
+                    ['portfolio' => $this->repo->getWorkerPortfolio(auth()->id())]
+                ),
+            ], 201);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error creating skill.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updateSkillAsset($request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'title'               => 'sometimes|string|max:255',
+                'skill_id'            => 'sometimes|exists:skills,id',
+                'description'         => 'sometimes|string',
+                'min_price'           => 'sometimes|numeric',
+                'max_price'           => 'sometimes|numeric',
+                'profeciency_level'   => 'sometimes|exists:professional_proficiency_levels,id',
+                'year_experience'     => 'sometimes|in:0-2,3-5,6-10,10+',
+                'location'            => 'sometimes|string',
+                'availability'        => 'sometimes',
+
+                // Portfolio (optional on update, replaces existing)
+                'portfolio'               => 'nullable|array',
+                'portfolio.*.title'       => 'required_with:portfolio|string|max:255',
+                'portfolio.*.description' => 'required_with:portfolio|string',
+            ]);
+
+            $skill = $this->repo->updateSkillAsset(
+                $id,
+                collect($validated)->except('portfolio')->toArray(),
+                auth()->id()
+            );
+
+            if (array_key_exists('portfolio', $validated)) {
+                $this->repo->updatePortfolio($validated['portfolio'] ?? [], $skill->id, auth()->id());
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Skill updated successfully.',
+                'data'    => array_merge(
+                    $this->formatWorkerDetail($skill),
+                    ['portfolio' => $this->repo->getWorkerPortfolio(auth()->id())]
+                ),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error updating skill.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getPurchasedWorkers()
+    {
+        try {
+            $workers = $this->repo->getPurchasedWorkers(auth()->id());
+
+            $data = [];
+            foreach ($workers as $worker) {
+                $data[] = $this->formatWorkerSummary($worker);
+            }
+
+            return response()->json([
+                'status'     => true,
+                'message'    => 'Purchased workers retrieved successfully.',
+                'data'       => $data,
+                'pagination' => $this->buildPagination($workers),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving purchased workers.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getMySkill()
+    {
+        try {
+            $skill = $this->repo->getMySkillAsset(auth()->id());
+
+            if (!$skill) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'You have not created a skill yet.',
+                ], 404);
+            }
+
+            $portfolio = $this->repo->getWorkerPortfolio(auth()->id());
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Skill retrieved successfully.',
+                'data'    => array_merge(
+                    $this->formatWorkerDetail($skill),
+                    [
+                        'portfolio'          => $portfolio,
+
+                    ]
+                ),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving skill.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
     public function purchasePoint($id)
     {
         try {
@@ -160,7 +314,7 @@ class HireWorkerService
                 ],
             ], 200);
         } catch (Throwable $e) {
-            DB::rollBack(); 
+            DB::rollBack();
 
             return response()->json([
                 'status'  => false,

@@ -37,4 +37,28 @@ class HireWorkerController extends Controller
     {
         return $this->hireWorkerService->purchasePoint($id);
     }
+
+    // GET /hire-workers/my-skill
+    public function mySkill()
+    {
+        return $this->hireWorkerService->getMySkill();
+    }
+
+    // PUT /hire-workers/{id}/edit
+    public function update(Request $request, $id)
+    {
+        return $this->hireWorkerService->updateSkillAsset($request, $id);
+    }
+
+    // POST /hire-workers
+    public function store(Request $request)
+    {
+        return $this->hireWorkerService->createSkillAsset($request);
+    }
+
+    // GET /hire-workers/purchased
+    public function purchased()
+    {
+        return $this->hireWorkerService->getPurchasedWorkers();
+    }
 }
