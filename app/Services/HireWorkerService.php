@@ -153,8 +153,8 @@ class HireWorkerService
                 'description'         => 'sometimes|string',
                 'min_price'           => 'sometimes|numeric',
                 'max_price'           => 'sometimes|numeric',
-                'profeciency_level'   => 'sometimes|exists:professional_proficiency_levels,id',
-                'year_experience'     => 'sometimes|in:0-2,3-5,6-10,10+',
+                'profeciency_level'   => 'sometimes|exists:professionals_proficiency_levels,id',
+                'year_experience'     => 'sometimes',
                 'location'            => 'sometimes|string',
                 'availability'        => 'sometimes',
 
@@ -164,6 +164,9 @@ class HireWorkerService
                 'portfolio.*.description' => 'required_with:portfolio|string',
             ]);
 
+
+
+            // return $validated;
             $skill = $this->repo->updateSkillAsset(
                 $id,
                 collect($validated)->except('portfolio')->toArray(),
@@ -171,7 +174,7 @@ class HireWorkerService
             );
 
             if (array_key_exists('portfolio', $validated)) {
-                $this->repo->updatePortfolio($validated['portfolio'] ?? [], $skill->id, auth()->id());
+                $this->repo->updatePortfolio($validated['portfolio'] ?? [], $skill->skill_id, auth()->id());
             }
 
             return response()->json([
