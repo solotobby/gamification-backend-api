@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\NotificationEvent;
+use App\Mail\GeneralMail;
 use App\Models\MassEmailLog;
 use App\Models\PaymentTransaction;
 use App\Models\User;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class WebhookController extends Controller
@@ -473,6 +475,11 @@ class WebhookController extends Controller
                         type: 'wallet',
                         // data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
                     );
+
+
+                    $subject = 'Wallet Credited';
+                    $content = 'Congratulations, your wallet has been credited with ' . $currency . ' ' . $amount;
+                    Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
 
                     break;
 
