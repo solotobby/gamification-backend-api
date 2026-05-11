@@ -30,7 +30,7 @@ class ReferralRepositoryModel
     {
         return Referral::where(
             'referee_id',
-            $user->referral_code
+            $user->id
         )->get();
     }
 
@@ -38,7 +38,7 @@ class ReferralRepositoryModel
     {
         return Referral::where(
             'referee_id',
-            $user->referral_code
+            $user->id
         )->paginate(
             10,
             ['*'],
