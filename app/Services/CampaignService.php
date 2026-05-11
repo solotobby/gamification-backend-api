@@ -518,9 +518,9 @@ class CampaignService
                         'title' => 'Raise money for urgent needs',
                         'description' => 'Create a crowd funding link to share with your friends - Famlic',
                         'image' => 'https://res.cloudinary.com/movic/image/upload/v1778492837/FAMLIC_icon-cropped_knlew2.png',
-                        'color' => 'green',
+                        'color' => 'blue',
                         'button_text' => 'Get Started',
-                        'link' => 'hhttps://famlic.com/'
+                        'link' => 'https://famlic.com/'
                     ],
                     [
                         'title' => 'Has your Content ever made you enough money?',
