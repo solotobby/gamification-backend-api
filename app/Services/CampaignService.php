@@ -447,8 +447,7 @@ class CampaignService
             'dashboard' => [
                 'info' => [
                     'title' => 'Welcome to Freebyz remote jobs, Get Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job ',
-                    'description' => 'Job PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your friends.<br><br>Learn how to COMPLETE SIMPLE tasks online & earn <a href="https://youtube.com/shorts/sn64O_osLbs?si=P75AwS0Of9Sc-jA3" target="_blank">here</a>',
-                    // 'description' => ' Job PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.\nLearn how to COMPLETE SIMPLE tasks online & earn here (https://youtube.com/shorts/sn64O_osLbs?si=P75AwS0Of9Sc-jA3).'
+'description' => 'Job PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your friends.\n\nLearn how to COMPLETE SIMPLE tasks online & earn here:\nhttps://youtube.com/shorts/sn64O_osLbs?si=P75AwS0Of9Sc-jA3',                    // 'description' => ' Job PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.\nLearn how to COMPLETE SIMPLE tasks online & earn here (https://youtube.com/shorts/sn64O_osLbs?si=P75AwS0Of9Sc-jA3).'
                 ],
                 'ads' => [
                     [
