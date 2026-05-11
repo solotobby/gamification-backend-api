@@ -161,6 +161,12 @@ class BannerService
             $subject = 'Ad Banner Placement - Under Review';
             Mail::to(auth()->user()->email)->send(new GeneralMail(auth()->user(), $content, $subject, ''));
 
+            app(NotificationService::class)->createNotification(
+                $user,
+                'Banner Created',
+                "Your Banner has been Created Successfully and pending approval from the admin",
+                'banner'
+            );
             DB::commit();
             return response()->json([
                 'status' => true,
@@ -171,7 +177,7 @@ class BannerService
             DB::rollBack();
             Log::error($exception->getMessage());
             return response()->json([
-                'status' => false,
+            'status' => false,
              'error' => $exception->getMessage(),
                 'message' => 'Error processing request'
             ], 500);

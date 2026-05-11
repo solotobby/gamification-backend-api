@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Auth;
 use Google\Client;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Auth as FirebaseAuth;
 use Kreait\Firebase\Exception\Auth\FailedToVerifyToken;
 
@@ -387,7 +388,9 @@ class AuthService
                     'token' => $newToken
                 ]
             ], 200);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::error('VerifyTokrn: ' . $e->getMessage());
+
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request'
@@ -419,7 +422,8 @@ class AuthService
                 'status' => true,
                 'message' => 'Password Reset Successful'
             ], 200);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::error('Reset Password: ' . $e->getMessage());
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request'

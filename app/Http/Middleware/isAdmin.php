@@ -18,13 +18,13 @@ class isAdmin
     public function handle($request, Closure $next)
     {
         if (!Auth::check()) {
-            return response()->json(['status' => 'not ok', 'message' => 'Unauthorized Access Please Login'], 401);
+            return response()->json(['status' => 'false', 'message' => 'Unauthorized Access Please Login'], 401);
         }
         $userid = auth()->user()->id;
         $getUserRole = User::where('id', $userid)->first();
         $adminRoles = 'admin';
         if ($getUserRole->role != $adminRoles){
-            return response()->json(['status' => 'not ok', 'message' => 'This page is forbidden, Login as an administrator'], 403);
+            return response()->json(['status' => 'false', 'message' => 'This page is forbidden, Login as an administrator'], 403);
         }
 
 
