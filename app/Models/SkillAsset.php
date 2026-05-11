@@ -9,18 +9,33 @@ class SkillAsset extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'title', 'description', 'skill_id', 'profeciency_level', 'year_experience', 'location', 'availability', 'max_price', 'min_price', 'status'];
+    protected $fillable = [
+        'user_id',
+        'title',
+        'description',
+        'skill_id',
+        'profeciency_level',
+        'year_experience',
+        'location',
+        'availability',
+        'max_price',
+        'min_price',
+        'status',
+        'portfolio_link'
+    ];
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function skill(){
+    public function skill()
+    {
         return $this->belongsTo(Skill::class, 'skill_id');
     }
 
-    public function profeciencyLevel(){
+    public function profeciencyLevel()
+    {
         return $this->belongsTo(ProfessionalProficiencyLevel::class, 'profeciency_level');
     }
-
 }

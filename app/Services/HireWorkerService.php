@@ -7,6 +7,7 @@ use App\Repositories\CampaignRepositoryModel;
 use App\Repositories\HireWorkerRepository;
 use App\Repositories\WalletRepositoryModel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class HireWorkerService
@@ -111,6 +112,7 @@ class HireWorkerService
                 'year_experience'     => 'required|in:0-2,3-5,6-10,10+',
                 'location'            => 'required|string',
                 'availability'        => 'required',
+                'portfolio_link'      => 'nullable|url',
 
                 // Portfolio (optional at creation)
                 'portfolio'           => 'nullable|array',
@@ -136,6 +138,7 @@ class HireWorkerService
                 ),
             ], 201);
         } catch (Throwable $e) {
+            Log::error('Bonus grant failed: ' . $e->getMessage());
             return response()->json([
                 'status'  => false,
                 'message' => 'Error creating skill.',
@@ -157,6 +160,8 @@ class HireWorkerService
                 'year_experience'     => 'sometimes',
                 'location'            => 'sometimes|string',
                 'availability'        => 'sometimes',
+                'portfolio_link'      => 'sometimes|url',
+
 
                 // Portfolio (optional on update, replaces existing)
                 'portfolio'               => 'nullable|array',
@@ -186,6 +191,7 @@ class HireWorkerService
                 ),
             ], 200);
         } catch (Throwable $e) {
+            Log::error('Bonus grant failed: ' . $e->getMessage());
             return response()->json([
                 'status'  => false,
                 'message' => 'Error updating skill.',
