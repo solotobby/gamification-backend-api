@@ -20,7 +20,7 @@ class isUser
         if (!Auth::check()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Unauthorized Access. Please log in.',
+                'message' => 'Unauthenticated access. Please log in.',
             ], 401);
         }
 
@@ -29,7 +29,7 @@ class isUser
         if ($user->role !== 'regular') {
             return response()->json([
                 'status' => false,
-                'message' => 'Access forbidden. Please log in as a regular user.',
+                'message' => 'Unauthenticated access. Please log in.',
             ], 403);
         }
 

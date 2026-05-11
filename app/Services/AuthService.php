@@ -372,7 +372,10 @@ class AuthService
             // Verify Token
             $checkToken = $this->auth->verifyOtp($request->token, $request->email);
             if (!$checkToken) {
-                return response()->json(['status' => false, 'message' => 'Something unexpected happen, contact the admin or try again later'], 401);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid or expired OTP. Please try again.'
+                ], 401);
             }
 
             // Delete Token
@@ -408,7 +411,7 @@ class AuthService
             if (!$checkToken) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Something unexpected happen, contact the admin or try again later'
+                    'message' => 'Invalid or expired OTP. Please try again.'
                 ], 401);
             }
 
