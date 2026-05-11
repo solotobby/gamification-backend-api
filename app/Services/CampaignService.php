@@ -453,7 +453,7 @@ class CampaignService
                     [
                         'title' => 'Raise money for urgent needs',
                         'description' => 'Create a crowd funding link to share with your friends',
-                        'image' => '',
+                        'image' => 'https://res.cloudinary.com/movic/image/upload/v1778492837/FAMLIC_icon-cropped_knlew2.png',
                         'link' => 'https://famlic.com/'
                     ],
                     [
@@ -515,12 +515,12 @@ class CampaignService
                 'info' => 'Discover full-time roles, part-time positions, and exciting gigs. Join thousands of professionals finding their perfect match.',
                 'ads' => [
                     [
-                        'title' => 'Looking for quick gigs',
-                        'description' => 'Browse through Freebyz micro-jobs and start earning today!',
-                        'image' => '',
-                        'color' => 'blue',
-                        'button_text' => 'Explore micro jobs',
-                        'link' => ''
+                        'title' => 'Raise money for urgent needs',
+                        'description' => 'Create a crowd funding link to share with your friends - Famlic',
+                        'image' => 'https://res.cloudinary.com/movic/image/upload/v1778492837/FAMLIC_icon-cropped_knlew2.png',
+                        'color' => 'green',
+                        'button_text' => 'Get Started',
+                        'link' => 'hhttps://famlic.com/'
                     ],
                     [
                         'title' => 'Has your Content ever made you enough money?',
@@ -529,7 +529,15 @@ class CampaignService
                         'color' => 'purple',
                         'button_text' => 'Get Started',
                         'link' => 'https://payhankey.com/'
-                    ]
+                    ],
+                     [
+                        'title' => 'Looking for quick gigs',
+                        'description' => 'Browse through Freebyz micro-jobs and start earning today!',
+                        'image' => 'https://res.cloudinary.com/movic/image/upload/v1771206549/freebyz_heawli.jpg',
+                        'color' => 'blue',
+                        'button_text' => 'Explore micro jobs',
+                        'link' => 'https://dashboard.freebyz.com/tasks'
+                    ],
                 ],
                 'filter' => [
                     'types' => [
