@@ -21,7 +21,9 @@ class NotificationService
         try {
             $this->notifRepo->createForUser($user->id, $title, $body, $type);
 
-            $tokens = User::where('id', $user->id)->whereNotNull('fcm_token')->pluck('fcm_token');
+            // $tokens = User::where('id', $user->id)->whereNotNull('fcm_token')->pluck('fcm_token');
+            $tokens = User::where('id', $user->id)->whereNotNull('fcm_token')->value('fcm_token');
+
             if ($tokens) {
                 $this->firebase->send($tokens, $title, $body);
             }
