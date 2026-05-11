@@ -335,7 +335,8 @@ class JobRepositoryModel
             'price_high'     => $query->orderBy('campaign_amount', 'desc'),
             'price_low'      => $query->orderBy('campaign_amount', 'asc'),
             'priority_first' => $query->orderByRaw("approved IN ('Priotized','Priotize') DESC"),
-            default          => $query->orderBy('created_at', 'desc'), // newest first
+            'newest'         => $query->orderBy('created_at', 'desc'), // newest first
+            default          => $query,
         };
 
         return $query->paginate(10, ['*'], 'page', $page);

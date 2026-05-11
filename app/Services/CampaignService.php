@@ -446,8 +446,8 @@ class CampaignService
         return [
             'dashboard' => [
                 'info' => [
-                    'title' => 'Welcome to Freebyz remote jobs, Complete simple tasks to earn in your own Local Currency.',
-                    'description' => 'Please update/verify your information before 13th July 2026 to unlock level benefits.\nGet Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job here.\nPROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.\nLearn how to COMPLETE SIMPLE tasks online & earn here.\nVIRTUAL WALLET Account: We have noticed downtimes from our partner on Virtual wallet account. Please use another payment gateway by going to Wallet > Fund wallet OR pay manually to 6667335193 (Moniepoint BANK-Freebyz Technologies LTD).\nIf you paid manually, drop your evidence of payment here.'
+                    'title' => 'Welcome to Freebyz remote jobs, Get Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job ',
+                    'description' => ' Job PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.\nLearn how to COMPLETE SIMPLE tasks online & earn here (https://youtube.com/shorts/sn64O_osLbs?si=P75AwS0Of9Sc-jA3).'
                 ],
                 'ads' => [
                     [
