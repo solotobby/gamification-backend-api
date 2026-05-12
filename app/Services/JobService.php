@@ -405,14 +405,15 @@ class JobService
             }
 
 
-            $check = $this->checkVerification($user, $currency, $unitPrice);
-            if (!$check) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User account yet to be verified',
-                    // 'data' => [$currency, $unitPrice, $user],
-                ], 403);
-            }
+            // $check = $this->checkVerification($user, $currency, $unitPrice);
+            // if (!$check) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'User account yet to be verified',
+            //         // 'data' => [$currency, $unitPrice, $user],
+            //     ], 403);
+            // }
+
             // Prepare response data
             $data = [
                 'id' => $job->id,
@@ -425,7 +426,7 @@ class JobService
                 'campaign_currency' => $baseCurrency,
                 'campaign_number_of_worker' => $job->number_of_staff,
                 'campaign_url_link' => $job->post_link,
-                'campaign_expect' => $job->post_link,
+                'campaign_expect' => $job->expected_result_image ?? null,
                 'campaign_allow_upload' => $job->allow_upload ? true : false,
                 'campaign_instruction' => $job->proof,
                 'created_at' => $job->created_at,

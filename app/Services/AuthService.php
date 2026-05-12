@@ -411,7 +411,7 @@ class AuthService
             if (!$checkToken) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Invalid or expired OTP. Please try again.'
+                    'message' => 'Invalid or expired code. Please try again.'
                 ], 401);
             }
 
