@@ -18,7 +18,7 @@ class UnauthorizedException extends Exception
     {
         $response = [
             'status' => false,
-            'message' => $this->getMessage() ?: 'Unauthorized Access',
+            'message' => $this->getMessage() ?: 'Unauthenticated access. Please log in.',
             'errors' => $this->getCode() ? $this->getCode() : []
         ];
 

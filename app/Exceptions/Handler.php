@@ -44,7 +44,7 @@ class Handler extends ExceptionHandler
     if ($exception instanceof UnauthorizedException) {
         return response()->json([
             'status' => false, // Add status field
-            'message' => 'Unauthenticated.' // Custom message
+            'message' => 'Unauthenticated access. Please log in.' // Custom message
         ], 401);
     }
 
