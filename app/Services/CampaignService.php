@@ -547,6 +547,7 @@ class CampaignService
                         'Contract' => 'contract',
                         'Internship' => 'internship',
                         'Gig' => 'gig',
+                        'NYSC PPA' => 'nysc',
                     ],
                     'tiers' => [
                         'Free' => 'free',
