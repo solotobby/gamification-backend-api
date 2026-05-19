@@ -84,7 +84,7 @@
                 <p style="margin-top: 45px; margin-bottom: 15px;">
                     {{-- ---- <br>
                     Regards, <br> --}}
-                    ----
+                    ---- <br>
                     <i>
                         Dr. Samuel FAROHUNBI, <br>
                         CEO, Freebyz Technologies Ltd.
