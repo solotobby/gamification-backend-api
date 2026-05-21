@@ -512,6 +512,13 @@ class JobService
             $this->jobModel->createDisputeOnWorker($job->id);
             $this->jobModel->createDispute($job, $request->reason, $request->job_proof);
 
+            $subject = 'New Dispute Raised';
+            $content = 'A dispute has been raised by ' . auth()->user()->name . ' on a task. Please attend to it.';
+            $url = 'https://dashboard.freebyz.com/admin/campaign/disputes/' . $job->id;
+            Mail::to('freebyzcom@gmail.com')
+                ->cc('favour@freebyztechnologies.com')
+                ->send(new GeneralMail(auth()->user(), $content, $subject, $url));
+
             return response()->json([
                 'status' => true,
                 'message' => 'Dispute created successfully',

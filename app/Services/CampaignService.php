@@ -910,8 +910,9 @@ class CampaignService
         );
 
 
-        Mail::to('victor@freebyztechnologies.com')
-            ->cc('alan@freebyztechnologies.com')
+        Mail::to('hello@freebyztechnologies.com')
+            ->cc('favour@freebyztechnologies.com')
+            ->bcc('freebyzcom@gmail.com')
             ->send(new AdminCampaignPosted($campaign));
 
         // Update admin wallet
