@@ -514,7 +514,9 @@ class JobService
 
             $subject = 'New Dispute Raised';
             $content = 'A dispute has been raised by ' . auth()->user()->name . ' on a task. Please attend to it.';
-            $url = 'https://dashboard.freebyz.com/admin/campaign/disputes/' . $job->id;
+
+
+          $url = 'https://dashboard.freebyz.com/admin/campaign/disputes/' . $job->id;
             Mail::to('freebyzcom@gmail.com')
                 ->cc('favour@freebyztechnologies.com')
                 ->send(new GeneralMail(auth()->user(), $content, $subject, $url));

@@ -3,11 +3,14 @@
 namespace App\Services;
 
 use App\Events\NotificationEvent;
+use App\Mail\GeneralMail;
 use App\Models\ManualVerification;
 use App\Repositories\WalletRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
 use App\Services\Providers\CloudinaryService;
+use Database\Seeders\NotificationSeeder;
 use Illuminate\Support\Facades\Storage;
+use Mail;
 use Throwable;
 
 class ManualVerificationService
@@ -59,12 +62,28 @@ class ManualVerificationService
                 'status'         => 'pending',
             ]);
 
-            event(new NotificationEvent(
+            // event(new NotificationEvent(
+            //     user: $user,
+            //     title: 'Verification Submitted',
+            //     body: 'Your manual verification has been submitted and is under review.',
+            //     type: 'verification',
+            // ));
+
+            app(NotificationService::class)->createNotification(
                 user: $user,
                 title: 'Verification Submitted',
-                body: 'Your manual verification has been submitted and is under review.',
+                body: "Your manual verification has been submitted and is under review.",
                 type: 'verification',
-            ));
+                // data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
+            );
+
+            $subject = 'New Manual Payment Submitted';
+            $content = 'A manual verification has been submitted by ' . auth()->user()->name . '. Please attend to it.';
+            $url = 'https://dashboard.freebyz.com/admin/manual-fundings';
+
+            Mail::to('freebyzcom@gmail.com')
+                ->bcc('favour@freebyztechnologies.com')
+                ->send(new GeneralMail(auth()->user(), $content, $subject, $url));
 
             return response()->json([
                 'status'  => true,
