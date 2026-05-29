@@ -429,6 +429,8 @@ class JobService
             //     ], 403);
             // }
 
+            $check =  $this->checkCanPerform($user, $currency, $unitPrice, $job);
+
             // Prepare response data
             $data = [
                 'id' => $job->id,
@@ -444,6 +446,8 @@ class JobService
                 'campaign_expect' => $job->expected_result_image ?? null,
                 'campaign_allow_upload' => $job->allow_upload ? true : false,
                 'campaign_instruction' => $job->proof,
+                'can_perform_task' => $check === true,
+                'can_perform_task_reason' => $check === true ? '' : $check,
                 'created_at' => $job->created_at,
                 'public_link' => "https://dashboard.freebyz.com/tasks/" . $job->job_id,
 
