@@ -196,7 +196,7 @@ class WalletRepositoryModel
         }
 
         return $query->latest()
-            ->paginate(10, ['*'], 'page', $page);
+            ->paginate(20, ['*'], 'page', $page);
     }
     public function creditWallet($user, $currency, $amount)
     {
