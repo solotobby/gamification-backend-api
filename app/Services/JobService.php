@@ -440,6 +440,7 @@ class JobService
                 'campaign_category' => $job->campaignCategory->name,
                 'campaign_description' => $job->description,
                 'campaign_amount' => $unitPrice,
+                'campaign_approval_time' => $job->approval_time,
                 'campaign_currency' => $baseCurrency,
                 'campaign_number_of_worker' => $job->number_of_staff,
                 'campaign_url_link' => $job->post_link,
