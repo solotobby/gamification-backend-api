@@ -18,7 +18,7 @@ class SubmitJob extends Mailable
      * @return void
      */
     public $campaignWorker;
-    
+
     public function __construct($campaignWorker)
     {
         $this->campaignWorker = $campaignWorker;
@@ -31,7 +31,7 @@ class SubmitJob extends Mailable
      */
     public function build()
     {
-        return $this->markdown('emails.jobs.submit')->subject('Job Submission')->with([
+        return $this->markdown('emails.jobs.submit')->subject('Task Submission')->with([
                 'campaign_name' => $this->campaignWorker->campaign->post_title,
                 'amount' => $this->campaignWorker->amount,
                 'name' => $this->campaignWorker->user->name

@@ -386,7 +386,7 @@ class HireWorkerService
             'name'             => $worker->user->name ?? null,
             'title'            => $worker->title,
             'description'      => $worker->description,
-            'portfolio_link'     => $worker->portfolio_link ?? null,
+            'portfolio_link'    => $worker->portfolio_link ?? null,
             'skill'            => $worker->skill->name ?? null,
             'skill_id'         => $worker->skill_id,
             'proficiency'      => $worker->profeciencyLevel->name ?? null,

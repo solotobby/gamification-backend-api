@@ -29,7 +29,7 @@ class CreateCampaign extends Mailable
      */
     public function build()
     {
-        return $this->markdown('emails.campaigns.post')->subject('Campaign Posted')->with([
+        return $this->markdown('emails.campaigns.post')->subject('Task Posted')->with([
             'campaign_name' => $this->campaign->post_title,
             'amount' => $this->campaign->campaign_amount,
             'number_of_staff' => $this->campaign->number_of_staff,

@@ -14,13 +14,13 @@
                 <p style="margin-bottom: 10px;">Hi <strong>{{ $name }},</strong></p>
                 <p style="margin-bottom: 10px;">
                     Thank you for completing the task on <b>{{ $campaign }}</b>. This is to let you know your submission has been <b>{{ $status }} </b> at <b>&#8358;{{ $amount }}</b>
-                    <br> 
+                    <br>
                     Reason for {{ $status }} : {{ $reason }}
                 </p>
                 <p style="margin-bottom: 10px;">
                     Click the button below to access more jobs... <br><br>
                     <a href="{{ url('home') }}" target="_blank" style="background-color:#6576ff;border-radius:4px;color:#ffffff;display:inline-block;font-size:13px;font-weight:600;line-height:44px;text-align:center;text-decoration:none;text-transform: uppercase; padding: 0 30px">
-                        Take More Jobs
+                        Take More Tasks
                     </a>
                 </p>
                 {{-- <p style="margin-bottom: 10px;">Its clean, minimal and pre-designed email template that is suitable for multiple purposes email template.</p>
