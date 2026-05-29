@@ -285,13 +285,21 @@ class JobService
                 ], 400);
             }
 
-            $owner = $this->jobModel->checkIfJobIsYours($campaign->job_id);
-            if ($owner) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'You cannot perform your own task'
-                ], 400);
-            }
+            // $owner = $this->jobModel->checkIfJobIsYours($campaign->job_id);
+            // if ($owner) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'You cannot perform your own task'
+            //     ], 400);
+            // }
+
+            // $check =  $this->checkCanPerform($user, $currency, $unitPrice, $value);
+            // if ($check !== true) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => $check
+            //     ], 400);
+            // }
 
             $checkJob = $this->jobModel->checkIfJobIsDoneByUser($campaign->id);
             if ($checkJob) {
@@ -310,6 +318,13 @@ class JobService
                 $unitPrice *= $rate;
             }
 
+            $check =  $this->checkCanPerform($user, $currency, $unitPrice, $campaign);
+            if ($check !== true) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $check
+                ], 400);
+            }
             // $check = $this->checkVerification($user, $currency, $unitPrice);
             // if (!$check) {
             //     return response()->json([
@@ -516,7 +531,7 @@ class JobService
             $content = 'A dispute has been raised by ' . auth()->user()->name . ' on a task. Please attend to it.';
 
 
-          $url = 'https://dashboard.freebyz.com/admin/campaign/disputes/' . $job->id;
+            $url = 'https://dashboard.freebyz.com/admin/campaign/disputes/' . $job->id;
             Mail::to('freebyzcom@gmail.com')
                 ->cc('favour@freebyztechnologies.com')
                 ->send(new GeneralMail(auth()->user(), $content, $subject, $url));

@@ -45,6 +45,7 @@ class DepositService
             'amount' => 'required|numeric|min:1',
             'method' => 'required|in:korapay,paystack,stripe,crypto,virtual_account,manual',
             // 'crypto_type' => 'required_if:method,crypto|in:USDT_TRC20,USDT_ERC20,BTC',
+            'device' => 'nullable|in:web'
         ]);
 
         try {
