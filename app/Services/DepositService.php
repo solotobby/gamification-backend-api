@@ -53,11 +53,12 @@ class DepositService
             $amount       = $request->amount;
             $method       = $request->method;
             $ref          = Str::upper(Str::random(16));
+            $device       = $request->device ?? 'app';
 
             // Route based on method
             return match ($method) {
-                'korapay'         => $this->handleKoraPay($user, $amount, $ref, $baseCurrency),
-                'paystack'        => $this->handlePaystack($user, $amount, $ref, $baseCurrency),
+                'korapay'         => $this->handleKoraPay($user, $amount, $ref, $baseCurrency, $device),
+                'paystack'        => $this->handlePaystack($user, $amount, $ref, $baseCurrency, $device),
                 'stripe'          => $this->handleStripe($user, $amount, $ref, $baseCurrency),
                 'crypto'          => $this->handleCrypto($user, $amount, $ref, $baseCurrency, 'USDT_TRC20'),
                 'virtual_account' => $this->handleVirtualAccount($user),
@@ -76,23 +77,28 @@ class DepositService
         }
     }
 
-    private function handleKoraPay($user, float $amount, string $ref, string $currency)
+    private function handleKoraPay($user, float $amount, string $ref, string $currency, string $device)
     {
         if ($currency !== 'NGN') {
             return response()->json(['status' => false, 'message' => 'KoraPay is only available for NGN accounts.'], 422);
         }
+
+        $redirectUrl = $device === 'web'
+            ? 'https://app.freebyz.com/wallet'
+            : route('webhook.korapay.callback');
 
         $payload = [
             'amount'           => $amount,
             'currency'         => 'NGN',
             'reference'        => $ref,
             'narration'        => 'Wallet Top Up',
-            'redirect_url'     => route('webhook.korapay.callback'),
-            //  'redirect_url'     => "https://app.freebyz.com/wallet",
-            // 'notification_url' => route('webhook.korapay.callback'),
+            'redirect_url'     => $redirectUrl,
             'notification_url' => route('webhook.korapay'),
             'channels'         => ['card', 'bank_transfer', 'pay_with_bank'],
-            'customer'         => ['name' => $user->name, 'email' => $user->email],
+            'customer'         => [
+                'name'  => $user->name,
+                'email' => $user->email
+            ],
         ];
 
         $link = $this->korapay->initializeCharge($payload);
@@ -119,7 +125,7 @@ class DepositService
         ]);
     }
 
-    private function handlePaystack($user, float $amount, string $ref, string $currency)
+    private function handlePaystack($user, float $amount, string $ref, string $currency, string $device)
     {
         if ($currency !== 'NGN') {
             return response()->json([
@@ -128,10 +134,14 @@ class DepositService
             ], 422);
         }
 
+        $redirectUrl = $device === 'web'
+            ? 'https://app.freebyz.com/wallet'
+            : route('webhook.paystack.callback');
+
         $link = $this->paystack->initializeTransaction(
             $ref,
             $amount,
-            route('webhook.paystack.callback'),
+            $redirectUrl, // route('webhook.paystack.callback'),
             $user->email
         );
 

@@ -320,15 +320,6 @@ class JobRepositoryModel
             $query->where('campaign_type', $categoryID);
         }
 
-        // Priority pinning always applied first
-        $query->orderByRaw("
-        CASE
-            WHEN job_id = 'Lgh1yOgwO' THEN 0
-            WHEN approved IN ('Priotized','Priotize') THEN 1
-            ELSE 2
-        END
-    ");
-
         // Secondary sort based on request
         match ($sort) {
             'oldest'         => $query->orderBy('created_at', 'asc'),
@@ -338,6 +329,17 @@ class JobRepositoryModel
             'newest'         => $query->orderBy('created_at', 'desc'), // newest first
             default          => $query,
         };
+
+
+        // Priority pinning always applied first
+        $query->orderByRaw("
+        CASE
+            WHEN job_id = 'Lgh1yOgwO' THEN 0
+            WHEN approved IN ('Priotized','Priotize') THEN 1
+            ELSE 2
+        END
+    ");
+
 
         return $query->paginate(10, ['*'], 'page', $page);
     }

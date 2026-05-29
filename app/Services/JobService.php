@@ -104,7 +104,7 @@ class JobService
                     'completed' => $count,
                     'completed_count' => $count,
                     'expected_count' => (int)$value->number_of_staff,
-                    'campaign_review' => round(mt_rand(25, 50) / 10, 1), // Review calculation to be done later
+                    'campaign_review' => round(mt_rand(40, 50) / 10, 1), // Review calculation to be done later
                     'is_completed' => $count >= $value->number_of_staff ? true : false,
                     'progress' => round($progress, 2),
                     'currency' => $currency->code,
@@ -114,7 +114,7 @@ class JobService
                     'campaign_approval_time' => $value->approval_time,
                     'campaign_description' => $value->description,
                     'expected_image_url' => $value->expected_result_image,
-                    'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $value->job_id,
+                    'public_link' => "https://dashbaord.freebyz.com/tasks/" . $value->job_id,
                     'can_perform_task' => $check === true,
                     'can_perform_task_reason' => $check === true ? '' : $check,
                     'created_at' => $value->created_at,
@@ -155,7 +155,7 @@ class JobService
 
             return response()->json([
                 'status' => true,
-                'message' => 'Jobs retrieved successfully.',
+                'message' => 'Tasks retrieved successfully.',
                 'data' => $data,
                 'banners' => $bannerData,
                 'pagination' => $pagination,
@@ -181,7 +181,7 @@ class JobService
             if ($type && !in_array($type, $validTypes)) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Invalid job type provided.',
+                    'message' => 'Invalid task type provided.',
                 ], 400);
             }
 
@@ -219,7 +219,7 @@ class JobService
                     'can_dispute' =>  $job->canCreateDispute(),
                     'has_dispute' => $job->is_dispute ? true : false,
                     'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
-                    'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaignDetails->job_id,
+                    'public_link' => "https://dashboard.freebyz.com/tasks/" . $campaignDetails->job_id,
                 ];
             }
 
@@ -255,7 +255,7 @@ class JobService
 
             return response()->json([
                 'status' => true,
-                'message' => 'Jobs retrieved successfully.',
+                'message' => 'Tasks retrieved successfully.',
                 'data' => $data,
                 'banners' => $bannerData,
                 'pagination' => $pagination,
@@ -281,7 +281,7 @@ class JobService
             if (!$campaign) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Job not found'
+                    'message' => 'Task not found'
                 ], 400);
             }
 
@@ -297,7 +297,7 @@ class JobService
             if ($checkJob) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'You have already perform this job before'
+                    'message' => 'You have already perform this task before'
                 ], 400);
             }
 
@@ -350,8 +350,8 @@ class JobService
             )->send(new SubmitJob(
                 $campaignWorker
             ));
-            $subject = 'Job Submission';
-            $content = $user->name . ' submitted a response to your campaign - ' . $campaign->post_title . '. Please login to review.';
+            $subject = 'Task Submission';
+            $content = $user->name . ' submitted a response to your task - ' . $campaign->post_title . '. Please login to review.';
             Mail::to(
                 $campaign->user->email
             )->send(new GeneralMail(
@@ -367,7 +367,7 @@ class JobService
             $campaignWorker['campaign_id'] = $campaign->job_id;
             return response()->json([
                 'status' => true,
-                'message' => 'Job Submitted Successfully',
+                'message' => 'Task Submitted Successfully',
                 'data' => $campaignWorker
             ], 201);
         } catch (Exception $exception) {
@@ -391,7 +391,7 @@ class JobService
             if (!$job) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Job not found.',
+                    'message' => 'Task not found.',
                 ], 404);
             }
 
@@ -430,12 +430,12 @@ class JobService
                 'campaign_allow_upload' => $job->allow_upload ? true : false,
                 'campaign_instruction' => $job->proof,
                 'created_at' => $job->created_at,
-                'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $job->job_id,
+                'public_link' => "https://dashboard.freebyz.com/tasks/" . $job->job_id,
 
             ];
             return response()->json([
                 'status' => true,
-                'message' => 'Job details retrieved successfully',
+                'message' => 'Task details retrieved successfully',
                 'data' => $data
             ], 200);
         } catch (Throwable $exception) {
@@ -462,12 +462,12 @@ class JobService
     public function checkCanPerform($user, $currency, $unitPrice, $campaign)
     {
         $isOwner = $campaign->user_id === $user->id;
-        // $isVerified = $user->is_verified;
-        $isVerified = true;
+        $isVerified = $user->is_verified;
+        // $isVerified = true;
         $isBelowThreshold = (int) $currency->min_upgrade_amount > $unitPrice;
 
         if ($isOwner) {
-            return "You cannot perform your own campaign.";
+            return "You cannot perform your own task.";
         }
 
         if ($isVerified) {
@@ -478,7 +478,7 @@ class JobService
             return true;
         }
 
-        return "Your account needs verification to perform this campaign.";
+        return "Your account needs verification to perform this task.";
     }
 
     public function createDispute($request)
@@ -491,7 +491,7 @@ class JobService
             if (!$job) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Job not found.',
+                    'message' => 'Task not found.',
                 ], 404);
             }
 
@@ -505,7 +505,7 @@ class JobService
             if ($job->is_dispute === 1) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'A dispute has already been lodged for this job, so the action cannot be performed again.',
+                    'message' => 'A dispute has already been lodged for this task, so the action cannot be performed again.',
                 ], 400);
             }
 
@@ -548,7 +548,7 @@ class JobService
             if (!$campaign) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Campaign not found'
+                    'message' => 'Task not found'
                 ], 404);
             }
             $workDone = $this->jobModel->getJobByIdAndCampaignId(
