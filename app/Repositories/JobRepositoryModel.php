@@ -344,7 +344,7 @@ class JobRepositoryModel
         return $query->paginate(10, ['*'], 'page', $page);
     }
 
-    public function availableTasks($categoryID = null, $page = null, $sort = null)
+    public function availableTasks($categoryID = null, $page = null, $sort = null, $search = null)
     {
         $query = Campaign::query()
             ->with(['campaignType', 'campaignCategory'])
@@ -359,6 +359,14 @@ class JobRepositoryModel
             $query->where('campaign_type', $categoryID);
         }
 
+        // Search (properly grouped)
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('post_title', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
         // Priority pinning always first
         $query->orderByRaw("
         CASE
@@ -370,17 +378,15 @@ class JobRepositoryModel
 
         // Secondary sorting
         match ($sort) {
-            'oldest'         => $query->orderBy('created_at', 'asc'),
-            'price_high'     => $query->orderBy('campaign_amount', 'desc'),
-            'price_low'      => $query->orderBy('campaign_amount', 'asc'),
-            'priority_first' => $query->orderByRaw("approved IN ('Priotized','Priotize') DESC"),
-            'newest'         => $query->orderBy('created_at', 'desc'),
-            default          => $query->orderBy('created_at', 'desc'),
+            'oldest'     => $query->orderBy('created_at', 'asc'),
+            'price_high' => $query->orderBy('campaign_amount', 'desc'),
+            'price_low'  => $query->orderBy('campaign_amount', 'asc'),
+            'newest'     => $query->orderBy('created_at', 'desc'),
+            default      => $query->orderBy('created_at', 'desc'),
         };
 
         return $query->paginate(12, ['*'], 'page', $page);
     }
-
     public function getJobById($jobId)
     {
         return Campaign::where(

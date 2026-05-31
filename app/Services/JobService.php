@@ -177,9 +177,15 @@ class JobService
             $category   = strtolower($request->query('category_id'));
             $page       = $request->query('page');
             $sort       = $request->query('sort');
+            $search     = $request->query('search');
 
-            $jobs = $this->jobModel->availableTasks($category, $page, $sort)
-                ->appends(['page' => $page, 'sort' => $sort, 'category_id' => $category]);
+            $jobs = $this->jobModel->availableTasks($category, $page, $sort, $search)
+                ->appends([
+                    'page' => $page,
+                    'sort' => $sort,
+                    'category_id' => $category,
+                    'search' => $search
+                ]);
 
             $data = [];
 
@@ -280,6 +286,44 @@ class JobService
             ], 500);
         }
     }
+
+    public function getTaskCategories()
+    {
+        try {
+            // $user = auth()->user();
+            // $baseCurrency = $user->wallet->base_currency;
+            // $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+
+            $categories = $this->campaignModel->listCategories();
+            if (!$categories) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No categories found',
+                    'data' => []
+                ], 404);
+            }
+
+            $data['category'] = $categories;
+            // $data['category'] = $this->mapCategories($categories, $mapCurrency);
+            // $data['currency'] = $this->currencyModel->getCurrencyByCode($mapCurrency) ?? [];
+            // $data['currency']['campaign_percentage'] = $user->is_business ? 100 : 60;
+            // $data['currency']['business_account'] = (bool) $user->is_business;
+            // $data['utility'] = $this->getUtilityData();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Categories fetched successfully',
+                'data' => $data
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'error' => $e->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
 
     public function myJobs($request)
     {

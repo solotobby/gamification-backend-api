@@ -26,4 +26,9 @@ class PublicController extends Controller
     {
         return $this->jobService->taskDetails($jobId);
     }
+
+      public function getCategories()
+    {
+        return $this->jobService->getTaskCategories();
+    }
 }

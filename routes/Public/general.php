@@ -11,6 +11,8 @@ Route::group(['namespace' => 'auth'], function () {
     Route::get('country/list', [GeneralController::class, 'country']);
     Route::get('/public/tasks', [PublicController::class, 'publicTasks']);
     Route::get('/public/tasks-details/{job_id}', [PublicController::class, 'taskDetails']);
+    Route::get('/public/task/categories', [PublicController::class, 'getCategories']);
+
 
     /// test apis
     Route::get('test/list', [GeneralController::class, 'apiTest']);

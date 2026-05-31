@@ -362,6 +362,7 @@ class CampaignService
         }
     }
 
+
     public function getCategories()
     {
         try {
