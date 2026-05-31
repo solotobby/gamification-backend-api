@@ -170,6 +170,117 @@ class JobService
         }
     }
 
+    public function publicTasks($request)
+    {
+        try {
+            // $user       = auth()->user();
+            $category   = strtolower($request->query('category_id'));
+            $page       = $request->query('page');
+            $sort       = $request->query('sort');
+
+            $jobs = $this->jobModel->availableTasks($category, $page, $sort)
+                ->appends(['page' => $page, 'sort' => $sort, 'category_id' => $category]);
+
+            $data = [];
+
+            // return $jobs;
+            foreach ($jobs as $key => $value) {
+                $count = $value->pending_count + $value->completed_count;
+                $div = $count / $value->number_of_staff;
+                $progress = $div * 100;
+
+                // $baseCurrency = $user->wallet->base_currency;
+                // $baseCurrency = $value->currency;
+                // $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+                // $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+                // $unitPrice = $value->campaign_amount;
+
+                // if ($currency->code !== $value->currency) {
+                //     $rate = $this->campaignService->currencyConversion($value->currency, $currency->code);
+                //     $unitPrice *= $rate;
+                // }
+
+                // $check =  $this->checkCanPerform($user, $currency, $unitPrice, $value);
+                $data[] = [
+                    'id' => $value->id,
+                    'campaign_id' => $value->job_id,
+                    // 'campaign_amount' => $unitPrice,
+                    'campaign_amount' => $value->campaign_amount,
+                    'post_title' => $value->post_title,
+                    'post_link' => $value->post_link,
+                    'number_of_staff' => $value->number_of_staff,
+                    'type' => $value->campaignType->name,
+                    'category' => $value->campaignCategory->name,
+                    'url' => $value->campaignType->url,
+                    'completed' => $count,
+                    'completed_count' => $count,
+                    'expected_count' => (int)$value->number_of_staff,
+                    'campaign_review' => round(mt_rand(40, 50) / 10, 1), // Review calculation to be done later
+                    'is_completed' => $count >= $value->number_of_staff ? true : false,
+                    'progress' => round($progress, 2),
+                    'currency' => $value->currency,
+                    'original_currency' => $value->currency,
+                    'campaign_allow_upload' => $value->allow_upload ? true : false,
+                    'campaign_instruction' => $value->proof,
+                    'campaign_approval_time' => $value->approval_time,
+                    'campaign_description' => $value->description,
+                    'expected_image_url' => $value->expected_result_image,
+                    'public_link' => "https://dashbaord.freebyz.com/tasks/" . $value->job_id,
+                    // 'can_perform_task' => $check === true,
+                    // 'can_perform_task_reason' => $check === true ? '' : $check,
+                    'created_at' => $value->created_at,
+                ];
+            }
+
+            // Fetching 2 random active banners
+            // $banners = $this->bannerModel->getRandomActiveBanners();
+
+            // $bannerData = [];
+
+            // foreach ($banners as $bannerItem) {
+
+            //     //Increase impression upon display
+            //     $bannerItem->impression_count += 1;
+            //     $bannerItem->save();
+
+            //     $bannerData[] = [
+            //         'banner_id' => $bannerItem->banner_id,
+            //         'banner_url' => $bannerItem->banner_url,
+            //         //  'external_link' => $bannerItem->external_link,
+            //         // 'status' => $bannerItem->status ? true : false,
+            //         'clicks' => $bannerItem->click_count,
+            //         'created_at' => $bannerItem->created_at,
+            //         'updated_at' => $bannerItem->updated_at,
+            //     ];
+            // }
+
+            // Pagination data for jobs
+            $pagination = [
+                'current_page' => $jobs->currentPage(),
+                'last_page' => $jobs->lastPage(),
+                'per_page' => $jobs->perPage(),
+                'total' => $jobs->total(),
+                'from' => $jobs->firstItem(),
+                'to' => $jobs->lastItem(),
+            ];
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Tasks retrieved successfully.',
+                'data' => $data,
+                // 'banners' => $bannerData,
+                'pagination' => $pagination,
+            ]);
+        } catch (Throwable $exception) {
+            // return $exception;
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
     public function myJobs($request)
     {
         try {
@@ -449,6 +560,78 @@ class JobService
                 'campaign_instruction' => $job->proof,
                 'can_perform_task' => $check === true,
                 'can_perform_task_reason' => $check === true ? '' : $check,
+                'created_at' => $job->created_at,
+                'public_link' => "https://dashboard.freebyz.com/tasks/" . $job->job_id,
+
+            ];
+            return response()->json([
+                'status' => true,
+                'message' => 'Task details retrieved successfully',
+                'data' => $data
+            ], 200);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+    public function taskDetails($jobId)
+    {
+        try {
+            // $user = auth()->user();
+
+
+            $job = $this->jobModel->getJobById($jobId);
+
+            if (!$job) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Task not found.',
+                ], 404);
+            }
+
+            // $baseCurrency = $user->wallet->base_currency;
+            // $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            // $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+            // $unitPrice = $job->campaign_amount;
+            // if ($currency->code !== $job->currency) {
+            //     $rate = $this->campaignService->currencyConversion($job->currency, $currency->code);
+            //     $unitPrice *= $rate;
+            // }
+
+
+            // $check = $this->checkVerification($user, $currency, $unitPrice);
+            // if (!$check) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'User account yet to be verified',
+            //         // 'data' => [$currency, $unitPrice, $user],
+            //     ], 403);
+            // }
+
+            // $check =  $this->checkCanPerform($user, $currency, $unitPrice, $job);
+
+            // Prepare response data
+            $data = [
+                'id' => $job->id,
+                'campaign_id' => $job->job_id,
+                'campaign_name' => $job->post_title,
+                'campaign_type' => $job->campaignType->name,
+                'campaign_category' => $job->campaignCategory->name,
+                'campaign_description' => $job->description,
+                'campaign_amount' => $job->campaign_amount,
+                'campaign_approval_time' => $job->approval_time,
+                'campaign_currency' => $job->currency,
+                'campaign_number_of_worker' => $job->number_of_staff,
+                'campaign_url_link' => $job->post_link,
+                'campaign_expect' => $job->expected_result_image ?? null,
+                'campaign_allow_upload' => $job->allow_upload ? true : false,
+                'campaign_instruction' => $job->proof,
+                // 'can_perform_task' => $check === true,
+                // 'can_perform_task_reason' => $check === true ? '' : $check,
                 'created_at' => $job->created_at,
                 'public_link' => "https://dashboard.freebyz.com/tasks/" . $job->job_id,
 

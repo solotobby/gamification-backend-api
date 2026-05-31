@@ -343,6 +343,44 @@ class JobRepositoryModel
 
         return $query->paginate(10, ['*'], 'page', $page);
     }
+
+    public function availableTasks($categoryID = null, $page = null, $sort = null)
+    {
+        $query = Campaign::query()
+            ->with(['campaignType', 'campaignCategory'])
+            ->where('status', 'Live')
+            ->where('is_completed', false)
+            ->whereRaw('
+            (COALESCE(pending_count,0) + COALESCE(completed_count,0))
+            < COALESCE(number_of_staff,0)
+        ');
+
+        if (!empty($categoryID) && $categoryID > 0) {
+            $query->where('campaign_type', $categoryID);
+        }
+
+        // Priority pinning always first
+        $query->orderByRaw("
+        CASE
+            WHEN job_id = 'Lgh1yOgwO' THEN 0
+            WHEN approved IN ('Priotized','Priotize') THEN 1
+            ELSE 2
+        END
+    ");
+
+        // Secondary sorting
+        match ($sort) {
+            'oldest'         => $query->orderBy('created_at', 'asc'),
+            'price_high'     => $query->orderBy('campaign_amount', 'desc'),
+            'price_low'      => $query->orderBy('campaign_amount', 'asc'),
+            'priority_first' => $query->orderByRaw("approved IN ('Priotized','Priotize') DESC"),
+            'newest'         => $query->orderBy('created_at', 'desc'),
+            default          => $query->orderBy('created_at', 'desc'),
+        };
+
+        return $query->paginate(12, ['*'], 'page', $page);
+    }
+
     public function getJobById($jobId)
     {
         return Campaign::where(
@@ -350,7 +388,7 @@ class JobRepositoryModel
             $jobId
         )->first();
     }
-    public function     getMyJobById($jobId, $userId)
+    public function  getMyJobById($jobId, $userId)
     {
         $query = CampaignWorker::where(
             'id',
