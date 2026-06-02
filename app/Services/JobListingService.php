@@ -40,7 +40,6 @@ class JobListingService
                 'data'       => $data,
                 'pagination' => $this->buildPagination($jobs),
             ], 200);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -81,7 +80,6 @@ class JobListingService
                     ['related_jobs' => $relatedData]
                 ),
             ], 200);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -134,7 +132,6 @@ class JobListingService
                 'message' => 'Application submitted successfully.',
                 'data'    => $application,
             ], 201);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -181,19 +178,33 @@ class JobListingService
 
     private function formatJobSummary($job)
     {
+        $user = auth()->user();
+        $check = true;
+
+        if ($job->tier === 'premium') {
+
+            if (!$user) {
+                $check = 'Login required to view premium job.';
+            } elseif (!$user->is_verified) {
+                $check = 'Your account needs verification to view Job.';
+            }
+        }
+
         return [
-            'id'           => $job->id,
-            'title'        => $job->title,
-            'slug'         => $job->slug,
-            'type'         => $job->type,
-            'tier'         => $job->tier,
-            'location'     => $job->location,
-            'remote_allowed' => $job->remote_allowed,
-            'salary_range' => $job->salary_range,
-            'currency'     => $job->currency,
-            'company_name' => $job->company_name,
-            'company_logo' => $job->company_logo,
-            'created_at'   => $job->created_at,
+            'id'                      => $job->id,
+            'title'                   => $job->title,
+            'slug'                    => $job->slug,
+            'type'                    => $job->type,
+            'tier'                    => $job->tier,
+            'location'                => $job->location,
+            'remote_allowed'          => $job->remote_allowed,
+            'salary_range'            => $job->salary_range,
+            'currency'                => $job->currency,
+            'company_name'            => $job->company_name,
+            'company_logo'            => $job->company_logo,
+            'can_perform_task'        => $check === true,
+            'can_perform_task_reason' => $check === true ? '' : $check,
+            'created_at'              => $job->created_at,
         ];
     }
 

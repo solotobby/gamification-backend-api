@@ -444,6 +444,26 @@ class CampaignService
                 // 'Crypto (USDT_TRC20)' => 'crypto',
             ];
         }
+
+        if ($currency === 'NGN') {
+            $verifyProcessors = [
+                'Paystack' => 'paystack',
+                'KoraPay' => 'korapay',
+                'Virtual Account' => 'virtual_account',
+                // 'Crypto (USDT_TRC20)' => 'crypto',
+                // 'Manual Account' => 'manual',
+            ];
+        } elseif ($currency === 'USD') {
+            $verifyProcessors = [
+                'Stripe' => 'stripe',
+                'Crypto (USDT_TRC20)' => 'crypto',
+            ];
+        } else {
+            $verifyProcessors = [
+                'Paystack' => 'paystack',
+                // 'Crypto (USDT_TRC20)' => 'crypto',
+            ];
+        }
         return [
             'dashboard' => [
                 'info' => [
@@ -485,6 +505,11 @@ class CampaignService
                 'info' => 'Fund your wallet through any means of payment below. Your wallet gets credited in less than 1 min for all except the Manual Account funding',
                 'note' => 'If you paid using manual account number, drop your evidence of payment',
                 'payment_processor' => $paymentProcessors,
+            ],
+            'verification' => [
+                'info' => 'Fund your wallet through any means of payment below. Your wallet gets credited in less than 1 min',
+                'note' => '',
+                'payment_processor' => $verifyProcessors,
             ],
             'tasks' => [
                 'created_tasks' => [
