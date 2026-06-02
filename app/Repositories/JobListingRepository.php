@@ -22,6 +22,14 @@ class JobListingRepository
             ->findOrFail($id);
     }
 
+     public function getJobBySlug($id)
+    {
+        return JobListing::active()
+            ->with('postedBy:id,name')->where('slug', $id)->first();
+            // ->findOrFail($id);
+    }
+
+
     public function getRelatedJobs($job, $limit = 3)
     {
         return JobListing::active()

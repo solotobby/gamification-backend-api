@@ -146,7 +146,8 @@ class JobListingService
     {
         try {
             // $user = auth()->user();
-            $job  = $this->jobRepository->getJobById($id);
+            // $job  = $this->jobRepository->getJobById($id);
+            $job  = $this->jobRepository->getJobBySlug($id);
 
             // Check premium access
             // if (!$job->canView($user)) {
