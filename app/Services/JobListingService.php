@@ -142,6 +142,79 @@ class JobListingService
     }
 
 
+    public function jobDetails($id)
+    {
+        try {
+            // $user = auth()->user();
+            $job  = $this->jobRepository->getJobById($id);
+
+            // Check premium access
+            // if (!$job->canView($user)) {
+            //     return response()->json([
+            //         'status'  => false,
+            //         'message' => 'Please verify your email to access premium opportunities.',
+            //     ], 403);
+            // }
+
+            $this->jobRepository->incrementViews($job);
+
+            $relatedJobs = $this->jobRepository->getRelatedJobs($job);
+
+            $relatedData = [];
+            foreach ($relatedJobs as $related) {
+                $relatedData[] = $this->formatJobSummary($related);
+            }
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Job retrieved successfully.',
+                'data'    => array_merge(
+                    $this->formatJob($job),
+                    ['related_jobs' => $relatedData]
+                ),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Job not found',
+            ], 404);
+        }
+    }
+    public function publicJobs($request)
+    {
+        try {
+            $filters = $request->only([
+                'type',
+                'tier',
+                'location',
+                'salary_min',
+                'salary_max',
+                'remote',
+                'search',
+            ]);
+
+            $jobs = $this->jobRepository->getJobListings($filters);
+
+            $data = [];
+            foreach ($jobs as $job) {
+                $data[] = $this->formatJobSummary($job);
+            }
+
+            return response()->json([
+                'status'     => true,
+                'message'    => 'Job listings retrieved successfully.',
+                'data'       => $data,
+                'pagination' => $this->buildPagination($jobs),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving job listings',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     private function formatJob($job)
     {
         return [

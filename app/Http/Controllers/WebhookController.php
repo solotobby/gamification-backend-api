@@ -298,12 +298,16 @@ class WebhookController extends Controller
                 // data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
             );
 
-            $this->notification->createNotification(
-                $user,
-                'Wallet Credited',
-                "{$currency} {$amount} has been added to your wallet.",
-                'wallet'
-            );
+               $subject = 'Wallet Credited';
+                $content = 'Congratulations, your wallet has been credited with ' . $currency . ' ' . $amount;
+                Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
+
+            // $this->notification->createNotification(
+            //     $user,
+            //     'Wallet Credited',
+            //     "{$currency} {$amount} has been added to your wallet.",
+            //     'wallet'
+            // );
             // return response()->json(['status' => 'success'], 200);
             return response()->json([
                 'status'  => true,
