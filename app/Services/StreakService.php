@@ -165,11 +165,16 @@ class StreakService
             ->where('created_at', '>=', $since)
             ->sum('amount');
 
-        $hiredWorkers = Campaign::where('user_id', $user->id)
+        // $hiredWorkers = Campaign::where('user_id', $user->id)
+        //     ->where('created_at', '>=', $since)
+        //     ->withCount(['attempts as approved_count' => fn($q) => $q->where('status', 'Approved')])
+        //     ->get()
+        //     ->sum('approved_count');
+
+        $hiredWorkers = DB::table('skill_user')
+            ->where('user_id', $user->id)
             ->where('created_at', '>=', $since)
-            ->withCount(['attempts as approved_count' => fn($q) => $q->where('status', 'Approved')])
-            ->get()
-            ->sum('approved_count');
+            ->count();
 
         return [
             'criteria' => [
