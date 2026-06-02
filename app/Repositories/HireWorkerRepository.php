@@ -105,7 +105,7 @@ class HireWorkerRepository
             'currency'    => $currency->code,
             'channel'     => 'paystack',
             'type'        => 'point_purchase',
-            'description' => $worker->name . ' purchased point',
+            'description' => $worker->user->name . ' Hire worker point purchase',
             'tx_type'     => 'Debit',
             'user_type'   => 'regular',
         ]);

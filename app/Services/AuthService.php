@@ -191,7 +191,7 @@ class AuthService
             if (!$user) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'User not found'
+                    'message' => 'Incorrect Credentials'
                 ], 404);
             }
             $deviceSource = $request->header('X-Device-Source');
@@ -210,7 +210,7 @@ class AuthService
 
             // Validate the password
             if (!$this->auth->validatePassword($request->password, $user->password)) {
-                return response()->json(['status' => false, 'message' => 'Incorrect login details'], 403);
+                return response()->json(['status' => false, 'message' => 'Incorrect Credentials'], 403);
             }
 
             // Generate user data and token

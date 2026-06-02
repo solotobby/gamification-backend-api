@@ -2,16 +2,29 @@
 
 namespace App\Services;
 
+use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\JobListingRepository;
+use App\Repositories\WalletRepositoryModel;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class JobListingService
 {
     protected $jobRepository;
+    protected $walletModel;
+    protected $currencyModel;
+    protected $campaignService;
 
-    public function __construct(JobListingRepository $jobRepository)
-    {
+    public function __construct(
+        JobListingRepository $jobRepository,
+        WalletRepositoryModel $walletModel,
+        CurrencyRepositoryModel $currencyModel,
+        CampaignService $campaignService
+    ) {
         $this->jobRepository = $jobRepository;
+        $this->walletModel = $walletModel;
+        $this->currencyModel = $currencyModel;
+        $this->campaignService = $campaignService;
     }
 
     public function getJobListings($request)
@@ -52,17 +65,46 @@ class JobListingService
     public function getJob($id)
     {
         try {
+            // $user = auth()->user();
+            // $job  = $this->jobRepository->getJobById($id);
+
+            // // Check premium access
+            // if (!$job->canView($user)) {
+            //     return response()->json([
+            //         'status'  => false,
+            //         'message' => 'Please verify your email to access premium opportunities.',
+            //     ], 403);
+            // }
+
             $user = auth()->user();
             $job  = $this->jobRepository->getJobById($id);
 
-            // Check premium access
-            if (!$job->canView($user)) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Please verify your email to access premium opportunities.',
-                ], 403);
-            }
+            $hasPurchased = false;
 
+            if ($job->tier === 'premium') {
+
+                if (!$user) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Login required.',
+                    ], 401);
+                }
+
+                $hasPurchased = $this->jobRepository
+                    ->hasUserPurchasedJob($job->id, $user->id);
+
+                if (!$hasPurchased) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Premium job requires point purchase.',
+                        'data' => [
+                            'has_purchased' => false,
+                            'point_required' => 1,
+                            'point_cost_ngn' => 300,
+                        ]
+                    ], 403);
+                }
+            }
             $this->jobRepository->incrementViews($job);
 
             $relatedJobs = $this->jobRepository->getRelatedJobs($job);
@@ -76,7 +118,7 @@ class JobListingService
                 'status'  => true,
                 'message' => 'Job retrieved successfully.',
                 'data'    => array_merge(
-                    $this->formatJob($job),
+                    $this->formatJob($job, $hasPurchased),
                     ['related_jobs' => $relatedData]
                 ),
             ], 200);
@@ -216,7 +258,83 @@ class JobListingService
         }
     }
 
-    private function formatJob($job)
+    public function purchasePoint($id)
+    {
+        try {
+
+            $user = auth()->user();
+            $job  = $this->jobRepository->getJobById($id);
+
+            if ($job->tier !== 'premium') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Point purchase not required.',
+                ], 400);
+            }
+
+            if ($this->jobRepository->hasUserPurchasedJob($job->id, $user->id)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Already purchased.',
+                ], 409);
+            }
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->currencyModel
+                ->getCurrencyByCode($mapCurrency);
+
+            $amount = 300;
+
+            if ($currency->code !== 'NGN') {
+                $rate = $this->campaignService
+                    ->currencyConversion('NGN', $currency->code);
+
+                $amount *= $rate;
+            }
+
+            if (!checkWalletBalance($user, $currency, $amount)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Insufficient wallet balance.',
+                ], 402);
+            }
+
+            DB::beginTransaction();
+
+            app(WalletRepositoryModel::class)->debitWallet(
+                $user,
+                $currency->code,
+                $amount
+            );
+
+            $this->jobRepository->purchaseJobPoint(
+                $job->id,
+                $user->id,
+                $amount,
+                $currency,
+                $job
+            );
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Premium access purchased successfully.',
+            ]);
+        } catch (Throwable $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Purchase failed.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function formatJob($job, $hasPurchased = false)
     {
         return [
             'id'                  => $job->id,
@@ -240,6 +358,7 @@ class JobListingService
             'company_website'     => $job->company_website,
             'views_count'         => $job->views_count,
             'applications_count'  => $job->applications_count,
+            'has_purchased'          => $hasPurchased,
             'posted_by'           => $job->postedBy ? [
                 'id'   => $job->postedBy->id,
                 'name' => $job->postedBy->name,
@@ -253,16 +372,16 @@ class JobListingService
     private function formatJobSummary($job)
     {
         $user = auth()->user();
-        $check = true;
+        // $check = true;
 
-        if ($job->tier === 'premium') {
+        // if ($job->tier === 'premium') {
 
-            if (!$user) {
-                $check = 'Login required to view premium job.';
-            } elseif (!$user->is_verified) {
-                $check = 'Your account needs verification to view Job.';
-            }
-        }
+        //     if (!$user) {
+        //         $check = 'Login required to view premium job.';
+        //     } elseif (!$user->is_verified) {
+        //         $check = 'Your account needs verification to view Job.';
+        //     }
+        // }
 
         return [
             'id'                      => $job->id,
@@ -276,9 +395,11 @@ class JobListingService
             'currency'                => $job->currency,
             'company_name'            => $job->company_name,
             'company_logo'            => $job->company_logo,
-            'can_perform_task'        => $check === true,
-            'can_perform_task_reason' => $check === true ? '' : $check,
+            // 'has_purchased'           => $hasPurchased,
+            // 'can_perform_task'        => $check === true,
+            // 'can_perform_task_reason' => $check === true ? '' : $check,
             'created_at'              => $job->created_at,
+
         ];
     }
 

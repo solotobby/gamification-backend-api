@@ -28,4 +28,9 @@ class RemoteJobController extends Controller
     {
         return $this->jobService->applyForJob($request, $id);
     }
+
+    public function purchasePoint($id)
+    {
+        return $this->jobService->purchasePoint($id);
+    }
 }

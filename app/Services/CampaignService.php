@@ -590,7 +590,7 @@ class CampaignService
                 ]
             ],
             'talk_to_us' => [
-                'info' => 'If you are reporting a worker, please include the worker name, email and the job done. This will enable us that proper action',
+                'info' => 'If you are reporting a worker, please include the worker name, email and the task done. This will enable us take proper action',
                 'options' => [
                     'Feedback' => 'feedback',
                     'Complaint' => 'complaint',

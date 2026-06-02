@@ -12,6 +12,8 @@ Route::middleware([
     Route::get('/', [RemoteJobController::class, 'index']);
     Route::get('/{id}', [RemoteJobController::class, 'show']);
     Route::post('/{id}/apply', [RemoteJobController::class, 'apply']);
+    Route::post('/{id}/purchase-point', [RemoteJobController::class, 'purchasePoint']
+);
 });
 
 
@@ -29,4 +31,5 @@ Route::middleware([
     Route::get('/{id}', [HireWorkerController::class, 'show']);
     Route::put('/update-skill/{id}', [HireWorkerController::class, 'update']);
     Route::post('/{id}/purchase-point', [HireWorkerController::class, 'purchasePoint']);
+
 });
