@@ -210,7 +210,9 @@ class FeedbackService
             $data[] = [
                 'id'          => $reply->id,
                 'sender_id'   => $reply->user_id,
-                'sender_name' => $reply->user->name,
+                'sender_name' => in_array($reply->user->role, ['admin', 'super_admin'])
+                    ? 'Freebyz Support'
+                    : $reply->user->name,
                 'sender_role' => $reply->user->role,
                 'type'        => $type,
                 'message'     => $reply->text_message ?? $reply->message,

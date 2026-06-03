@@ -188,7 +188,7 @@ class AuthService
             // Find user by email
             $user = $this->auth->findUser($request->email);
 
-            if (!$user) {
+            if (!$user || !$user->role || $user->role === 'admin' || $user->role === 'super_admin') {
                 return response()->json([
                     'status' => false,
                     'message' => 'Incorrect Credentials'
