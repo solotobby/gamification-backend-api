@@ -65,16 +65,7 @@ class JobListingService
     public function getJob($id)
     {
         try {
-            // $user = auth()->user();
-            // $job  = $this->jobRepository->getJobById($id);
 
-            // // Check premium access
-            // if (!$job->canView($user)) {
-            //     return response()->json([
-            //         'status'  => false,
-            //         'message' => 'Please verify your email to access premium opportunities.',
-            //     ], 403);
-            // }
 
             $user = auth()->user();
             $job  = $this->jobRepository->getJobById($id);
@@ -97,16 +88,16 @@ class JobListingService
                     return response()->json([
                         'status' => true,
                         'message' => 'Premium job requires point purchase.',
-                        'data' => [
-                            array_merge(
-                                $this->formatJobSummary($job),
-                                [
-                                    'has_purchased' => false,
-                                    'point_required' => 1,
-                                    'point_cost_ngn' => 300,
-                                ]
-                            )
-                        ]
+                        'data' =>
+                        array_merge(
+                            $this->formatJobSummary($job),
+                            [
+                                'has_purchased' => false,
+                                'point_required' => 1,
+                                'point_cost_ngn' => 300,
+                            ]
+                        )
+
                     ], 403);
                 }
             }
