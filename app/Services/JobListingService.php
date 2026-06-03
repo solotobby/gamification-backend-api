@@ -95,12 +95,17 @@ class JobListingService
 
                 if (!$hasPurchased) {
                     return response()->json([
-                        'status' => false,
+                        'status' => true,
                         'message' => 'Premium job requires point purchase.',
                         'data' => [
-                            'has_purchased' => false,
-                            'point_required' => 1,
-                            'point_cost_ngn' => 300,
+                            array_merge(
+                                $this->formatJobSummary($job),
+                                [
+                                    'has_purchased' => false,
+                                    'point_required' => 1,
+                                    'point_cost_ngn' => 300,
+                                ]
+                            )
                         ]
                     ], 403);
                 }
