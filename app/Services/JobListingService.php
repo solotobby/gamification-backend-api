@@ -79,7 +79,7 @@ class JobListingService
             $user = auth()->user();
             $job  = $this->jobRepository->getJobById($id);
 
-            $hasPurchased = false;
+            $hasPurchased = true;
 
             if ($job->tier === 'premium') {
 
@@ -339,7 +339,7 @@ class JobListingService
         }
     }
 
-    private function formatJob($job, $hasPurchased = false)
+    private function formatJob($job, $hasPurchased = true)
     {
         return [
             'id'                  => $job->id,
