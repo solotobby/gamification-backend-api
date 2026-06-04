@@ -61,14 +61,12 @@ class CampaignService
             $user = auth()->user();
 
             $type = strtolower($request->query('type'));
-            $per_page = strtolower($request->query('per_page', 10));
+            $per_page = (int)$request->query('per_page', 10);
             // Fetch campaigns by user ID
             $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
 
-            // Log::info($campaigns);
             // Fetch user's base currency and map it
-            $baseCurrency = $user->wallet->base_currency;
-            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $mapCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
 
             // Fetch currency details
             $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
@@ -82,22 +80,23 @@ class CampaignService
             }
 
             // Prepare campaign data
-            $data = [];
-            foreach ($campaigns as $campaign) {
+            // $campaigns is a LengthAwarePaginator — map() is not available on the paginator itself.
+            // Map over the underlying collection instead.
+            $data = $campaigns->getCollection()->map(function ($campaign) use ($currency) {
                 $unitPrice = $campaign->campaign_amount;
                 $totalAmount = $campaign->total_amount;
 
                 // Check if conversion is needed
                 if ($currency->code !== $campaign->currency) {
                     $rate = $this->currencyConversion($campaign->currency, $currency->code);
-
                     $unitPrice *= $rate;
                     $totalAmount *= $rate;
                 }
 
                 $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
                 $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
-                $data[] = [
+
+                return [
                     'id' => $campaign->id,
                     'user_id' => $campaign->user_id,
                     'campaign_id' => $campaign->job_id,
@@ -112,27 +111,25 @@ class CampaignService
                     'currency' => $currency->code,
                     'original_currency' => $campaign->currency,
                     'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
-                    // 'status' => $campaign->status,
                     'status' => $this->mapCampaignStatus($campaign),
-                    'amount_ratio' => $campaign->currency . '' . $spentAmount . ' / ' . $campaign->currency . '' . $campaignAmount,
+                    'amount_ratio' => $campaign->currency . $spentAmount . ' / ' . $campaign->currency . $campaignAmount,
                     'stat' => $this->jobModel->getCampaignStats($campaign->id),
                     'created' => $campaign->created_at,
                 ];
-            }
-            $pagination = [
-                'total' => $campaigns->total(),
-                'per_page' => $campaigns->perPage(),
-                'current_page' => $campaigns->currentPage(),
-                'last_page' => $campaigns->lastPage(),
-                'from' => $campaigns->firstItem(),
-                'to' => $campaigns->lastItem(),
-            ];
+            })->all();
 
             return response()->json([
                 'status' => true,
                 'message' => 'Campaign List',
                 'data' => $data,
-                'pagination' => $pagination,
+                'pagination' => [
+                    'total' => $campaigns->total(),
+                    'per_page' => $campaigns->perPage(),
+                    'current_page' => $campaigns->currentPage(),
+                    'last_page' => $campaigns->lastPage(),
+                    'from' => $campaigns->firstItem(),
+                    'to' => $campaigns->lastItem(),
+                ],
             ], 200);
         } catch (Throwable $exception) {
             return response()->json([
@@ -645,7 +642,8 @@ class CampaignService
         try {
             $userId = auth()->user()->id;
             $type = strtolower($request->query('type'));
-            $page = strtolower($request->query('page'));
+            $page = strtolower($request->query('page', 1));
+            $perPage = strtolower($request->query('per_page', 10));
 
             $campaign = $this->campaignModel->getCampaignByJobId($campaignId, $userId);
 
@@ -655,7 +653,14 @@ class CampaignService
                     'message' => 'Campaign not found'
                 ], 404);
             }
-            $jobs = $this->jobModel->getJobsByIdAndType($campaign->id, $type, $page);
+            $jobs = $this->jobModel->getJobsByIdAndType($campaign->id, $type, $page, $perPage);
+
+            if ($jobs->isEmpty()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No jobs found for the campaign.'
+                ], 404);
+            }
 
             $data['campaign_name'] = $campaign->post_title;
             $data['campaign_id'] = $campaign->job_id;

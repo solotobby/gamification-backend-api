@@ -146,7 +146,7 @@ class JobRepositoryModel
         return $amounts;
     }
 
-    public function getJobsByIdAndType($camId, $type, $page = null)
+    public function getJobsByIdAndType($camId, $type, $page, $perPage)
     {
         $query = CampaignWorker::where(
             'campaign_id',
@@ -161,7 +161,7 @@ class JobRepositoryModel
         return $query->orderBy(
             'created_at',
             'DESC'
-        )->paginate(10, ['*'], 'page', $page);
+        )->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function getJobByIdAndCampaignId($jobId, $campaignId, $userId = null)
