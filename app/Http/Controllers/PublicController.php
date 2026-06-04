@@ -36,9 +36,9 @@ class PublicController extends Controller
         return $this->jobListingService->publicJobs($request);
     }
 
-    public function jobDetails($jobId)
+    public function jobDetails($slug)
     {
-        return $this->jobListingService->jobDetails($jobId);
+        return $this->jobListingService->jobDetails($slug);
     }
 
       public function getCategories()

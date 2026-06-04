@@ -66,7 +66,6 @@ class JobListingService
     {
         try {
 
-
             $user = auth()->user();
             $job  = $this->jobRepository->getJobById($id);
 
@@ -180,11 +179,10 @@ class JobListingService
     }
 
 
-    public function jobDetails($id)
+    public function jobDetails($slug)
     {
         try {
-            $job  = $this->jobRepository->getJobBySlug($id);
-
+            $job  = $this->jobRepository->getJobBySlug($slug);
 
             $this->jobRepository->incrementViews($job);
 
@@ -202,7 +200,7 @@ class JobListingService
                     $this->formatJob($job),
                     ['related_jobs' => $relatedData]
                 ),
-            ], 204);
+            ], 200);
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,

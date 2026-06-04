@@ -13,8 +13,8 @@ Route::group(['namespace' => 'auth'], function () {
     Route::get('/public/tasks-details/{job_id}', [PublicController::class, 'taskDetails']);
     Route::get('/public/task/categories', [PublicController::class, 'getCategories']);
 
-     Route::get('/public/jobs', [PublicController::class, 'publicJobs']);
-    Route::get('/public/job-details/{job_id}', [PublicController::class, 'jobDetails']);
+    Route::get('/public/jobs', [PublicController::class, 'publicJobs']);
+    Route::get('/public/job-details/{slug}', [PublicController::class, 'jobDetails']);
 
 
     /// test apis
