@@ -98,7 +98,7 @@ class JobListingService
                             ]
                         )
 
-                    ], 403);
+                    ], 204);
                 }
             }
             $this->jobRepository->incrementViews($job);
@@ -183,17 +183,8 @@ class JobListingService
     public function jobDetails($id)
     {
         try {
-            // $user = auth()->user();
-            // $job  = $this->jobRepository->getJobById($id);
             $job  = $this->jobRepository->getJobBySlug($id);
 
-            // Check premium access
-            // if (!$job->canView($user)) {
-            //     return response()->json([
-            //         'status'  => false,
-            //         'message' => 'Please verify your email to access premium opportunities.',
-            //     ], 403);
-            // }
 
             $this->jobRepository->incrementViews($job);
 
@@ -211,7 +202,7 @@ class JobListingService
                     $this->formatJob($job),
                     ['related_jobs' => $relatedData]
                 ),
-            ], 200);
+            ], 204);
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -367,17 +358,6 @@ class JobListingService
 
     private function formatJobSummary($job)
     {
-        $user = auth()->user();
-        // $check = true;
-
-        // if ($job->tier === 'premium') {
-
-        //     if (!$user) {
-        //         $check = 'Login required to view premium job.';
-        //     } elseif (!$user->is_verified) {
-        //         $check = 'Your account needs verification to view Job.';
-        //     }
-        // }
 
         return [
             'id'                      => $job->id,
