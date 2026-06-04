@@ -44,9 +44,16 @@ class JobListingService
 
             $data = [];
             foreach ($jobs as $job) {
-                $data[] = $this->formatJobSummary($job);
-            }
+                $hasPurchased = true;
 
+                if ($job->tier === 'premium') {
+
+                    $hasPurchased = $this->jobRepository
+                        ->hasUserPurchasedJob($job->id, auth()->user()->id);
+                }
+
+                $data[] = $this->formatJobSummary($job, $hasPurchased);
+            }
             return response()->json([
                 'status'     => true,
                 'message'    => 'Job listings retrieved successfully.',
@@ -354,7 +361,7 @@ class JobListingService
         ];
     }
 
-    private function formatJobSummary($job)
+    private function formatJobSummary($job, $hasPurchased = true)
     {
 
         return [
@@ -363,13 +370,13 @@ class JobListingService
             'slug'                    => $job->slug,
             'type'                    => $job->type,
             'tier'                    => $job->tier,
-            'location'                => $job->location,
+            'location'                => $hasPurchased ? $job->location : '🔒 Location Hidden',
             'remote_allowed'          => $job->remote_allowed,
             'salary_range'            => $job->salary_range,
             'currency'                => $job->currency,
-            'company_name'            => $job->company_name,
+            'company_name'            => $hasPurchased ? $job->company_name : '🔒 Company Hidden',
             'company_logo'            => $job->company_logo,
-            // 'has_purchased'           => $hasPurchased,
+            'has_purchased'           => $hasPurchased,
             // 'can_perform_task'        => $check === true,
             // 'can_perform_task_reason' => $check === true ? '' : $check,
             'created_at'              => $job->created_at,
