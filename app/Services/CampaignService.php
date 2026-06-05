@@ -61,7 +61,7 @@ class CampaignService
             $user = auth()->user();
 
             $type = strtolower($request->query('type'));
-            $per_page = (int)$request->query('per_page', 10);
+            $per_page = (int)$request->query('per_page', 30);
             // Fetch campaigns by user ID
             $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
 
