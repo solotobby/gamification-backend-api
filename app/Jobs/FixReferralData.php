@@ -21,7 +21,7 @@ class FixReferralData implements ShouldQueue
         $fixed = 0;
         $skipped = 0;
 
-        Referral::whereRaw("referee_id REGEXP '^[^0-9]+'")
+        Referral::whereRaw("referee_id REGEXP '[^0-9]'")
             ->chunkById(500, function ($referrals) use (&$fixed, &$skipped) {
 
                 $codes = $referrals->pluck('referee_id')->unique();
