@@ -461,7 +461,7 @@ class AuthService
                 $baseCurrency = $referrer->wallet->base_currency;
                 $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
                 $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
-                $this->refer->createReferral($user, $ref_id, $referralCommission);
+                $this->refer->createReferral($user, $referrer->id, $referralCommission);
             }
         }
 

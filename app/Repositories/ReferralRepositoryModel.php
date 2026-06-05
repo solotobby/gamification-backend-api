@@ -22,7 +22,7 @@ class ReferralRepositoryModel
 
     public function addReferralCode($user)
     {
-        $user->referral_code = Str::random(7);
+        $user->referral_code = Str::random(8);
         $user->save();
     }
 
