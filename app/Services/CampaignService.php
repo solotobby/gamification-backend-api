@@ -150,6 +150,7 @@ class CampaignService
                 ],
             ]);
         } catch (Throwable $e) {
+
             return response()->json([
                 'status'  => false,
                 'error'   => $e->getMessage(),

@@ -92,45 +92,35 @@ class CampaignRepositoryModel
     // }
 
 
-    public function getCampaignsByPagination($id, $type, $per_page, $page = null)
-    {
-        $columns = [
-            'id',
-            'user_id',
-            'job_id',
-            'post_title',
-            'campaign_amount',
-            'total_amount',
-            'number_of_staff',
-            'completed_count',
-            'pending_count',
-            'currency',
-            'status',
-            'is_completed',
-            'created_at',
-        ];
+public function getCampaignsByPagination($id, $type, $per_page, $page = null)
+{
+    $columns = [
+        'id', 'user_id', 'job_id', 'post_title',
+        'campaign_amount', 'total_amount', 'number_of_staff',
+        'completed_count', 'pending_count',
+        'currency', 'status', 'is_completed', 'created_at', 'campaign_type',
+    ];
 
-        $query = Campaign::with(['campaignType:id,name,url'])
-            ->select($columns)
-            ->where('user_id', $id);
+    $query = Campaign::with(['campaignType:id,name,url'])
+        ->select($columns)
+        ->where('user_id', $id);
 
-        $filters = [
-            'completed' => fn($q) => $q->where('is_completed', true),
-            'declined'  => fn($q) => $q->where('status', 'Denied'),
-            'live'      => fn($q) => $q->where('status', 'Live')->where('is_completed', false),
-            'pending'   => fn($q) => $q->where('status', 'Offline'),
-            'paused'    => fn($q) => $q->where('status', 'Paused'),
-            'flagged'   => fn($q) => $q->where('status', 'Flagged'),
-        ];
+    $filters = [
+        'completed' => fn ($q) => $q->where('is_completed', true),
+        'declined'  => fn ($q) => $q->where('status', 'Denied'),
+        'live'      => fn ($q) => $q->where('status', 'Live')->where('is_completed', false),
+        'pending'   => fn ($q) => $q->where('status', 'Offline'),
+        'paused'    => fn ($q) => $q->where('status', 'Paused'),
+        'flagged'   => fn ($q) => $q->where('status', 'Flagged'),
+    ];
 
-        if (!empty($type) && isset($filters[$type])) {
-            $filters[$type]($query);
-        }
-
-        return $query->orderByDesc('created_at')
-            ->paginate($per_page, ['*'], 'page', $page);
+    if (!empty($type) && isset($filters[$type])) {
+        $filters[$type]($query);
     }
 
+    return $query->orderByDesc('created_at')
+        ->paginate($per_page, ['*'], 'page', $page);
+}
     public function getUserCampaigns($id)
     {
         return Campaign::where(
