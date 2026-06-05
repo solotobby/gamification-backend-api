@@ -158,10 +158,15 @@ class JobRepositoryModel
                 $type
             );
         }
-        return $query->orderBy(
-            'created_at',
-            'DESC'
-        )->paginate($perPage, ['*'], 'page', $page);
+        return $query->orderByRaw("
+    CASE
+        WHEN status = 'Pending' THEN 0
+        WHEN status = 'Approved' THEN 1
+        WHEN status = 'Denied' THEN 2
+        ELSE 3
+    END ASC
+        ")->orderBy('created_at', 'DESC');
+        paginate($perPage, ['*'], 'page', $page);
     }
 
     public function getJobByIdAndCampaignId($jobId, $campaignId, $userId = null)
