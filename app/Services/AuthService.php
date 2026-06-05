@@ -101,6 +101,81 @@ class AuthService
     {
         $request->validate([
             'id_token' => 'required|string',
+        ]);
+
+        try {
+            // Verify Google JWT token
+            $client = new \Google\Client(['client_id' => config('services.google.client_id')]);
+            $payload = $client->verifyIdToken($request->id_token);
+
+            if (!$payload) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Invalid Google token'
+                ], 401);
+            }
+
+            $email = $payload['email'] ?? null;
+            $name  = $payload['name']  ?? null;
+
+            if (!$email) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Could not retrieve email from Google token'
+                ], 401);
+            }
+
+            DB::beginTransaction();
+
+            $user = $this->auth->findUser($email);
+
+            if (!$user) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            $deviceSource = $request->header('X-Device-Source');
+
+            if ($deviceSource === 'app') {
+                app(StreakService::class)->grantBonusIfEligible($user);
+            }
+
+            $this->ensureUserHasRole($user);
+            $this->ensureUserHasReferralCode($user);
+
+            $data['user']            = $this->auth->findUserWithRole($user->email);
+            $data['wallet']          = $this->walletModel->walletDetails($user);
+            $data['token']           = $user->createToken('freebyz')->accessToken;
+            $data['dashboard']       = $this->auth->dashboardStat($user->id);
+            $data['virtual_account'] = ($user->wallet->base_currency ?? 'NGN') === 'NGN'
+                ? $this->bank->getVirtualBank($user->id)
+                : null;
+
+            $this->log->createLogForLogin($user);
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Google authentication successful',
+                'data'    => $data,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => false,
+                'message' => 'Google authentication failed',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function googleAuthOld($request)
+    {
+        $request->validate([
+            'id_token' => 'required|string',
             // 'fcm_token' => 'nullable|string',
         ]);
 
