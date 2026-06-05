@@ -96,7 +96,7 @@ class JobListingService
                         'message' => 'Premium job requires point purchase.',
                         'data' =>
                         array_merge(
-                            $this->formatJobSummary($job),
+                            $this->formatJobSummary($job, false),
                             [
                                 'has_purchased' => false,
                                 'point_required' => 1,
@@ -104,7 +104,7 @@ class JobListingService
                             ]
                         )
 
-                    ], 200);
+                    ], 204);
                 }
             }
             $this->jobRepository->incrementViews($job);
