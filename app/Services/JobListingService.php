@@ -104,7 +104,7 @@ class JobListingService
                             ]
                         )
 
-                    ], 204);
+                    ], 200);
                 }
             }
             $this->jobRepository->incrementViews($job);
