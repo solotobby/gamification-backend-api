@@ -93,7 +93,8 @@ class CampaignService
                     $totalAmount *= $rate;
                 }
 
-                $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
+                // $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
+                $spentAmount = $unitPrice * $campaign->completed_count;
                 $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
 
                 return [
@@ -643,7 +644,7 @@ class CampaignService
             $userId = auth()->user()->id;
             $type = strtolower($request->query('type'));
             $page = strtolower($request->query('page', 1));
-            $perPage = strtolower($request->query('per_page', 10));
+            $perPage = strtolower($request->query('per_page', 100));
 
             $campaign = $this->campaignModel->getCampaignByJobId($campaignId, $userId);
 
