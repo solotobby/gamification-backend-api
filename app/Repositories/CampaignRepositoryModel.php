@@ -42,53 +42,93 @@ class CampaignRepositoryModel
         return Campaign::create($request->all());
     }
 
+    // public function getCampaignsByPagination($id, $type, $per_page, $page = null)
+    // {
+    //     $query = Campaign::with(['campaignType'])->where(
+    //         'user_id',
+    //         $id
+    //     );
+    //     if (!empty($type)) {
+    //         switch (strtolower($type)) {
+    //             case 'completed':
+    //                 $query->where('is_completed', true);
+    //                 break;
+
+    //             case 'declined':
+    //                 $query->where('status', 'Denied');
+    //                 break;
+
+    //             case 'live':
+    //                 $query->where('status', 'Live')
+    //                     ->where('is_completed', false);
+    //                 break;
+
+    //             case 'pending':
+    //                 $query->where('status', 'Offline');
+    //                 break;
+
+    //             case 'paused':
+    //                 $query->where('status', 'Paused');
+    //                 break;
+
+    //             case 'flagged':
+    //                 $query->where('status', 'Flagged');
+    //                 break;
+
+    //             default:
+    //                 break;
+    //         }
+    //     }
+
+    //     return $query->orderBy(
+    //         'created_at',
+    //         'DESC'
+    //     )->paginate(
+    //         $per_page,
+    //         ['*'],
+    //         'page',
+    //         $page
+    //     );
+    // }
+
+
     public function getCampaignsByPagination($id, $type, $per_page, $page = null)
     {
-        $query = Campaign::with(['campaignType'])->where(
+        $columns = [
+            'id',
             'user_id',
-            $id
-        );
-        if (!empty($type)) {
-            switch (strtolower($type)) {
-                case 'completed':
-                    $query->where('is_completed', true);
-                    break;
+            'job_id',
+            'post_title',
+            'campaign_amount',
+            'total_amount',
+            'number_of_staff',
+            'completed_count',
+            'pending_count',
+            'currency',
+            'status',
+            'is_completed',
+            'created_at',
+        ];
 
-                case 'declined':
-                    $query->where('status', 'Denied');
-                    break;
+        $query = Campaign::with(['campaignType:id,name,url'])
+            ->select($columns)
+            ->where('user_id', $id);
 
-                case 'live':
-                    $query->where('status', 'Live')
-                        ->where('is_completed', false);
-                    break;
+        $filters = [
+            'completed' => fn($q) => $q->where('is_completed', true),
+            'declined'  => fn($q) => $q->where('status', 'Denied'),
+            'live'      => fn($q) => $q->where('status', 'Live')->where('is_completed', false),
+            'pending'   => fn($q) => $q->where('status', 'Offline'),
+            'paused'    => fn($q) => $q->where('status', 'Paused'),
+            'flagged'   => fn($q) => $q->where('status', 'Flagged'),
+        ];
 
-                case 'pending':
-                    $query->where('status', 'Offline');
-                    break;
-
-                case 'paused':
-                    $query->where('status', 'Paused');
-                    break;
-
-                case 'flagged':
-                    $query->where('status', 'Flagged');
-                    break;
-
-                default:
-                    break;
-            }
+        if (!empty($type) && isset($filters[$type])) {
+            $filters[$type]($query);
         }
 
-        return $query->orderBy(
-            'created_at',
-            'DESC'
-        )->paginate(
-            $per_page,
-            ['*'],
-            'page',
-            $page
-        );
+        return $query->orderByDesc('created_at')
+            ->paginate($per_page, ['*'], 'page', $page);
     }
 
     public function getUserCampaigns($id)

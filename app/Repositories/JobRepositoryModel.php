@@ -134,6 +134,27 @@ class JobRepositoryModel
         return $counts;
     }
 
+    public function getCampaignStatsBatch(array $campaignIds): array
+    {
+        if (empty($campaignIds)) {
+            return [];
+        }
+
+        $default = ['Pending' => 0, 'Denied' => 0, 'Approved' => 0];
+        $result  = array_fill_keys($campaignIds, $default);
+
+        CampaignWorker::whereIn('campaign_id', $campaignIds)
+            ->whereIn('status', ['Pending', 'Denied', 'Approved'])
+            ->selectRaw('campaign_id, status, count(*) as count')
+            ->groupBy('campaign_id', 'status')
+            ->get()
+            ->each(function ($row) use (&$result) {
+                $result[$row->campaign_id][$row->status] = (int) $row->count;
+            });
+
+        return $result;
+    }
+
     public function getCampaignSpentAmount($camId)
     {
         $amounts = CampaignWorker::where(

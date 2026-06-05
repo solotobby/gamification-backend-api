@@ -20,6 +20,7 @@ use App\Repositories\JobRepositoryModel;
 use App\Services\Providers\CloudinaryService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -58,133 +59,224 @@ class CampaignService
     public function getCampaigns($request)
     {
         try {
-            $user = auth()->user();
+            $user     = auth()->user();
+            $type     = strtolower($request->query('type', ''));
+            $per_page = (int) $request->query('per_page', 15);
 
-            $type = strtolower($request->query('type'));
-            $per_page = (int)$request->query('per_page', 15);
-            // Fetch campaigns by user ID
-            $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
-
-            // Fetch user's base currency and map it
+            // ── 1. Resolve currency ONCE (cached) ────────────────────────────────
             $mapCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
+            $currency    = Cache::remember(
+                "currency:{$mapCurrency}",
+                now()->addDay(),
+                fn() => $this->currencyModel->getCurrencyByCode($mapCurrency)
+            );
 
-            // Fetch currency details
-            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
-
-            // Validate retrieved data
             if (!$currency) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Currency not found.'
-                ], 404);
+                return response()->json(['status' => false, 'message' => 'Currency not found.'], 404);
             }
 
-            // Prepare campaign data
-            // $campaigns is a LengthAwarePaginator — map() is not available on the paginator itself.
-            // Map over the underlying collection instead.
-            $data = $campaigns->getCollection()->map(function ($campaign) use ($currency) {
-                $unitPrice = $campaign->campaign_amount;
-                $totalAmount = $campaign->total_amount;
+            // ── 2. Paginated campaigns (only columns we actually use) ─────────────
+            $campaigns = $this->campaignModel->getCampaignsByPagination(
+                $user->id,
+                $type,
+                $per_page
+            );
 
-                // Check if conversion is needed
+            $collection   = $campaigns->getCollection();
+            $campaignIds  = $collection->pluck('id')->all();
+
+            // ── 3. Batch-load stats — ONE query for all campaigns ─────────────────
+            $statsMap = $this->jobModel->getCampaignStatsBatch($campaignIds);
+
+            // ── 4. Resolve conversion rate once if needed ─────────────────────────
+            //    (assumes all campaigns share the same original currency, which is
+            //     the common case; if mixed currencies exist, group them first)
+            $rateCache = [];
+            $getRate   = function (string $from, string $to) use (&$rateCache): float {
+                $key = "{$from}-{$to}";
+                if (!isset($rateCache[$key])) {
+                    $rateCache[$key] = (float) $this->currencyConversion($from, $to);
+                }
+                return $rateCache[$key];
+            };
+
+            // ── 5. Map results ─────────────────────────────────────────────────────
+            $data = $collection->map(function ($campaign) use ($currency, $getRate, $statsMap) {
+                $unitPrice   = (float) $campaign->campaign_amount;
+                $totalAmount = (float) $campaign->total_amount;
+
                 if ($currency->code !== $campaign->currency) {
-                    $rate = $this->currencyConversion($campaign->currency, $currency->code);
-                    $unitPrice *= $rate;
+                    $rate         = $getRate($campaign->currency, $currency->code);
+                    $unitPrice   *= $rate;
                     $totalAmount *= $rate;
                 }
 
-                // $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
-                $spentAmount = $unitPrice * $campaign->completed_count;
-                $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
+                $spentAmount    = $unitPrice * $campaign->completed_count;
+                $campaignAmount = (float) $campaign->campaign_amount * $campaign->number_of_staff;
 
                 return [
-                    'id' => $campaign->id,
-                    'user_id' => $campaign->user_id,
-                    'campaign_id' => $campaign->job_id,
-                    'title' => $campaign->post_title,
-                    'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
-                    'completed_count' => $campaign->pending_count + $campaign->completed_count,
-                    'expected_count' => (int)$campaign->number_of_staff,
-                    'campaign_category' => $campaign->campaignType->name,
+                    'id'                   => $campaign->id,
+                    'user_id'              => $campaign->user_id,
+                    'campaign_id'          => $campaign->job_id,
+                    'title'                => $campaign->post_title,
+                    'approved'             => $campaign->completed_count . '/' . $campaign->number_of_staff,
+                    'completed_count'      => $campaign->pending_count + $campaign->completed_count,
+                    'expected_count'       => (int) $campaign->number_of_staff,
+                    'campaign_category'    => $campaign->campaignType->name,
                     'campaign_category_url' => $campaign->campaignType->url,
-                    'unit_price' => round($unitPrice, 5),
-                    'total_amount' => round($totalAmount, 5),
-                    'currency' => $currency->code,
-                    'original_currency' => $campaign->currency,
-                    'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
-                    'status' => $this->mapCampaignStatus($campaign),
-                    'amount_ratio' => $campaign->currency . $spentAmount . ' / ' . $campaign->currency . $campaignAmount,
-                    'stat' => $this->jobModel->getCampaignStats($campaign->id),
-                    'created' => $campaign->created_at,
+                    'unit_price'           => round($unitPrice, 5),
+                    'total_amount'         => round($totalAmount, 5),
+                    'currency'             => $currency->code,
+                    'original_currency'    => $campaign->currency,
+                    'public_link'          => 'https://stagging.e-portal.com.ng/tasks/' . $campaign->job_id,
+                    'status'               => $this->mapCampaignStatus($campaign),
+                    'amount_ratio'         => $campaign->currency . $spentAmount . ' / ' . $campaign->currency . $campaignAmount,
+                    'stat'                 => $statsMap[$campaign->id] ?? ['Pending' => 0, 'Denied' => 0, 'Approved' => 0],
+                    'created'              => $campaign->created_at,
                 ];
             })->all();
 
             return response()->json([
-                'status' => true,
-                'message' => 'Campaign List',
-                'data' => $data,
+                'status'     => true,
+                'message'    => 'Campaign List',
+                'data'       => $data,
                 'pagination' => [
-                    'total' => $campaigns->total(),
-                    'per_page' => $campaigns->perPage(),
+                    'total'        => $campaigns->total(),
+                    'per_page'     => $campaigns->perPage(),
                     'current_page' => $campaigns->currentPage(),
-                    'last_page' => $campaigns->lastPage(),
-                    'from' => $campaigns->firstItem(),
-                    'to' => $campaigns->lastItem(),
+                    'last_page'    => $campaigns->lastPage(),
+                    'from'         => $campaigns->firstItem(),
+                    'to'           => $campaigns->lastItem(),
                 ],
-            ], 200);
-        } catch (Throwable $exception) {
+            ]);
+        } catch (Throwable $e) {
             return response()->json([
-                'status' => false,
-                'error' => $exception->getMessage(),
-                'message' => 'Error processing request'
+                'status'  => false,
+                'error'   => $e->getMessage(),
+                'message' => 'Error processing request',
             ], 500);
         }
     }
 
-    public function mapCampaignStatus($campaign)
+    // public function getCampaigns($request)
+    // {
+    //     try {
+    //         $user = auth()->user();
+
+    //         $type = strtolower($request->query('type'));
+    //         $per_page = (int)$request->query('per_page', 15);
+    //         // Fetch campaigns by user ID
+    //         $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
+
+    //         // Fetch user's base currency and map it
+    //         $mapCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
+
+    //         // Fetch currency details
+    //         $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+    //         // Validate retrieved data
+    //         if (!$currency) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => 'Currency not found.'
+    //             ], 404);
+    //         }
+
+    //         // Prepare campaign data
+    //         // $campaigns is a LengthAwarePaginator — map() is not available on the paginator itself.
+    //         // Map over the underlying collection instead.
+    //         $data = $campaigns->getCollection()->map(function ($campaign) use ($currency) {
+    //             $unitPrice = $campaign->campaign_amount;
+    //             $totalAmount = $campaign->total_amount;
+
+    //             // Check if conversion is needed
+    //             if ($currency->code !== $campaign->currency) {
+    //                 $rate = $this->currencyConversion($campaign->currency, $currency->code);
+    //                 $unitPrice *= $rate;
+    //                 $totalAmount *= $rate;
+    //             }
+
+    //             // $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
+    //             $spentAmount = $unitPrice * $campaign->completed_count;
+    //             $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
+
+    //             return [
+    //                 'id' => $campaign->id,
+    //                 'user_id' => $campaign->user_id,
+    //                 'campaign_id' => $campaign->job_id,
+    //                 'title' => $campaign->post_title,
+    //                 'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
+    //                 'completed_count' => $campaign->pending_count + $campaign->completed_count,
+    //                 'expected_count' => (int)$campaign->number_of_staff,
+    //                 'campaign_category' => $campaign->campaignType->name,
+    //                 'campaign_category_url' => $campaign->campaignType->url,
+    //                 'unit_price' => round($unitPrice, 5),
+    //                 'total_amount' => round($totalAmount, 5),
+    //                 'currency' => $currency->code,
+    //                 'original_currency' => $campaign->currency,
+    //                 'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
+    //                 'status' => $this->mapCampaignStatus($campaign),
+    //                 'amount_ratio' => $campaign->currency . $spentAmount . ' / ' . $campaign->currency . $campaignAmount,
+    //                 'stat' => $this->jobModel->getCampaignStats($campaign->id),
+    //                 'created' => $campaign->created_at,
+    //             ];
+    //         })->all();
+
+    //         return response()->json([
+    //             'status' => true,
+    //             'message' => 'Campaign List',
+    //             'data' => $data,
+    //             'pagination' => [
+    //                 'total' => $campaigns->total(),
+    //                 'per_page' => $campaigns->perPage(),
+    //                 'current_page' => $campaigns->currentPage(),
+    //                 'last_page' => $campaigns->lastPage(),
+    //                 'from' => $campaigns->firstItem(),
+    //                 'to' => $campaigns->lastItem(),
+    //             ],
+    //         ], 200);
+    //     } catch (Throwable $exception) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'error' => $exception->getMessage(),
+    //             'message' => 'Error processing request'
+    //         ], 500);
+    //     }
+    // }
+
+    public function mapCampaignStatus($campaign): string
     {
-        if ($campaign->is_completed) {
-            return 'completed';
-        }
+        if ($campaign->is_completed)        return 'completed';
+        if ($campaign->status === 'Denied') return 'declined';
 
-        if ($campaign->status === 'Denied') {
-            return 'declined';
-        }
-
-        if ($campaign->status === 'Flagged') {
-            return 'flagged';
-        }
-
-        if ($campaign->status === 'Paused') {
-            return 'paused';
-        }
-
-        if ($campaign->status === 'Live' && !$campaign->is_completed) {
-            return 'live';
-        }
-
-        if ($campaign->status === 'Offline') {
-            return 'pending';
-        }
-
-        return strtolower($campaign->status);
+        return match ($campaign->status) {
+            'Flagged' => 'flagged',
+            'Paused'  => 'paused',
+            'Live'    => 'live',
+            'Offline' => 'pending',
+            default   => strtolower($campaign->status),
+        };
     }
 
-    public function currencyConversion($from, $to)
+    public function currencyConversion(string $from, string $to): float
     {
-        $currencyRate = $this->currencyModel->convertCurrency($from, $to);
-
-        // return $currencyRate;
-        if (!$currencyRate) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Currency conversion rate not found.'
-            ], 404);
+        if ($from === $to) {
+            return 1.0;
         }
 
-        $rate = $currencyRate->rate;
-        return $rate;
+        $rate = Cache::remember(
+            "fx:{$from}:{$to}",
+            now()->addDay(),
+            fn() => $this->currencyModel->convertCurrency($from, $to)
+        );
+
+        if (!$rate) {
+            throw new \RuntimeException("Currency conversion rate not found: {$from} → {$to}");
+        }
+
+        return (float) $rate->rate;
     }
+
     public function create($request)
     {
         $this->validator->validateCampaignCreation($request);

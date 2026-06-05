@@ -101,24 +101,14 @@ class WalletRepositoryModel
         return $currency->referral_commission;
     }
 
-    public function mapCurrency($currency)
+    public function mapCurrency($currency): string
     {
-        switch (strtolower($currency)) {
-            case 'naira':
-                return 'NGN';
-
-            case 'ngn':
-                return 'NGN';
-
-            case 'usd':
-                return 'USD';
-
-            case 'dollar':
-                return 'USD';
-
-            default:
-                return $currency;
-        }
+        return [
+            'naira'  => 'NGN',
+            'ngn'    => 'NGN',
+            'dollar' => 'USD',
+            'usd'    => 'USD',
+        ][strtolower($currency)] ?? $currency;
     }
 
     public function getWalletBalance($userId)
