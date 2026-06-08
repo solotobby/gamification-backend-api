@@ -329,13 +329,13 @@ class HireWorkerService
             //     $amount
             // );
 
-            if (!$debit) {
-                DB::rollBack();
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Failed to debit wallet. Please try again.',
-                ], 500);
-            }
+            // if (!$debit) {
+            // DB::rollBack();
+            // return response()->json([
+            //     'status'  => false,
+            //     'message' => 'Failed to debit wallet. Please try again.',
+            // ], 500);
+            // }
 
             // 🔹 Save purchase
             $this->repo->purchasePoint($worker->id, $user->id, $amount, $currency, $worker);
@@ -352,7 +352,7 @@ class HireWorkerService
             ], 200);
         } catch (Throwable $e) {
             DB::rollBack();
-
+            
             return response()->json([
                 'status'  => false,
                 'message' => 'Error processing point purchase.',
