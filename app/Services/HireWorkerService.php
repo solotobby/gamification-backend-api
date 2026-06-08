@@ -290,22 +290,44 @@ class HireWorkerService
             $amount = $unitPrice;
 
             // Insufficient wallet balance
-            if (!checkWalletBalance($user, $currency, $amount)) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Insufficient wallet balance. Please fund your wallet.',
-                ], 402);
-            }
+            // if (!checkWalletBalance($user, $currency, $amount)) {
+            //     return response()->json([
+            //         'status'  => false,
+            //         'message' => 'Insufficient wallet balance. Please fund your wallet.',
+            //     ], 402);
+            // }
 
             DB::beginTransaction();
 
-            // 🔹 Debit wallet
-            // $debit = debitWallet($user, $currency, $amount);
-            $debit = app(walletRepositoryModel::class)->debitWallet(
+            if (!$this->walletModel->checkWalletBalance(
                 $user,
                 $currency->code,
                 $amount
-            );
+            )) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You do not have sufficient funds in your wallet',
+                ], 401);
+            }
+
+            if (!$this->walletModel->debitWallet(
+                $user,
+                $currency->code,
+                $amount
+            )) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Wallet debit failed. Please try again.',
+                ], 401);
+            }
+
+            // 🔹 Debit wallet
+            // $debit = debitWallet($user, $currency, $amount);
+            // $debit = app(walletRepositoryModel::class)->debitWallet(
+            //     $user,
+            //     $currency->code,
+            //     $amount
+            // );
 
             if (!$debit) {
                 DB::rollBack();

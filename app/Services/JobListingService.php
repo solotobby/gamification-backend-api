@@ -285,21 +285,45 @@ class JobListingService
                 $amount *= $rate;
             }
 
-            if (!checkWalletBalance($user, $currency, $amount)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Insufficient wallet balance.',
-                ], 402);
-            }
+            // if (!checkWalletBalance($user, $currency, $amount)) {
+            //     return response()->json([
+            //         'status'  => false,
+            //         'message' => 'Insufficient wallet balance. Please fund your wallet.',
+            //     ], 402);
+            // }
+
+
 
             DB::beginTransaction();
 
-            app(WalletRepositoryModel::class)->debitWallet(
+            // app(WalletRepositoryModel::class)->debitWallet(
+            //     $user,
+            //     $currency->code,
+            //     $amount
+            // );
+
+            if (!$this->walletModel->checkWalletBalance(
                 $user,
                 $currency->code,
                 $amount
-            );
+            )) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You do not have sufficient funds in your wallet',
+                ], 401);
+            }
 
+            if (!$this->walletModel->debitWallet(
+                $user,
+                $currency->code,
+                $amount
+            )) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Wallet debit failed. Please try again.',
+                ], 401);
+            }
+            
             $this->jobRepository->purchaseJobPoint(
                 $job->id,
                 $user->id,

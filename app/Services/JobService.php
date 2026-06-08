@@ -491,6 +491,10 @@ class JobService
             if ($request->hasFile('proof') && $campaign->allow_upload) {
                 $file = $request->file('proof');
                 $proofUrl = $this->cloudinary->uploadImage($file, 'uploads', true);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Error uploading Proof'
+                ], 400);
             }
 
             //return $proofUrl;

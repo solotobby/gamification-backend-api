@@ -1007,6 +1007,10 @@ class CampaignService
 
         if ($request->filled('expected_result_image')) {
             $expectedURL = app(CloudinaryService::class)->uploadBase64Image($request->expected_result_image);
+             return response()->json([
+                    'status' => false,
+                    'message' => 'Error uploading Proof'
+                ], 401);
         }
         $request->merge([
             'user_id' => $user->id,
