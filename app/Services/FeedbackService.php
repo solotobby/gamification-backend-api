@@ -47,7 +47,7 @@ class FeedbackService
                 'category' => $request->category,
                 'message'  => $request->message,
                 'proof_url' => $proofUrl,
-                'status'   => true,
+                'status'   => false,
             ];
 
             $feedback = $this->feedbackModel->createFeedback($data);
@@ -156,6 +156,9 @@ class FeedbackService
                 $isImage,
                 $imageUrl
             );
+
+            $feedback->status = true;
+            $feedback->save();
 
             $replies = $this->getRepliesFormatted($feedbackId);
 
