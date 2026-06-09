@@ -39,7 +39,7 @@ class CampaignRepositoryModel
     }
     public function createCampaign($request)
     {
-        return Campaign::create($request->all());
+        return Campaign::create($request);
     }
 
     // public function getCampaignsByPagination($id, $type, $per_page, $page = null)

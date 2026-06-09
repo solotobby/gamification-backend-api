@@ -7,6 +7,30 @@ use Illuminate\Validation\ValidationException;
 
 class CampaignValidator
 {
+    // public static function validateCampaignCreation($request)
+    // {
+    //     $validationRules = [
+    //         'description' => 'required|string',
+    //         'proof' => 'required|string',
+    //         'post_title' => 'required|string',
+    //         'post_link' => 'required|string',
+    //         'number_of_staff' => 'required|string',
+    //         'campaign_amount' => 'required|string',
+    //         'validate' => 'required|boolean',
+    //         'campaign_type' => 'required|numeric',
+    //         'campaign_subcategory' => 'required|numeric',
+    //         'priotize' => 'required|boolean',
+    //         'allow_upload' => 'required|boolean',
+    //         'expected_result_image' => 'nullable|string',
+    //         'approval_time' => 'required|numeric|in:24,36,48,56,72'
+    //     ];
+    //     $validator = Validator::make($request->all(), $validationRules);
+
+    //     if ($validator->fails()) {
+    //         throw new ValidationException($validator);
+    //     }
+    // }
+
     public static function validateCampaignCreation($request)
     {
         $validationRules = [
@@ -14,7 +38,7 @@ class CampaignValidator
             'proof' => 'required|string',
             'post_title' => 'required|string',
             'post_link' => 'required|string',
-            'number_of_staff' => 'required|string',
+            'number_of_staff' => 'required|numeric|min:10',
             'campaign_amount' => 'required|string',
             'validate' => 'required|boolean',
             'campaign_type' => 'required|numeric',
@@ -24,7 +48,14 @@ class CampaignValidator
             'expected_result_image' => 'nullable|string',
             'approval_time' => 'required|numeric|in:24,36,48,56,72'
         ];
-        $validator = Validator::make($request->all(), $validationRules);
+
+        $validator = Validator::make(
+            $request->all(),
+            $validationRules,
+            [
+                'number_of_staff.min' => 'Number of workers must not be less than 10.'
+            ]
+        );
 
         if ($validator->fails()) {
             throw new ValidationException($validator);

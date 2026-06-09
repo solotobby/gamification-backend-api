@@ -63,7 +63,6 @@ class CampaignService
             $type     = strtolower($request->query('type', ''));
             $per_page = (int) $request->query('per_page', 15);
 
-            // ── 1. Resolve currency ONCE (cached) ────────────────────────────────
             $mapCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
             $currency    = Cache::remember(
                 "currency:{$mapCurrency}",
@@ -75,7 +74,6 @@ class CampaignService
                 return response()->json(['status' => false, 'message' => 'Currency not found.'], 404);
             }
 
-            // ── 2. Paginated campaigns (only columns we actually use) ─────────────
             $campaigns = $this->campaignModel->getCampaignsByPagination(
                 $user->id,
                 $type,
@@ -85,12 +83,8 @@ class CampaignService
             $collection   = $campaigns->getCollection();
             $campaignIds  = $collection->pluck('id')->all();
 
-            // ── 3. Batch-load stats — ONE query for all campaigns ─────────────────
             $statsMap = $this->jobModel->getCampaignStatsBatch($campaignIds);
 
-            // ── 4. Resolve conversion rate once if needed ─────────────────────────
-            //    (assumes all campaigns share the same original currency, which is
-            //     the common case; if mixed currencies exist, group them first)
             $rateCache = [];
             $getRate   = function (string $from, string $to) use (&$rateCache): float {
                 $key = "{$from}-{$to}";
@@ -100,7 +94,6 @@ class CampaignService
                 return $rateCache[$key];
             };
 
-            // ── 5. Map results ─────────────────────────────────────────────────────
             $data = $collection->map(function ($campaign) use ($currency, $getRate, $statsMap) {
                 $unitPrice   = (float) $campaign->campaign_amount;
                 $totalAmount = (float) $campaign->total_amount;
@@ -159,92 +152,6 @@ class CampaignService
         }
     }
 
-    // public function getCampaigns($request)
-    // {
-    //     try {
-    //         $user = auth()->user();
-
-    //         $type = strtolower($request->query('type'));
-    //         $per_page = (int)$request->query('per_page', 15);
-    //         // Fetch campaigns by user ID
-    //         $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
-
-    //         // Fetch user's base currency and map it
-    //         $mapCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
-
-    //         // Fetch currency details
-    //         $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
-
-    //         // Validate retrieved data
-    //         if (!$currency) {
-    //             return response()->json([
-    //                 'status' => false,
-    //                 'message' => 'Currency not found.'
-    //             ], 404);
-    //         }
-
-    //         // Prepare campaign data
-    //         // $campaigns is a LengthAwarePaginator — map() is not available on the paginator itself.
-    //         // Map over the underlying collection instead.
-    //         $data = $campaigns->getCollection()->map(function ($campaign) use ($currency) {
-    //             $unitPrice = $campaign->campaign_amount;
-    //             $totalAmount = $campaign->total_amount;
-
-    //             // Check if conversion is needed
-    //             if ($currency->code !== $campaign->currency) {
-    //                 $rate = $this->currencyConversion($campaign->currency, $currency->code);
-    //                 $unitPrice *= $rate;
-    //                 $totalAmount *= $rate;
-    //             }
-
-    //             // $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
-    //             $spentAmount = $unitPrice * $campaign->completed_count;
-    //             $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
-
-    //             return [
-    //                 'id' => $campaign->id,
-    //                 'user_id' => $campaign->user_id,
-    //                 'campaign_id' => $campaign->job_id,
-    //                 'title' => $campaign->post_title,
-    //                 'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
-    //                 'completed_count' => $campaign->pending_count + $campaign->completed_count,
-    //                 'expected_count' => (int)$campaign->number_of_staff,
-    //                 'campaign_category' => $campaign->campaignType->name,
-    //                 'campaign_category_url' => $campaign->campaignType->url,
-    //                 'unit_price' => round($unitPrice, 5),
-    //                 'total_amount' => round($totalAmount, 5),
-    //                 'currency' => $currency->code,
-    //                 'original_currency' => $campaign->currency,
-    //                 'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
-    //                 'status' => $this->mapCampaignStatus($campaign),
-    //                 'amount_ratio' => $campaign->currency . $spentAmount . ' / ' . $campaign->currency . $campaignAmount,
-    //                 'stat' => $this->jobModel->getCampaignStats($campaign->id),
-    //                 'created' => $campaign->created_at,
-    //             ];
-    //         })->all();
-
-    //         return response()->json([
-    //             'status' => true,
-    //             'message' => 'Campaign List',
-    //             'data' => $data,
-    //             'pagination' => [
-    //                 'total' => $campaigns->total(),
-    //                 'per_page' => $campaigns->perPage(),
-    //                 'current_page' => $campaigns->currentPage(),
-    //                 'last_page' => $campaigns->lastPage(),
-    //                 'from' => $campaigns->firstItem(),
-    //                 'to' => $campaigns->lastItem(),
-    //             ],
-    //         ], 200);
-    //     } catch (Throwable $exception) {
-    //         return response()->json([
-    //             'status' => false,
-    //             'error' => $exception->getMessage(),
-    //             'message' => 'Error processing request'
-    //         ], 500);
-    //     }
-    // }
-
     public function mapCampaignStatus($campaign): string
     {
         if ($campaign->is_completed)        return 'completed';
@@ -278,93 +185,86 @@ class CampaignService
         return (float) $rate->rate;
     }
 
+
     public function create($request)
     {
         $this->validator->validateCampaignCreation($request);
 
+        DB::beginTransaction();
+
         try {
-            return response()->json([
-                'status' => false,
-                'message' => 'Error creating Campaign, Please try again later',
-            ], 401);
 
-
-            DB::beginTransaction();
             $user = auth()->user();
-            $baseCurrency = $user->wallet->base_currency;
 
-            // Map currency to determine prioritization and upload amount
-            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->getMappedCurrency($user);
 
-            // Get the currency details and status
-            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
-
-            // Determine prioritization amount and status
-            $prAmount = $request->priotize ? (float)($currency->priotize) : 0;
-            $priotize = $request->priotize ? 'Priotize' : 'Pending';
-
-            // Calculate initial upload amount
-            $iniAmount = $request->allow_upload ? $request->number_of_staff * (float)($currency->allow_upload) : 0;
-            $allowUpload = (bool)$request->allow_upload;
-
-            // Get the Subcategory amount from db
-            $subAmount = $this->campaignModel->getSubCategoryAmount(
-                $request->campaign_subcategory,
-                $request->campaign_type
-            );
-            // return $subAmount;
-            // Calculate estimated amount and total
-            $estAmount = $request->number_of_staff * $subAmount->amount;
-            $userPercent = $user->is_business ? 100 : 60;
-            $percent = ($userPercent / 100) * $estAmount;
-            $total = $estAmount + $percent + $iniAmount + $prAmount;
-
-            // Generate a unique job ID
-            $jobId = rand(1000000, 99999999999);
-
-            // Check wallet balance and debit if valid
-            if (!$this->walletModel->checkWalletBalance(
+            $amounts = $this->calculateCampaignAmounts(
+                $request,
                 $user,
-                $currency->code,
-                $total
-            )) {
+                $currency
+            );
+
+            // Check wallet balance
+            if (
+                !$this->walletModel->checkWalletBalance(
+                    $user,
+                    $currency->code,
+                    $amounts['total']
+                )
+            ) {
+
+                DB::rollBack();
+
                 return response()->json([
                     'status' => false,
                     'message' => 'You do not have sufficient funds in your wallet',
                 ], 401);
             }
 
-            if (!$this->walletModel->debitWallet(
+            // Debit wallet
+            $walletDebited = $this->walletModel->debitWallet(
                 $user,
                 $currency->code,
-                $total
-            )) {
+                $amounts['total']
+            );
+
+            if (!$walletDebited) {
+
+                DB::rollBack();
+
                 return response()->json([
                     'status' => false,
                     'message' => 'Wallet debit failed. Please try again.',
                 ], 401);
             }
 
-            // Process the campaign
+            // return $request;
+            // Process Campaign
             $campaign = $this->processCampaign(
-                $total,
-                $request,
-                $jobId,
-                $percent,
-                $allowUpload,
-                $priotize,
-                $currency,
+                request: $request->all(),
+                user: $user,
+                currency: $currency,
+                total: $amounts['total'],
+                percent: $amounts['percent'],
+                allowUpload: $amounts['allow_upload'],
+                priotize: $amounts['priotize'],
+                jobId: $amounts['job_id']
             );
 
+
+            DB::commit();
+
+            // Notification
             $this->notification->createNotification(
                 $user,
                 'Task Created',
-                "Task with ID {$jobId} Created Successfully and pending approval from the admin",
+                "Task with ID {$amounts['job_id']} Created Successfully and pending approval from the admin",
                 'task'
             );
-            DB::commit();
-            // Notify user via email
-            Mail::to($user->email)->send(new CreateCampaign($campaign));
+
+            // Send email
+            Mail::to($user->email)
+                ->queue(new CreateCampaign($campaign));
 
             return response()->json([
                 'status' => true,
@@ -372,22 +272,152 @@ class CampaignService
                 'data' => $campaign,
             ], 201);
         } catch (Throwable $e) {
-            Log::error('Campaign creation failed: ' . $e->getMessage());
 
             DB::rollBack();
 
-            Log::error('Campaign creation failed: ' . $e->getMessage(), [
+            Log::error('Campaign creation failed', [
+                'message' => $e->getMessage(),
                 'user_id' => auth()->id(),
                 'request' => $request->all(),
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->json([
                 'status' => false,
-                'error' => $e,
                 'message' => 'Error processing request',
             ], 500);
         }
     }
 
+
+    private function getMappedCurrency($user)
+    {
+        $mappedCurrency = $this->walletModel
+            ->mapCurrency($user->wallet->base_currency);
+
+        return $this->currencyModel
+            ->getCurrencyByCode($mappedCurrency);
+    }
+
+    private function calculateCampaignAmounts($request, $user, $currency)
+    {
+        // Get subcategory amount
+        $subAmount = $this->campaignModel->getSubCategoryAmount(
+            $request->campaign_subcategory,
+            $request->campaign_type
+        );
+
+        // Estimated amount
+        $estAmount = $request->number_of_staff * $subAmount->amount;
+
+        // Admin percentage
+        $userPercent = $user->is_business ? 100 : 60;
+
+        $percent = ($userPercent / 100) * $estAmount;
+
+        // Priotize amount
+        $prAmount = $request->priotize
+            ? (float) $currency->priotize
+            : 0;
+
+        // Upload amount
+        $iniAmount = $request->allow_upload
+            ? $request->number_of_staff * (float) $currency->allow_upload
+            : 0;
+
+        // Total amount
+        $total = $estAmount + $percent + $iniAmount + $prAmount;
+
+        return [
+            'percent' => $percent,
+            'total' => $total,
+            'allow_upload' => (bool) $request->allow_upload,
+            'priotize' => $request->priotize ? 'Priotize' : 'Pending',
+            'job_id' => random_int(1000000, 99999999999),
+        ];
+    }
+
+    private function processCampaign(
+        array $request,
+        $user,
+        $currency,
+        $total,
+        $percent,
+        $allowUpload,
+        $priotize,
+        $jobId
+    ) {
+
+        $channel = $currency->code === 'NGN'
+            ? 'paystack'
+            : 'paypal';
+
+        $approvalTime = $request['approval_time'] ?? 24;
+        $expectedURL = 'no image';
+
+        // Upload expected result image
+        if (!empty($request['expected_result_image'] ?? null)) {
+
+            $expectedURL = app(CloudinaryService::class)
+                ->uploadBase64Image($request['expected_result_image']);
+
+            if (!$expectedURL) {
+                throw new Exception('Error uploading Proof');
+            }
+        }
+
+        // Prepare payload
+        $payload = [
+            'user_id' => $user->id,
+            'total_amount' => $total,
+            'job_id' => $jobId,
+            'currency' => $currency->code,
+            'impressions' => 0,
+            'pending_count' => 0,
+            'completed_count' => 0,
+            'allow_upload' => $allowUpload,
+            'approved' => $priotize,
+            'expected_result_image' => $expectedURL,
+            'approval_time' => $approvalTime,
+        ];
+
+        // Create campaign
+        $campaign = $this->campaignModel->createCampaign([
+            ...$request,
+            ...$payload
+        ]);
+
+        // Process payment transaction
+        $this->campaignModel->processPaymentTransaction(
+            $user,
+            $campaign,
+            $total,
+            $currency->code,
+            $channel
+        );
+
+        // Update admin wallet
+        $this->campaignModel->updateAdminWallet(
+            $percent,
+            $currency->code
+        );
+
+        // Log admin transaction
+        $this->campaignModel->logAdminTransaction(
+            $percent,
+            $currency->code,
+            $channel,
+            $user
+        );
+
+        // Notify admin
+        Mail::to('hello@freebyztechnologies.com')
+            ->cc('favour@freebyztechnologies.com')
+            ->bcc('freebyzcom@gmail.com')
+            ->queue(new AdminCampaignPosted($campaign));
+
+        return $campaign;
+    }
     public function updateCampaignWorker($request)
     {
 
@@ -1007,63 +1037,6 @@ class CampaignService
         return true;
     }
 
-    private function processCampaign($total, $request, $job_id, $percent, $allowUpload, $priotize, $currency)
-    {
-        $user = auth()->user();
-        $channel = $currency->code == "NGN" ? 'paystack' : 'paypal';
-
-        $approvalTime = $user->is_business
-            ? $request->approval_time
-            : 24;
-        // Log::info('Base64 input', ['image' => $request->expected_result_image]);
-
-        if ($request->filled('expected_result_image')) {
-            $expectedURL = app(CloudinaryService::class)->uploadBase64Image($request->expected_result_image);
-            return response()->json([
-                'status' => false,
-                'message' => 'Error uploading Proof'
-            ], 401);
-        }
-        $request->merge([
-            'user_id' => $user->id,
-            'total_amount' => $total,
-            'job_id' => $job_id,
-            'currency' => $currency->code,
-            'impressions' => 0,
-            'pending_count' => 0,
-            'completed_count' => 0,
-            'allow_upload' => $allowUpload,
-            'approved' => $priotize,
-            'expected_result_image' => $expectedURL ?? null,
-            'approval_time' => $approvalTime
-        ]);
-
-        // Create the campaign
-        $campaign = $this->campaignModel->createCampaign($request);
-
-        // Process payment transaction
-        $this->campaignModel->processPaymentTransaction(
-            $user,
-            $campaign,
-            $total,
-            $currency->code,
-            $channel,
-        );
-
-
-        Mail::to('hello@freebyztechnologies.com')
-            ->cc('favour@freebyztechnologies.com')
-            ->bcc('freebyzcom@gmail.com')
-            ->send(new AdminCampaignPosted($campaign));
-
-        // Update admin wallet
-        $this->campaignModel->updateAdminWallet($percent, $currency->code);
-
-        // Log admin transaction
-        $this->campaignModel->logAdminTransaction($percent, $currency->code, $channel, $user);
-
-        return $campaign;
-    }
     public function approveOrDeclineJob($request)
     {
         $this->validator->approveOrDenyReason($request);
@@ -1219,7 +1192,6 @@ class CampaignService
         ], 200);
     }
 
-
     public function adminActivities($id)
     {
 
@@ -1233,4 +1205,262 @@ class CampaignService
 
         return view('admin.campaign_mgt.admin_activities', ['lists' => $cam, 'count' => $count]);
     }
+
+    //  public function create($request)
+    // {
+    //     $this->validator->validateCampaignCreation($request);
+
+    //     try {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Error creating Campaign, Please try again later',
+    //         ], 401);
+
+
+    //         DB::beginTransaction();
+    //         $user = auth()->user();
+    //         $baseCurrency = $user->wallet->base_currency;
+
+    //         // Map currency to determine prioritization and upload amount
+    //         $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+
+    //         // Get the currency details and status
+    //         $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+    //         // Determine prioritization amount and status
+    //         $prAmount = $request->priotize ? (float)($currency->priotize) : 0;
+    //         $priotize = $request->priotize ? 'Priotize' : 'Pending';
+
+    //         // Calculate initial upload amount
+    //         $iniAmount = $request->allow_upload ? $request->number_of_staff * (float)($currency->allow_upload) : 0;
+    //         $allowUpload = (bool)$request->allow_upload;
+
+    //         // Get the Subcategory amount from db
+    //         $subAmount = $this->campaignModel->getSubCategoryAmount(
+    //             $request->campaign_subcategory,
+    //             $request->campaign_type
+    //         );
+    //         // return $subAmount;
+    //         // Calculate estimated amount and total
+    //         $estAmount = $request->number_of_staff * $subAmount->amount;
+    //         $userPercent = $user->is_business ? 100 : 60;
+    //         $percent = ($userPercent / 100) * $estAmount;
+    //         $total = $estAmount + $percent + $iniAmount + $prAmount;
+
+    //         // Generate a unique job ID
+    //         $jobId = rand(1000000, 99999999999);
+
+    //         // Check wallet balance and debit if valid
+    //         if (!$this->walletModel->checkWalletBalance(
+    //             $user,
+    //             $currency->code,
+    //             $total
+    //         )) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => 'You do not have sufficient funds in your wallet',
+    //             ], 401);
+    //         }
+
+    //         if (!$this->walletModel->debitWallet(
+    //             $user,
+    //             $currency->code,
+    //             $total
+    //         )) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => 'Wallet debit failed. Please try again.',
+    //             ], 401);
+    //         }
+
+    //         // Process the campaign
+    //         $campaign = $this->processCampaign(
+    //             $total,
+    //             $request,
+    //             $jobId,
+    //             $percent,
+    //             $allowUpload,
+    //             $priotize,
+    //             $currency,
+    //         );
+
+    //         $this->notification->createNotification(
+    //             $user,
+    //             'Task Created',
+    //             "Task with ID {$jobId} Created Successfully and pending approval from the admin",
+    //             'task'
+    //         );
+    //         DB::commit();
+    //         // Notify user via email
+    //         Mail::to($user->email)->send(new CreateCampaign($campaign));
+
+    //         return response()->json([
+    //             'status' => true,
+    //             'message' => 'Task Posted Successfully. A member of our team will activate your campaign within 24 hours.',
+    //             'data' => $campaign,
+    //         ], 201);
+    //     } catch (Throwable $e) {
+    //         Log::error('Campaign creation failed: ' . $e->getMessage());
+
+    //         DB::rollBack();
+
+    //         Log::error('Campaign creation failed: ' . $e->getMessage(), [
+    //             'user_id' => auth()->id(),
+    //             'request' => $request->all(),
+    //         ]);
+    //         return response()->json([
+    //             'status' => false,
+    //             'error' => $e,
+    //             'message' => 'Error processing request',
+    //         ], 500);
+    //     }
+    // }
+
+    // public function getCampaigns($request)
+    // {
+    //     try {
+    //         $user = auth()->user();
+
+    //         $type = strtolower($request->query('type'));
+    //         $per_page = (int)$request->query('per_page', 15);
+    //         // Fetch campaigns by user ID
+    //         $campaigns = $this->campaignModel->getCampaignsByPagination($user->id, $type, $per_page);
+
+    //         // Fetch user's base currency and map it
+    //         $mapCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
+
+    //         // Fetch currency details
+    //         $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+    //         // Validate retrieved data
+    //         if (!$currency) {
+    //             return response()->json([
+    //                 'status' => false,
+    //                 'message' => 'Currency not found.'
+    //             ], 404);
+    //         }
+
+    //         // Prepare campaign data
+    //         // $campaigns is a LengthAwarePaginator — map() is not available on the paginator itself.
+    //         // Map over the underlying collection instead.
+    //         $data = $campaigns->getCollection()->map(function ($campaign) use ($currency) {
+    //             $unitPrice = $campaign->campaign_amount;
+    //             $totalAmount = $campaign->total_amount;
+
+    //             // Check if conversion is needed
+    //             if ($currency->code !== $campaign->currency) {
+    //                 $rate = $this->currencyConversion($campaign->currency, $currency->code);
+    //                 $unitPrice *= $rate;
+    //                 $totalAmount *= $rate;
+    //             }
+
+    //             // $spentAmount = $this->jobModel->getCampaignSpentAmount($campaign->id);
+    //             $spentAmount = $unitPrice * $campaign->completed_count;
+    //             $campaignAmount = $campaign->campaign_amount * $campaign->number_of_staff;
+
+    //             return [
+    //                 'id' => $campaign->id,
+    //                 'user_id' => $campaign->user_id,
+    //                 'campaign_id' => $campaign->job_id,
+    //                 'title' => $campaign->post_title,
+    //                 'approved' => $campaign->completed_count . '/' . $campaign->number_of_staff,
+    //                 'completed_count' => $campaign->pending_count + $campaign->completed_count,
+    //                 'expected_count' => (int)$campaign->number_of_staff,
+    //                 'campaign_category' => $campaign->campaignType->name,
+    //                 'campaign_category_url' => $campaign->campaignType->url,
+    //                 'unit_price' => round($unitPrice, 5),
+    //                 'total_amount' => round($totalAmount, 5),
+    //                 'currency' => $currency->code,
+    //                 'original_currency' => $campaign->currency,
+    //                 'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
+    //                 'status' => $this->mapCampaignStatus($campaign),
+    //                 'amount_ratio' => $campaign->currency . $spentAmount . ' / ' . $campaign->currency . $campaignAmount,
+    //                 'stat' => $this->jobModel->getCampaignStats($campaign->id),
+    //                 'created' => $campaign->created_at,
+    //             ];
+    //         })->all();
+
+    //         return response()->json([
+    //             'status' => true,
+    //             'message' => 'Campaign List',
+    //             'data' => $data,
+    //             'pagination' => [
+    //                 'total' => $campaigns->total(),
+    //                 'per_page' => $campaigns->perPage(),
+    //                 'current_page' => $campaigns->currentPage(),
+    //                 'last_page' => $campaigns->lastPage(),
+    //                 'from' => $campaigns->firstItem(),
+    //                 'to' => $campaigns->lastItem(),
+    //             ],
+    //         ], 200);
+    //     } catch (Throwable $exception) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'error' => $exception->getMessage(),
+    //             'message' => 'Error processing request'
+    //         ], 500);
+    //     }
+    // }
+
+
+    // private function processCampaign($total, $request, $job_id, $percent, $allowUpload, $priotize, $currency)
+    // {
+    //     $user = auth()->user();
+    //     $channel = $currency->code == "NGN" ? 'paystack' : 'paypal';
+
+    //     $approvalTime = $user->is_business
+    //         ? $request->approval_time
+    //         : 24;
+    //     // Log::info('Base64 input', ['image' => $request->expected_result_image]);
+
+    //     if ($request->filled('expected_result_image')) {
+    //         $expectedURL = app(CloudinaryService::class)->uploadBase64Image($request->expected_result_image);
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Error uploading Proof'
+    //         ], 401);
+    //     }
+    //     $request->merge([
+    //         'user_id' => $user->id,
+    //         'total_amount' => $total,
+    //         'job_id' => $job_id,
+    //         'currency' => $currency->code,
+    //         'impressions' => 0,
+    //         'pending_count' => 0,
+    //         'completed_count' => 0,
+    //         'allow_upload' => $allowUpload,
+    //         'approved' => $priotize,
+    //         'expected_result_image' => $expectedURL ?? null,
+    //         'approval_time' => $approvalTime
+    //     ]);
+
+    //     // Create the campaign
+    //     $campaign = $this->campaignModel->createCampaign($request);
+
+    //     // Process payment transaction
+    //     $this->campaignModel->processPaymentTransaction(
+    //         $user,
+    //         $campaign,
+    //         $total,
+    //         $currency->code,
+    //         $channel,
+    //     );
+
+
+    //     Mail::to('hello@freebyztechnologies.com')
+    //         ->cc('favour@freebyztechnologies.com')
+    //         ->bcc('freebyzcom@gmail.com')
+    //         ->send(new AdminCampaignPosted($campaign));
+
+    //     // Update admin wallet
+    //     $this->campaignModel->updateAdminWallet($percent, $currency->code);
+
+    //     // Log admin transaction
+    //     $this->campaignModel->logAdminTransaction($percent, $currency->code, $channel, $user);
+
+    //     return $campaign;
+    // }
+
+
+
 }
