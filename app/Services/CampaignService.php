@@ -283,6 +283,11 @@ class CampaignService
         $this->validator->validateCampaignCreation($request);
 
         try {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error creating Campaign, Please try again later',
+            ], 401);
+
 
             DB::beginTransaction();
             $user = auth()->user();
