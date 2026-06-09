@@ -365,16 +365,19 @@ class CampaignService
                 'status' => true,
                 'message' => 'Task Posted Successfully. A member of our team will activate your campaign within 24 hours.',
                 'data' => $campaign,
-                ], 201);
-                } catch (Throwable $e) {
-            Log::error('Campaign creation failed: ' . $e->getMessage());
+            ], 201);
+        } catch (Throwable $e) {
             Log::error('Campaign creation failed: ' . $e->getMessage());
 
             DB::rollBack();
 
+            Log::error('Campaign creation failed: ' . $e->getMessage(), [
+                'user_id' => auth()->id(),
+                'request' => $request->all(),
+            ]);
             return response()->json([
                 'status' => false,
-                'error' => $e->getMessage(),
+                'error' => $e,
                 'message' => 'Error processing request',
             ], 500);
         }
@@ -1011,10 +1014,10 @@ class CampaignService
 
         if ($request->filled('expected_result_image')) {
             $expectedURL = app(CloudinaryService::class)->uploadBase64Image($request->expected_result_image);
-             return response()->json([
-                    'status' => false,
-                    'message' => 'Error uploading Proof'
-                ], 401);
+            return response()->json([
+                'status' => false,
+                'message' => 'Error uploading Proof'
+            ], 401);
         }
         $request->merge([
             'user_id' => $user->id,
