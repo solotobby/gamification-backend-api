@@ -365,11 +365,13 @@ class CampaignService
                 'status' => true,
                 'message' => 'Task Posted Successfully. A member of our team will activate your campaign within 24 hours.',
                 'data' => $campaign,
-            ], 201);
-        } catch (Throwable $e) {
+                ], 201);
+                } catch (Throwable $e) {
+            Log::error('Campaign creation failed: ' . $e->getMessage());
+            Log::error('Campaign creation failed: ' . $e->getMessage());
+
             DB::rollBack();
 
-            Log::error('Campaign creation failed: ' . $e->getMessage());
             return response()->json([
                 'status' => false,
                 'error' => $e->getMessage(),
