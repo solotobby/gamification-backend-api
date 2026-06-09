@@ -315,7 +315,7 @@ class CampaignService
             $total = $estAmount + $percent + $iniAmount + $prAmount;
 
             // Generate a unique job ID
-            $jobId = rand(1000000, 1000000000);
+            $jobId = rand(1000000, 99999999999);
 
             // Check wallet balance and debit if valid
             if (!$this->walletModel->checkWalletBalance(
