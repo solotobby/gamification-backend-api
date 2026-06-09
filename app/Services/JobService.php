@@ -197,22 +197,9 @@ class JobService
                 $div = $count / $value->number_of_staff;
                 $progress = $div * 100;
 
-                // $baseCurrency = $user->wallet->base_currency;
-                // $baseCurrency = $value->currency;
-                // $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
-                // $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
-                // $unitPrice = $value->campaign_amount;
-
-                // if ($currency->code !== $value->currency) {
-                //     $rate = $this->campaignService->currencyConversion($value->currency, $currency->code);
-                //     $unitPrice *= $rate;
-                // }
-
-                // $check =  $this->checkCanPerform($user, $currency, $unitPrice, $value);
                 $data[] = [
                     'id' => $value->id,
                     'campaign_id' => $value->job_id,
-                    // 'campaign_amount' => $unitPrice,
                     'campaign_amount' => $value->campaign_amount,
                     'post_title' => $value->post_title,
                     'post_link' => $value->post_link,
@@ -223,7 +210,7 @@ class JobService
                     'completed' => $count,
                     'completed_count' => $count,
                     'expected_count' => (int)$value->number_of_staff,
-                    'campaign_review' => round(mt_rand(40, 50) / 10, 1), // Review calculation to be done later
+                    'campaign_review' => round(mt_rand(40, 50) / 10, 1),
                     'is_completed' => $count >= $value->number_of_staff ? true : false,
                     'progress' => round($progress, 2),
                     'currency' => $value->currency,
@@ -234,33 +221,9 @@ class JobService
                     'campaign_description' => $value->description,
                     'expected_image_url' => $value->expected_result_image,
                     'public_link' => "https://dashbaord.freebyz.com/tasks/" . $value->job_id,
-                    // 'can_perform_task' => $check === true,
-                    // 'can_perform_task_reason' => $check === true ? '' : $check,
                     'created_at' => $value->created_at,
                 ];
             }
-
-            // Fetching 2 random active banners
-            // $banners = $this->bannerModel->getRandomActiveBanners();
-
-            // $bannerData = [];
-
-            // foreach ($banners as $bannerItem) {
-
-            //     //Increase impression upon display
-            //     $bannerItem->impression_count += 1;
-            //     $bannerItem->save();
-
-            //     $bannerData[] = [
-            //         'banner_id' => $bannerItem->banner_id,
-            //         'banner_url' => $bannerItem->banner_url,
-            //         //  'external_link' => $bannerItem->external_link,
-            //         // 'status' => $bannerItem->status ? true : false,
-            //         'clicks' => $bannerItem->click_count,
-            //         'created_at' => $bannerItem->created_at,
-            //         'updated_at' => $bannerItem->updated_at,
-            //     ];
-            // }
 
             // Pagination data for jobs
             $pagination = [
@@ -276,7 +239,6 @@ class JobService
                 'status' => true,
                 'message' => 'Tasks retrieved successfully.',
                 'data' => $data,
-                // 'banners' => $bannerData,
                 'pagination' => $pagination,
             ]);
         } catch (Throwable $exception) {
@@ -292,9 +254,7 @@ class JobService
     public function getTaskCategories()
     {
         try {
-            // $user = auth()->user();
-            // $baseCurrency = $user->wallet->base_currency;
-            // $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+
 
             $categories = $this->campaignModel->listCategories();
             if (!$categories) {
@@ -306,12 +266,6 @@ class JobService
             }
 
             $data['category'] = $categories;
-            // $data['category'] = $this->mapCategories($categories, $mapCurrency);
-            // $data['currency'] = $this->currencyModel->getCurrencyByCode($mapCurrency) ?? [];
-            // $data['currency']['campaign_percentage'] = $user->is_business ? 100 : 60;
-            // $data['currency']['business_account'] = (bool) $user->is_business;
-            // $data['utility'] = $this->getUtilityData();
-
             return response()->json([
                 'status' => true,
                 'message' => 'Categories fetched successfully',

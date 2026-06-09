@@ -36,12 +36,12 @@ class JobListingRepository
     {
         return JobListing::active()
             ->where('id', '!=', $job->id)
-            // ->where('tier', 'free')
-            ->where('type', $job->type)
-            // ->where(function ($q) use ($job) {
-            //     $q->where('type', $job->type)
-            //         // ->orWhere('location', 'like', "%{$job->location}%");
-            // })
+            ->where('tier', 'free')
+            ->where(function ($q) use ($job) {
+                $q->where('type', $job->type)
+                    ->orWhere('location', 'like', "%{$job->location}%");
+            })
+            ->latest()
             ->limit($limit)
             ->get();
     }
