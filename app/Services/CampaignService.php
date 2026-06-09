@@ -368,6 +368,8 @@ class CampaignService
             ], 201);
         } catch (Throwable $e) {
             DB::rollBack();
+
+            Log::error('Campaign creation failed: ' . $e->getMessage());
             return response()->json([
                 'status' => false,
                 'error' => $e->getMessage(),
