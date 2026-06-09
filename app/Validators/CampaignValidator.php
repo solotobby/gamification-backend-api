@@ -102,7 +102,7 @@ class CampaignValidator
         }
     }
 
-    public static function submitJob($request)
+    public static function submitJobOld($request)
     {
         $validationRules = [
             'proof' => 'sometimes|image|mimes:png,jpeg,gif,jpg|max:2048',
@@ -110,6 +110,45 @@ class CampaignValidator
             'job_id' => 'required|string|exists:campaigns,job_id',
         ];
         $validator = Validator::make($request->all(), $validationRules);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
+    public static function submitJob($request, $campaign)
+    {
+        $validationRules = [
+            'comment' => ['required', 'string'],
+            'job_id' => ['required', 'string', 'exists:campaigns,job_id'],
+        ];
+
+        if ($campaign->allow_upload) {
+            $validationRules['proof'] = [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,gif,webp',
+                'max:5120', // 5MB
+            ];
+        } else {
+            $validationRules['proof'] = [
+                'sometimes',
+                'image',
+                'mimes:jpg,jpeg,png,gif,webp',
+                'max:5120',
+            ];
+        }
+
+        $validator = Validator::make(
+            $request->all(),
+            $validationRules,
+            [
+                'proof.required' => 'This task requires a proof image.',
+                'proof.image' => 'Proof must be an image.',
+                'proof.mimes' => 'Proof must be jpg, jpeg, png, gif or webp.',
+                'proof.max' => 'Proof image cannot exceed 5MB.',
+            ]
+        );
 
         if ($validator->fails()) {
             throw new ValidationException($validator);

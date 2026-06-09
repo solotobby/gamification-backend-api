@@ -18,6 +18,8 @@ use Exception;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class JobService
 {
@@ -426,7 +428,167 @@ class JobService
 
     public function submitWork($request)
     {
-        $this->validator->submitJob($request);
+        try {
+            $user = auth()->user();
+
+            $campaign = $this->jobModel->getJobById($request->job_id);
+
+            if (!$campaign) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Task not found'
+                ], 404);
+            }
+
+            $this->validator->submitJob($request, $campaign);
+
+            $checkJob = $this->jobModel->checkIfJobIsDoneByUser($campaign->id);
+
+            if ($checkJob) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You have already performed this task before'
+                ], 400);
+            }
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
+            $currency = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+            $unitPrice = $campaign->campaign_amount;
+
+            if ($currency->code !== $campaign->currency) {
+                $rate = $this->campaignService->currencyConversion(
+                    $campaign->currency,
+                    $currency->code
+                );
+
+                $unitPrice *= $rate;
+            }
+
+            $check = $this->checkCanPerform(
+                $user,
+                $currency,
+                $unitPrice,
+                $campaign
+            );
+
+            if ($check !== true) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $check
+                ], 400);
+            }
+
+            $proofUrl = 'no image';
+
+            if ($campaign->allow_upload && $request->hasFile('proof')) {
+                try {
+                    $proofUrl = $this->cloudinary->uploadImage(
+                        $request->file('proof'),
+                        'campaign-proofs',
+                        true
+                    );
+
+                    if (!$proofUrl) {
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'Unable to upload proof image'
+                        ], 400);
+                    }
+                } catch (Throwable $e) {
+                    Log::error('Campaign proof upload failed', [
+                        'campaign_id' => $campaign->id,
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Error uploading proof image'
+                    ], 500);
+                }
+            }
+
+            DB::beginTransaction();
+
+            $campaignWorker = $this->jobModel->createJobs(
+                $user,
+                $campaign->id,
+                $request,
+                $currency,
+                $proofUrl,
+                $unitPrice
+            );
+
+            $this->jobModel->setPendingCount($campaign->id);
+
+            $this->log->createLogForJobCreation(
+                $user,
+                $currency,
+                $unitPrice
+            );
+
+            DB::commit();
+
+            Mail::to($user->email)
+                ->queue(new SubmitJob($campaignWorker));
+
+            $subject = 'Task Submission';
+
+            $content = $user->name .
+                ' submitted a response to your task - ' .
+                $campaign->post_title .
+                '. Please login to review.';
+
+            Mail::to($campaign->user->email)
+                ->queue(
+                    new GeneralMail(
+                        $campaign->user,
+                        $content,
+                        $subject,
+                        ''
+                    )
+                );
+
+            unset($campaignWorker['job_id']);
+
+            $campaignWorker['campaign_id'] = $campaign->job_id;
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Task Submitted Successfully',
+                'data' => $campaignWorker
+            ], 201);
+        } catch (ValidationException $e) {
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (Exception $exception) {
+
+            DB::rollBack();
+
+            Log::error('Task submission failed', [
+                'user_id' => auth()->id(),
+                'campaign_id' => $request->job_id,
+                'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+            ]);
+
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+    public function submitWorkOld($request)
+    {
+        $this->validator->submitJobOld($request);
         // return $request;
 
         try {

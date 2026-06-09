@@ -293,7 +293,6 @@ class JobListingService
             // }
 
 
-
             DB::beginTransaction();
 
             // app(WalletRepositoryModel::class)->debitWallet(
@@ -323,7 +322,7 @@ class JobListingService
                     'message' => 'Wallet debit failed. Please try again.',
                 ], 401);
             }
-            
+
             $this->jobRepository->purchaseJobPoint(
                 $job->id,
                 $user->id,
