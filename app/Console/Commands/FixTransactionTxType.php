@@ -24,7 +24,8 @@ class FixTransactionTxType extends Command
             'safelock_created',
             'upgrade_payment',
             'upgrade_payment_naira_dollar',
-            'wallet_debit'
+            'wallet_debit',
+            'job_point_purchase'
         ];
 
         $this->info("Setting debit tx_type...");
