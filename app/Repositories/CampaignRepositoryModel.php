@@ -215,6 +215,7 @@ public function getCampaignsByPagination($id, $type, $per_page, $page = null)
             'currency' => $currency,
             'channel' => $channel,
             'type' => 'campaign_posted',
+            'tx_type' => 'Debit',
             'description' => $campaign->post_title . ' Campaign'
         ]);
         return true;
@@ -260,6 +261,7 @@ public function getCampaignsByPagination($id, $type, $per_page, $page = null)
             'balance' => app(WalletRepositoryModel::class)->getWalletBalance($userId),
             'channel' => 'paystack',
             'type' => 'edit_campaign_payment',
+            'tx_type' => 'Debit',
             'description' => 'Extend Campaign Payment'
         ]);
     }
