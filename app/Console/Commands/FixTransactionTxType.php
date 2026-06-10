@@ -31,13 +31,13 @@ class FixTransactionTxType extends Command
 
         DB::table('payment_transactions')
             ->whereIn('type', $debitTypes)
-            ->update(['tx_type' => 'Debit']);
+            ->update(['tx_type' => 'debit']);
 
         $this->info("Setting credit tx_type...");
 
         DB::table('payment_transactions')
             ->whereNotIn('type', $debitTypes)
-            ->update(['tx_type' => 'Credit']);
+            ->update(['tx_type' => 'credit']);
 
         $this->info("Completed.");
         return Command::SUCCESS;
