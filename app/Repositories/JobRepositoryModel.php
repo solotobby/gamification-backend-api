@@ -451,15 +451,43 @@ class JobRepositoryModel
         return $updateStatus;
     }
 
+    // public function checkIfJobIsDoneByUser($id)
+    // {
+    //     return CampaignWorker::where(
+    //         'user_id',
+    //         auth()->id()
+    //     )->where(
+    //         'campaign_id',
+    //         $id
+    //     )->exists();
+    // }
+
     public function checkIfJobIsDoneByUser($id)
     {
-        return CampaignWorker::where(
-            'user_id',
-            auth()->id()
-        )->where(
-            'campaign_id',
-            $id
-        )->exists();
+        $specialCampaigns = [8188, 8401];
+
+        $isSpecial = in_array($id, $specialCampaigns);
+
+        if (! $isSpecial) {
+            return CampaignWorker::where('user_id', auth()->id())
+                ->where('campaign_id', $id)
+                ->exists();
+        }
+
+        $stats = CampaignWorker::where('user_id', auth()->id())
+            ->where('campaign_id', $id)
+            ->selectRaw("
+            SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as approved_count,
+            SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_count,
+            SUM(CASE WHEN status = 'Denied' THEN 1 ELSE 0 END) as denied_count
+        ")
+            ->first();
+
+        if (($stats->approved_count + $stats->pending_count) > 0) {
+            return false;
+        }
+
+        return ($stats->denied_count ?? 0) < 3;
     }
 
     public function checkIfJobIsYours($id)
