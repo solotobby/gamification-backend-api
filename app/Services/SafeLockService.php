@@ -242,7 +242,7 @@ class  SafeLockService
                 $getSafeLock->currency,
                 'safelock_redeemed',
                 'Redeemed SafeLock',
-                'Debit'
+                'Credit'
             );
 
             // Send Email Notification

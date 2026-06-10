@@ -107,7 +107,7 @@ class WalletService
                 $currency->code,
                 'upgrade_payment',
                 'Upgrade Payment',
-                'credit',
+                'Debit',
             );
             $this->walletModel->creditWallet(
                 $user,
@@ -198,7 +198,7 @@ class WalletService
                 $mappedCurrency,
                 'upgrade_payment',
                 'Account Verification Payment',
-                'debit',
+                'Debit',
             );
 
             // Mark user as verified
@@ -342,7 +342,7 @@ class WalletService
             $referrer->wallet->base_currency,
             'withdrawal_commission',
             'Withdrawal commission from ' . $user->name . ' withdrawal',
-            'credit'
+            'Credit'
         );
 
         // Credit Freebyz platform commission
@@ -389,7 +389,7 @@ class WalletService
             $user->wallet->base_currency,
             'cash_withdrawal',
             'Cash Withdrawal from ' . $user->name,
-            'debit'
+            'Debit'
         );
 
         return $withdrawalAmount;
@@ -582,7 +582,7 @@ class WalletService
             $currency,
             'referer_bonus',
             $user->name,
-            'credit',
+            'Credit',
             true
 
         );
