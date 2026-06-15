@@ -97,15 +97,17 @@ class CampaignService
             $data = $collection->map(function ($campaign) use ($currency, $getRate, $statsMap) {
                 $unitPrice   = (float) $campaign->campaign_amount;
                 $totalAmount = (float) $campaign->total_amount;
+                $estimatedAmount = $totalAmount / $campaign->number_of_staff;
 
                 if ($currency->code !== $campaign->currency) {
                     $rate         = $getRate($campaign->currency, $currency->code);
                     $unitPrice   *= $rate;
                     $totalAmount *= $rate;
+                    $estimatedAmount *= $rate;
                 }
 
-                $spentAmount    = $unitPrice * $campaign->completed_count;
-                $campaignAmount = (float) $campaign->campaign_amount * $campaign->number_of_staff;
+                $spentAmount    = $estimatedAmount * $campaign->completed_count;
+                $campaignAmount = (float) $estimatedAmount * $campaign->number_of_staff;
 
                 return [
                     'id'                   => $campaign->id,
