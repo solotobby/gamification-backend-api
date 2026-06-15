@@ -296,7 +296,7 @@ class CampaignService
                 'request' => $request->all(),
                 'trace' => $e->getTraceAsString(),
                 ]);
-                
+
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request',
@@ -381,6 +381,15 @@ class CampaignService
             }
         }
 
+         if (!empty($request['expected_result_file'] ?? null)) {
+
+            $expectedURL = app(CloudinaryService::class)
+                ->uploadImage($request['expected_result_file']);
+
+            if (!$expectedURL) {
+                throw new Exception('Error uploading Proof');
+            }
+        }
         // Prepare payload
         $payload = [
             'user_id' => $user->id,
