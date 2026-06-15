@@ -30,5 +30,6 @@ Route::prefix('webhooks')->group(function () {
     Route::post('/korapay',   [WebhookController::class, 'handleKoraPay'])->name('webhook.korapay');
     Route::get('/korapay/callback',   [WebhookController::class, 'handleKoraPayCallback'])->name('webhook.korapay.callback');
     Route::get('/stripe',    [WebhookController::class, 'handleStripe'])->name('webhook.stripe');
-
+    Route::post('/interswitch',          [WebhookController::class, 'handleInterswitchWebhook'])->name('webhook.interswitch');
+    Route::get('/interswitch/callback',  [WebhookController::class, 'handleInterswitchCallback'])->name('webhook.interswitch.callback');
 });

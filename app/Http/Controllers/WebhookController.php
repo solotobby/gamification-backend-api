@@ -22,6 +22,7 @@ use App\Services\NotificationService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Services\Providers\InterswitchServiceProvider;
 
 class WebhookController extends Controller
 {
@@ -31,6 +32,8 @@ class WebhookController extends Controller
         protected CurrencyRepositoryModel $currencyModel,
         protected WalletService           $walletService,
         protected NotificationService $notification,
+        protected InterswitchServiceProvider $interswitch,
+
     ) {}
 
     // ---------------------------------------------------------------
@@ -298,9 +301,9 @@ class WebhookController extends Controller
                 // data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
             );
 
-               $subject = 'Wallet Credited';
-                $content = 'Congratulations, your wallet has been credited with ' . $currency . ' ' . $amount;
-                Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
+            $subject = 'Wallet Credited';
+            $content = 'Congratulations, your wallet has been credited with ' . $currency . ' ' . $amount;
+            Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
 
             // $this->notification->createNotification(
             //     $user,
@@ -754,6 +757,237 @@ class WebhookController extends Controller
     }
 
     // ---------------------------------------------------------------
+    // INTERSWITCH WEBHOOK
+    // ---------------------------------------------------------------
+    public function handleInterswitchWebhook(Request $request)
+    {
+
+     $payload   = $request->json()->all();
+        $event     = $payload['transactionData']['responseCode']     ?? null;
+        $reference = $payload['transactionData']['merchantReference'] ?? null;
+        $amount    = isset($payload['transactionData']['amount'])
+            ? $payload['transactionData']['amount'] / 100
+            : 0;
+        $currency  = $payload['transactionData']['currency'] ?? 'NGN';
+
+        Webhook::create([
+            'provider' => 'interswitch',
+            'event'    => $event,
+            'payload'  => $payload,
+            'status'   => 'pending',
+        ]);
+        
+        // Interswitch signs with SHA-512 HMAC
+        $signature = $request->header('x-interswitch-signature');
+        $computed  = hash_hmac(
+            'sha512',
+            $request->getContent(),
+            config('services.interswitch.client_secret')
+        );
+
+        if (!hash_equals($computed, $signature ?? '')) {
+            Log::warning('Invalid Interswitch webhook signature', [
+                'received' => $signature,
+                'computed' => $computed,
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid signature'
+            ], 401);
+        }
+
+        $payload   = $request->json()->all();
+        $event     = $payload['transactionData']['responseCode']     ?? null;
+        $reference = $payload['transactionData']['merchantReference'] ?? null;
+        $amount    = isset($payload['transactionData']['amount'])
+            ? $payload['transactionData']['amount'] / 100
+            : 0;
+        $currency  = $payload['transactionData']['currency'] ?? 'NGN';
+
+        Webhook::create([
+            'provider' => 'interswitch',
+            'event'    => $event,
+            'payload'  => $payload,
+            'status'   => 'pending',
+        ]);
+
+        // Interswitch uses responseCode '00' for success
+        if ($event !== '00') {
+            Log::info('Interswitch webhook ignored — non-success event', ['event' => $event]);
+            return response()->json([
+                'status' => true,
+                'message' => 'Ignored'
+            ], 200);
+        }
+
+        if (!$reference) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Missing reference'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $transaction = PaymentTransaction::where('reference', $reference)->first();
+
+            if (!$transaction) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Transaction not found'
+                ], 404);
+            }
+
+            if ($transaction->status === 'successful') {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Already processed'
+                ], 200);
+            }
+
+            $user = User::find($transaction->user_id);
+            if (!$user) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            $this->walletModel->creditWallet($user, $currency, $amount);
+            $transaction->update([
+                'status'  => 'successful',
+                'balance' => $this->walletModel->getWalletBalance($user->id),
+            ]);
+
+            $this->attemptAutoUpgrade($user, $currency, $amount);
+
+            DB::commit();
+
+            $this->notification->createNotification(
+                user: $user,
+                title: 'Wallet Credited',
+                body: "{$currency} {$amount} has been added to your wallet.",
+                type: 'wallet',
+            );
+
+            Mail::to($user->email)->send(new GeneralMail(
+                $user,
+                "Congratulations, your wallet has been credited with {$currency} {$amount}",
+                'Wallet Credited',
+                ''
+            ));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Payment successful'
+            ], 200);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Interswitch webhook error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Processing error'
+            ], 500);
+        }
+    }
+
+    public function handleInterswitchCallback(Request $request)
+    {
+        $reference = $request->query('txnref') ?? $request->query('reference');
+
+        if (!$reference) {
+            return response()->json(['status' => false, 'message' => 'No reference'], 400);
+        }
+
+        // Verify directly from Interswitch
+        $verified = $this->interswitch->verifyPayment($reference);
+
+        Log::info('Interswitch callback verify', [
+            'reference' => $reference,
+            'response'  => $verified,
+        ]);
+
+        if (!$verified || ($verified['ResponseCode'] ?? null) !== '00') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Payment verification failed'
+            ], 402);
+        }
+
+        $amount   = isset($verified['Amount']) ? $verified['Amount'] / 100 : 0;
+        $currency = $verified['Currency'] ?? 'NGN';
+
+        DB::beginTransaction();
+        try {
+            $transaction = PaymentTransaction::where('reference', $reference)->first();
+
+            if (!$transaction) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Transaction not found'
+                ], 404);
+            }
+
+            if ($transaction->status === 'successful') {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Already processed'
+                ], 200);
+            }
+
+            $user = User::find($transaction->user_id);
+            if (!$user) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            $this->walletModel->creditWallet($user, $currency, $amount);
+            $transaction->update([
+                'status'  => 'successful',
+                'balance' => $this->walletModel->getWalletBalance($user->id),
+            ]);
+
+            $this->attemptAutoUpgrade($user, $currency, $amount);
+
+            DB::commit();
+
+            $this->notification->createNotification(
+                user: $user,
+                title: 'Wallet Credited',
+                body: "{$currency} {$amount} has been added to your wallet.",
+                type: 'wallet',
+            );
+
+            Mail::to($user->email)->send(new GeneralMail(
+                $user,
+                "Congratulations, your wallet has been credited with {$currency} {$amount}",
+                'Wallet Credited',
+                ''
+            ));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Payment successful'
+            ], 200);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Interswitch callback error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Processing error'
+            ], 500);
+        }
+    }
+
+    // ---------------------------------------------------------------
     // ZEPTO MAIL WEBHOOK (unchanged from your existing logic)
     // ---------------------------------------------------------------
     public function zeptoWebhook(Request $request)
@@ -782,6 +1016,8 @@ class WebhookController extends Controller
 
         return response()->json(['status' => 'success']);
     }
+
+
 
     // ---------------------------------------------------------------
     // PRIVATE HELPERS

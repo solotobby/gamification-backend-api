@@ -54,6 +54,15 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
-        
+
+    ],
+
+    'interswitch' => [
+        'client_id'      => env('INTERSWITCH_CLIENT_ID'),
+        'client_secret'  => env('INTERSWITCH_CLIENT_SECRET'),
+        'merchant_code'  => env('INTERSWITCH_MERCHANT_CODE'),
+        'payable_code'   => env('INTERSWITCH_PAYABLE_CODE'),
+        'base_url'       => env('INTERSWITCH_BASE_URL', 'https://api.interswitchgroup.com'),
+        'passport_url'   => env('INTERSWITCH_PASSPORT_URL', 'https://passport.interswitchng.com'),
     ],
 ];

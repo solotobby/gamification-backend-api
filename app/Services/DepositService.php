@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Events\NotificationEvent;
 use App\Models\PaymentTransaction;
+use App\Models\User;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
 use App\Services\Providers\KoraPayServiceProvider;
 use App\Services\Providers\PaystackServiceProvider;
 use App\Services\Providers\StripeServiceProvider;
+use App\Services\Providers\InterswitchServiceProvider;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
@@ -28,7 +30,9 @@ class DepositService
         protected PaystackServiceProvider $paystack,
         protected KoraPayServiceProvider  $korapay,
         protected StripeServiceProvider   $stripe,
-        protected VirtualAccountService $virtual
+        protected VirtualAccountService $virtual,
+        protected InterswitchServiceProvider $interswitch,
+
     ) {}
 
     /**
@@ -43,7 +47,7 @@ class DepositService
     {
         $request->validate([
             'amount' => 'required|numeric|min:1',
-            'method' => 'required|in:korapay,paystack,stripe,crypto,virtual_account,manual',
+            'method' => 'required|in:korapay,paystack,stripe,crypto,virtual_account,manual,interswitch',
             // 'crypto_type' => 'required_if:method,crypto|in:USDT_TRC20,USDT_ERC20,BTC',
             'device' => 'nullable|in:web'
         ]);
@@ -62,7 +66,10 @@ class DepositService
                 'paystack'        => $this->handlePaystack($user, $amount, $ref, $baseCurrency, $device),
                 'stripe'          => $this->handleStripe($user, $amount, $ref, $baseCurrency),
                 'crypto'          => $this->handleCrypto($user, $amount, $ref, $baseCurrency, 'USDT_TRC20'),
-                'virtual_account' => $this->handleVirtualAccount($user),
+                // 'virtual_account' => $this->handleVirtualAccount($user),
+                'virtual_account' => $this->handleInterswitchVirtualAccount($user),
+                'interswitch'     => $this->handleInterswitch($user, $amount, $ref, $baseCurrency, $device),
+
                 'manual' => $this->handleManualAccount($user, $baseCurrency),
                 default           => response()->json([
                     'status' => false,
@@ -169,7 +176,93 @@ class DepositService
         ]);
     }
 
-    private function handleStripe($user, float $amount, string $ref, string $currency)
+    private function handleInterswitch($user, float $amount, string $ref, string $currency, string $device)
+    {
+        $supportedCurrencies = ['NGN', 'KES', 'GHS', 'ZAR', 'USD'];
+
+        if (!in_array($currency, $supportedCurrencies)) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Interswitch does not support ' . $currency . ' accounts.',
+            ], 422);
+        }
+
+        $redirectUrl = $device === 'web'
+            ? 'https://app.freebyz.com/wallet'
+            : route('webhook.interswitch.callback');
+
+        $result = $this->interswitch->initializePayment([
+            'reference'    => $ref,
+            'amount'       => $amount,
+            'currency'     => $currency,
+            'email'        => $user->email,
+            'callback_url' => $redirectUrl,
+        ]);
+
+        if (!$result) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to initialize Interswitch payment.',
+            ], 500);
+        }
+
+        $this->createPendingTransaction($user, $amount, $ref, $currency, 'interswitch');
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Redirect user to payment link.',
+            'data'    => [
+                'method'               => 'interswitch',
+                'link'                 => $result['redirectUrl'] ?? $result['checkoutUrl'] ?? null,
+                'reference'            => $ref,
+                'manual_verification'  => false,
+            ],
+        ]);
+    }
+
+    public function generateInterswitchVirtualAccount(User $user)
+    {
+        $existing = $user->virtualAccount;
+        if ($existing) {
+            return response()->json([
+                'status' => true,
+                'data' => $existing
+            ]);
+        }
+
+        $result = $this->interswitch->createVirtualAccount([
+            'customer_id' => (string) $user->id,
+            'first_name'  => $user->first_name,
+            'last_name'   => $user->last_name,
+            'email'       => $user->email,
+            'phone'       => $user->phone,
+            'bvn'         => $user->bvn ?? null,
+        ]);
+
+        if (!$result) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Could not generate virtual account.'
+            ], 500);
+        }
+
+        // Persist to DB same as existing virtual account flow
+        $user->virtualAccount()->create([
+            'bank_name'      => $result['bankName']      ?? 'Interswitch',
+            'account_name'   => $result['accountName']   ?? $user->name,
+            'account_number' => $result['accountNumber'] ?? null,
+            'provider'       => 'interswitch',
+        ]);
+
+        return response()->json(['status' => true, 'data' => $result]);
+    }
+
+    private function handleInterswitchVirtualAccount(User $user)
+    {
+        return $this->generateInterswitchVirtualAccount($user);
+    }
+
+    private function handleStripe(User $user, float $amount, string $ref, string $currency)
     {
         if ($currency !== 'USD') {
             return response()->json(['status' => false, 'message' => 'Stripe is only available for USD accounts.'], 422);

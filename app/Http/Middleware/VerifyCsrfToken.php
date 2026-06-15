@@ -16,7 +16,7 @@ class VerifyCsrfToken extends Middleware
         'webhooks/paystack',
         'webhooks/korapay',
         'webhooks/stripe',
-        'webhook/interswitch',
-        'webhook/interswitch/callback',
+        'webhooks/interswitch',
+        'webhooks/interswitch/callback',
     ];
 }
