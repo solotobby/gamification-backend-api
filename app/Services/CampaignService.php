@@ -300,6 +300,7 @@ class CampaignService
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

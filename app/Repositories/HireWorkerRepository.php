@@ -130,7 +130,7 @@ class HireWorkerRepository
 
     public function createSkillAsset(array $data, $userId)
     {
-        return SkillAsset::create(array_merge($data, ['user_id' => $userId, 'status' => 'active']));
+        return SkillAsset::create(array_merge($data, ['user_id' => $userId, 'status' => 'pending']));
     }
 
     public function getPurchasedWorkers($userId, $page = null)
@@ -149,7 +149,7 @@ class HireWorkerRepository
     {
         return SkillAsset::with(['skill:id,name', 'profeciencyLevel:id,name'])
             ->where('user_id', $userId)
-            ->where('status', 'active')
+            // ->where('status', 'active')
             ->first();
     }
 
