@@ -196,7 +196,7 @@ class CampaignService
             'user_id' => auth()->id(),
             'request' => $request->all(),
         ]);
-        
+
         DB::beginTransaction();
 
         try {
@@ -280,15 +280,23 @@ class CampaignService
             ], 201);
         } catch (Throwable $e) {
 
-            DB::rollBack();
 
             Log::info('Campaign creation failed', [
                 'message' => $e->getMessage(),
                 'user_id' => auth()->id(),
                 'request' => $request->all(),
                 'trace' => $e->getTraceAsString(),
-            ]);
+                ]);
 
+                DB::rollBack();
+
+                Log::info('Campaign creation failed', [
+                'message' => $e->getMessage(),
+                'user_id' => auth()->id(),
+                'request' => $request->all(),
+                'trace' => $e->getTraceAsString(),
+                ]);
+                
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request',
