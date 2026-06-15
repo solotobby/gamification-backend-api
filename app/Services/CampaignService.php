@@ -192,6 +192,11 @@ class CampaignService
     {
         $this->validator->validateCampaignCreation($request);
 
+        Log::info('Initiating campaign creation', [
+            'user_id' => auth()->id(),
+            'request' => $request->all(),
+        ]);
+        
         DB::beginTransaction();
 
         try {
@@ -277,7 +282,7 @@ class CampaignService
 
             DB::rollBack();
 
-            Log::error('Campaign creation failed', [
+            Log::info('Campaign creation failed', [
                 'message' => $e->getMessage(),
                 'user_id' => auth()->id(),
                 'request' => $request->all(),
