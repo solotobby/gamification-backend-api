@@ -171,7 +171,7 @@ public function getCampaignsByPagination($id, $type, $per_page, $page = null)
         return $query->first();
     }
 
-    public function getCampaignByJobId($id, $userId = null)
+    public function getCampaignByJobId(string $id, $userId = null)
     {
         $query = Campaign::where(
             'job_id',

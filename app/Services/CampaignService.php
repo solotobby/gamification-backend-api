@@ -1030,10 +1030,22 @@ class CampaignService
     public function increaseCompletedCountAfterApproval($id)
     {
         $userId = auth()->user()->id;
+
         $campaign = $this->campaignModel->getCampaignById($id, $userId);
-        $campaign->completed_count += 1;
-        $campaign->pending_count -= 1;
-        $campaign->save();
+
+        if (!$campaign) return false;
+
+        $campaign->update([
+            'pending_count' => $campaign->pending_count - 1,
+            'completed_count' => $campaign->completed_count + 1,
+        ]);
+
+        $campaign->refresh();
+
+        $campaign->update([
+            'is_completed' => ($campaign->completed_count + $campaign->pending_count) >= $campaign->number_of_staff
+        ]);
+
         return true;
     }
 

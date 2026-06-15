@@ -863,19 +863,26 @@ class JobService
             }
 
             // Prevent duplicate actions on already processed jobs
-            if ($job->status !== 'Denied') {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Dispute action cannot be performed.',
-                ], 400);
-            }
-            if ($job->is_dispute === 1) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'A dispute has already been lodged for this task, so the action cannot be performed again.',
-                ], 400);
-            }
+            // if ($job->status !== 'Denied') {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'Dispute action cannot be performed.',
+            //     ], 400);
+            // }
+            // if ($job->is_dispute === 1) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'A dispute has already been lodged for this task, so the action cannot be performed again.',
+            //     ], 400);
+            // }
 
+            if (! $job->canCreateDispute()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'A dispute cannot be created for this task at this time.'
+                ], 400);
+            }
+            
             $this->jobModel->createDisputeOnWorker($job->id);
             $this->jobModel->createDispute($job, $request->reason, $request->job_proof);
 

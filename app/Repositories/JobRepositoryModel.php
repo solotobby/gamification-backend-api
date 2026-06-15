@@ -90,8 +90,9 @@ class JobRepositoryModel
         if (($campaign->pending_count + $campaign->completed_count) >= $campaign->number_of_staff) {
             $campaign->is_completed = true;
             $campaign->save();
-
-            return true;
+        } else {
+            $campaign->is_completed = false;
+            $campaign->save();
         }
 
         return true;
@@ -303,7 +304,7 @@ class JobRepositoryModel
     // }
 
 
-    public function availableJobs($userId, $categoryID = null, $page = null, $sort = null)
+    public function availableJobs(string $userId, $categoryID = null, $page = null, $sort = null)
     {
         $query = Campaign::query()
             ->with(['campaignType', 'campaignCategory'])
@@ -433,23 +434,48 @@ class JobRepositoryModel
     }
 
 
-    public function updateJobStatus($reason, $jobId, $status)
+    public function updateJobStatus(string $reason, string $jobId, string $status)
     {
+        $updateStatus = CampaignWorker::where('id', $jobId)->first();
 
-        $updateStatus = CampaignWorker::where(
-            'id',
-            $jobId
-        )->first();
+        if (!$updateStatus) {
+            return null; // or throw exception
+        }
 
-        $updateStatus->denied_at = now();
-        $updateStatus->reason = $reason;
         $updateStatus->status = $status;
-        $updateStatus->slot_released = false;
+        $updateStatus->reason = $reason;
+
+        // Only set denied_at when status is denied
+        if ($status === 'Denied') {
+            $updateStatus->slot_released = false;
+            $updateStatus->denied_at = now();
+            } else {
+            $updateStatus->slot_released = true;
+            $updateStatus->denied_at = null;
+        }
 
         $updateStatus->save();
 
         return $updateStatus;
     }
+
+    // public function updateJobStatus(string $reason, string $jobId, string $status)
+    // {
+
+    //     $updateStatus = CampaignWorker::where(
+    //         'id',
+    //         $jobId
+    //     )->first();
+
+    //     $updateStatus->denied_at = now();
+    //     $updateStatus->reason = $reason;
+    //     $updateStatus->status = $status;
+    //     $updateStatus->slot_released = false;
+
+    //     $updateStatus->save();
+
+    //     return $updateStatus;
+    // }
 
     // public function checkIfJobIsDoneByUser($id)
     // {
@@ -490,7 +516,7 @@ class JobRepositoryModel
         return ($stats->denied_count ?? 0) < 3;
     }
 
-    public function checkIfJobIsYours($id)
+    public function checkIfJobIsYours(string $id)
     {
         return Campaign::where(
             'user_id',
@@ -500,7 +526,7 @@ class JobRepositoryModel
             $id
         )->first();
     }
-    public function createDisputeOnWorker($jobId)
+    public function createDisputeOnWorker(string $jobId)
     {
         $updateStatus = CampaignWorker::where(
             'id',
@@ -513,7 +539,7 @@ class JobRepositoryModel
         return $updateStatus;
     }
 
-    public function createDispute($job, $reason, $proof)
+    public function createDispute(CampaignWorker $job, string $reason, string $proof)
     {
         $dispute = DisputedJobs::create([
             'campaign_worker_id' => $job->id,
