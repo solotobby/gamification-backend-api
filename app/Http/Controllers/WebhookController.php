@@ -167,6 +167,16 @@ class WebhookController extends Controller
     public function handlePaystackWebhook(Request $request)
     {
 
+        $payload = json_decode($request->getContent(), true);
+        $event = $request->input('event');
+        $data  = $request->input('data');
+
+        $webhook = Webhook::create([
+            'provider' => 'korapay',
+            'event'    => $event,
+            'payload'  => $payload,
+            'status'   => 'pending',
+        ]);
         // Verify signature
         $signature = $request->header('x-paystack-signature');
         $computed  = hash_hmac('sha512', $request->getContent(), config('services.paystack.secretKey'));
@@ -762,7 +772,7 @@ class WebhookController extends Controller
     public function handleInterswitchWebhook(Request $request)
     {
 
-     $payload   = $request->json()->all();
+        $payload   = $request->json()->all();
         $event     = $payload['transactionData']['responseCode']     ?? null;
         $reference = $payload['transactionData']['merchantReference'] ?? null;
         $amount    = isset($payload['transactionData']['amount'])
@@ -776,7 +786,7 @@ class WebhookController extends Controller
             'payload'  => $payload,
             'status'   => 'pending',
         ]);
-        
+
         // Interswitch signs with SHA-512 HMAC
         $signature = $request->header('x-interswitch-signature');
         $computed  = hash_hmac(
