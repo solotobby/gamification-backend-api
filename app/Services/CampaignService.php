@@ -590,15 +590,18 @@ class CampaignService
                 'Virtual Account' => 'virtual_account',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
                 'Manual Account' => 'manual',
+                // 'Interswitch' => 'interswitch',
             ];
         } elseif ($currency === 'USD') {
             $paymentProcessors = [
-                'Stripe' => 'stripe',
+                // 'Stripe' => 'stripe',
                 'Crypto (USDT_TRC20)' => 'crypto',
+                // 'Interswitch' => 'interswitch',
             ];
         } else {
             $paymentProcessors = [
                 'Paystack' => 'paystack',
+                // 'Interswitch' => 'interswitch',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
             ];
         }
@@ -610,15 +613,18 @@ class CampaignService
                 'Virtual Account' => 'virtual_account',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
                 // 'Manual Account' => 'manual',
+                // 'Interswitch' => 'interswitch',
             ];
         } elseif ($currency === 'USD') {
             $verifyProcessors = [
-                'Stripe' => 'stripe',
+                // 'Stripe' => 'stripe',
                 'Crypto (USDT_TRC20)' => 'crypto',
+                // 'Interswitch' => 'interswitch',
             ];
         } else {
             $verifyProcessors = [
                 'Paystack' => 'paystack',
+                // 'Interswitch' => 'interswitch',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
             ];
         }

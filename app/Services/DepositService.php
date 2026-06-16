@@ -52,6 +52,7 @@ class DepositService
             'device' => 'nullable|in:web'
         ]);
 
+        // set_time_limit(120);
         try {
             $user         = auth()->user();
             $baseCurrency = $this->walletModel->mapCurrency($user->wallet->base_currency);
@@ -66,8 +67,8 @@ class DepositService
                 'paystack'        => $this->handlePaystack($user, $amount, $ref, $baseCurrency, $device),
                 'stripe'          => $this->handleStripe($user, $amount, $ref, $baseCurrency),
                 'crypto'          => $this->handleCrypto($user, $amount, $ref, $baseCurrency, 'USDT_TRC20'),
-                // 'virtual_account' => $this->handleVirtualAccount($user),
-                'virtual_account' => $this->handleInterswitchVirtualAccount($user),
+                'virtual_account' => $this->handleVirtualAccount($user),
+                // 'virtual_account' => $this->handleInterswitchVirtualAccount($user),
                 'interswitch'     => $this->handleInterswitch($user, $amount, $ref, $baseCurrency, $device),
 
                 'manual' => $this->handleManualAccount($user, $baseCurrency),
@@ -230,14 +231,16 @@ class DepositService
             ]);
         }
 
-        $result = $this->interswitch->createVirtualAccount([
-            'customer_id' => (string) $user->id,
-            'first_name'  => $user->first_name,
+        $data = [
+            'customer_id' => (string) $user->id.'_'.now(),
             'last_name'   => $user->last_name,
+            'first_name'  => $user->first_name,
             'email'       => $user->email,
-            'phone'       => $user->phone,
-            'bvn'         => $user->bvn ?? null,
-        ]);
+            // 'phone'       => $user->phone,
+            // 'bvn'         => $user->bvn ?? null,
+        ];
+
+        $result = $this->interswitch->createVirtualAccount($data);
 
         if (!$result) {
             return response()->json([
