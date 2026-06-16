@@ -369,7 +369,7 @@ class CampaignService
             : 'paypal';
 
         $approvalTime = $request['approval_time'] ?? 24;
-        $expectedURL = 'no image';
+        $expectedURL = null;
 
         // Upload expected result image
         if (!empty($request['expected_result_image'] ?? null)) {
