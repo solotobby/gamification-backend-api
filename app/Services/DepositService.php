@@ -289,7 +289,7 @@ class DepositService
         //     ->where('channel', 'interswitch')
         //     ->first();
 
-            $virtualAccount = $user->virtualAccount;
+        $virtualAccount = $user->virtualAccount;
 
         if (!$virtualAccount) {
             $response = $this->virtual->generateInterswitchVirtualAccount($user);

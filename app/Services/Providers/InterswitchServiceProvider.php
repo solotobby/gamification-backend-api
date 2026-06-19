@@ -67,25 +67,25 @@ class InterswitchServiceProvider
 
     protected function legacyHeaders(string $method, string $url): array
     {
-        $timestamp = (string) time();
-        $nonce     = Str::random(32); // max 64 chars
+        // $timestamp = (string) time();
+        // $nonce     = Str::random(32); // max 64 chars
 
-        $signatureString = strtoupper($method)
-            . '&' . urlencode($url)
-            . '&' . $timestamp
-            . '&' . $nonce
-            . '&' . $this->clientId
-            . '&' . $this->clientSecret;
+        // $signatureString = strtoupper($method)
+        //     . '&' . urlencode($url)
+        //     . '&' . $timestamp
+        //     . '&' . $nonce
+        //     . '&' . $this->clientId
+        //     . '&' . $this->clientSecret;
 
-        $signature = base64_encode(sha1($signatureString, true));
+        // $signature = base64_encode(sha1($signatureString, true));
 
         return [
-            'Authorization'   => 'Bearer ' . $this->getAccessToken(), // ← OAuth token, not InterswitchAuth
+            'Authorization'   => 'Bearer ' . $this->getAccessToken(),
         // 'Authorization'   => 'InterswitchAuth ' . base64_encode($this->clientId),
-            'Timestamp'       => $timestamp,
-            'Nonce'           => $nonce,
-            'Signature'       => $signature,
-            'SignatureMethod'  => 'SHA1',
+            // 'Timestamp'       => $timestamp,
+            // 'Nonce'           => $nonce,
+            // 'Signature'       => $signature,
+            // 'SignatureMethod'  => 'SHA1',
             'Content-Type'    => 'application/json',
             'Accept'          => 'application/json',
         ];
@@ -99,8 +99,7 @@ class InterswitchServiceProvider
 
         $payload = [
             'accountName'  => $accountName,
-            // 'merchantCode' => (string)$this->merchantCode,
-            'merchantCode' => 'MX162952'
+            'merchantCode' => (string)$this->merchantCode,
         ];
 
         $provider = $provider ?? $this->providerCode;
@@ -108,12 +107,13 @@ class InterswitchServiceProvider
             $payload['provider'] = $provider;
         }
 
-        Log::info('Interswitch Create Virtual Account URL: ' . $url);
+        // Log::info('Interswitch Create Virtual Account URL: ' . $url);
 
-        $res = Http::withHeaders($this->legacyHeaders('POST', $url))
+        // $res = Http::withHeaders($this->legacyHeaders('POST', $url))
+        $res = Http::withHeaders($this->oauthHeaders())
             ->post($url, $payload);
 
-        Log::info('Interswitch Create Virtual Account Response: ' . $res);
+        // Log::info('Interswitch Create Virtual Account Response: ' . $res);
 
         return $res->successful() ? $res->json() : null;
     }
