@@ -167,16 +167,17 @@ class WebhookController extends Controller
     public function handlePaystackWebhook(Request $request)
     {
 
-        $payload = json_decode($request->getContent(), true);
-        $event = $request->input('event');
-        $data  = $request->input('data');
+        // $payload = json_decode($request->getContent(), true);
+        // $event = $request->input('event');
+        // $data  = $request->input('data');
 
-        $webhook = Webhook::create([
-            'provider' => 'korapay',
-            'event'    => $event,
-            'payload'  => $payload,
-            'status'   => 'pending',
-        ]);
+        // $webhook = Webhook::create([
+        //     'provider' => 'paystack',
+        //     'event'    => $event,
+        //     'payload'  => $payload,
+        //     'status'   => 'pending',
+        // ]);
+
         // Verify signature
         $signature = $request->header('x-paystack-signature');
         $computed  = hash_hmac('sha512', $request->getContent(), config('services.paystack.secretKey'));
@@ -771,110 +772,128 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleInterswitchWebhook(Request $request)
     {
+        $rawBody   = $request->getContent();
+        $signature = $request->header('X-Interswitch-Signature');
 
-        $payload   = $request->json()->all();
-        $event     = $payload['transactionData']['responseCode']     ?? null;
-        $reference = $payload['transactionData']['merchantReference'] ?? null;
-        $amount    = isset($payload['transactionData']['amount'])
-            ? $payload['transactionData']['amount'] / 100
-            : 0;
-        $currency  = $payload['transactionData']['currency'] ?? 'NGN';
+        // Per docs: HmacSHA512 of raw JSON body, hex-encoded
+        // $computed = hash_hmac('sha512', $rawBody, config('services.interswitch.client_secret'));
 
-        Webhook::create([
+        // if (!$signature || !hash_equals($computed, $signature)) {
+        //     Log::warning('Invalid Interswitch webhook signature', [
+        //         'received' => $signature,
+        //         'computed' => $computed,
+        //     ]);
+        //     return response('', 200); // docs say always return 200, no body
+        // }
+
+        $payload = json_decode($rawBody, true);
+        $event   = $payload['event']     ?? null;
+        $uuid    = $payload['uuid']      ?? null; // use uuid for duplicate check per docs
+        $data    = $payload['data']      ?? [];
+
+        // Log every webhook
+        $webhook = Webhook::create([
             'provider' => 'interswitch',
             'event'    => $event,
             'payload'  => $payload,
             'status'   => 'pending',
         ]);
 
-        // Interswitch signs with SHA-512 HMAC
-        $signature = $request->header('x-interswitch-signature');
-        $computed  = hash_hmac(
-            'sha512',
-            $request->getContent(),
-            config('services.interswitch.client_secret')
-        );
-
-        if (!hash_equals($computed, $signature ?? '')) {
-            Log::warning('Invalid Interswitch webhook signature', [
-                'received' => $signature,
-                'computed' => $computed,
-            ]);
-            return response()->json([
-                'status' => false,
-                'message' => 'Invalid signature'
-            ], 401);
+        // Per docs: respond 200 immediately, then process
+        // Only handle TRANSACTION.COMPLETED with responseCode 00
+        if ($event !== 'TRANSACTION.COMPLETED' || ($data['responseCode'] ?? null) !== '00') {
+            $webhook->update(['status' => 'ignored', 'message' => 'Non-success event: ' . $event]);
+            return response('', 200);
         }
 
-        $payload   = $request->json()->all();
-        $event     = $payload['transactionData']['responseCode']     ?? null;
-        $reference = $payload['transactionData']['merchantReference'] ?? null;
-        $amount    = isset($payload['transactionData']['amount'])
-            ? $payload['transactionData']['amount'] / 100
-            : 0;
-        $currency  = $payload['transactionData']['currency'] ?? 'NGN';
-
-        Webhook::create([
-            'provider' => 'interswitch',
-            'event'    => $event,
-            'payload'  => $payload,
-            'status'   => 'pending',
-        ]);
-
-        // Interswitch uses responseCode '00' for success
-        if ($event !== '00') {
-            Log::info('Interswitch webhook ignored — non-success event', ['event' => $event]);
-            return response()->json([
-                'status' => true,
-                'message' => 'Ignored'
-            ], 200);
+        if (!$uuid) {
+            $webhook->update(['status' => 'failed', 'message' => 'Missing uuid']);
+            return response('', 200);
         }
 
-        if (!$reference) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Missing reference'
-            ], 400);
+        // Duplicate check on uuid per docs
+        $alreadyProcessed = PaymentTransaction::where('reference', $uuid)
+            ->where('status', 'successful')
+            ->exists();
+
+        if ($alreadyProcessed) {
+            $webhook->update(['status' => 'ignored', 'message' => 'Already processed']);
+            return response('', 200);
         }
+
+        $reference     = $data['merchantReference'] ?? $uuid;
+        $amount        = isset($data['amount']) ? $data['amount'] / 100 : 0; // kobo → naira
+        $accountNumber = $data['retrievalReferenceNumber'] ?? null; // virtual account number paid into
+        $currencyCode  = $data['currencyCode'] ?? '566';
+        $currency      = $currencyCode === '566' ? 'NGN' : 'NGN'; // extend for multi-currency
 
         DB::beginTransaction();
         try {
             $transaction = PaymentTransaction::where('reference', $reference)->first();
 
             if (!$transaction) {
-                DB::rollBack();
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Transaction not found'
-                ], 404);
+                // Virtual account transfer — identify user from account number
+                $virtualAccount = VirtualAccount::where('account_number', $accountNumber)
+                    ->where('channel', 'interswitch')
+                    ->first();
+
+                if (!$virtualAccount) {
+                    $webhook->update(['status' => 'failed', 'message' => 'Virtual account not found: ' . $accountNumber]);
+                    DB::rollBack();
+                    return response('', 200);
+                }
+
+                $user = User::find($virtualAccount->user_id);
+                if (!$user) {
+                    $webhook->update(['status' => 'failed', 'message' => 'User not found']);
+                    DB::rollBack();
+                    return response('', 200);
+                }
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+
+                PaymentTransaction::create([
+                    'user_id'     => $user->id,
+                    'campaign_id' => 1,
+                    'reference'   => $reference,
+                    'amount'      => $amount,
+                    'balance'     => $this->walletModel->getWalletBalance($user->id),
+                    'status'      => 'successful',
+                    'currency'    => $currency,
+                    'channel'     => 'interswitch',
+                    'type'        => 'transfer_topup',
+                    'description' => 'Virtual Account Transfer from ' . ($data['merchantCustomerName'] ?? 'Unknown'),
+                    'tx_type'     => 'Credit',
+                    'user_type'   => 'regular',
+                ]);
+
+                $this->attemptAutoUpgrade($user, $currency, $amount);
+            } else {
+                if ($transaction->status === 'successful') {
+                    $webhook->update(['status' => 'ignored', 'message' => 'Already processed']);
+                    DB::rollBack();
+                    return response('', 200);
+                }
+
+                $user = User::find($transaction->user_id);
+                if (!$user) {
+                    $webhook->update(['status' => 'failed', 'message' => 'User not found']);
+                    DB::rollBack();
+                    return response('', 200);
+                }
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+                $transaction->update([
+                    'status'  => 'successful',
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                ]);
+
+                $this->attemptAutoUpgrade($user, $currency, $amount);
             }
-
-            if ($transaction->status === 'successful') {
-                DB::rollBack();
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Already processed'
-                ], 200);
-            }
-
-            $user = User::find($transaction->user_id);
-            if (!$user) {
-                DB::rollBack();
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User not found'
-                ], 404);
-            }
-
-            $this->walletModel->creditWallet($user, $currency, $amount);
-            $transaction->update([
-                'status'  => 'successful',
-                'balance' => $this->walletModel->getWalletBalance($user->id),
-            ]);
-
-            $this->attemptAutoUpgrade($user, $currency, $amount);
 
             DB::commit();
+
+            $webhook->update(['status' => 'processed', 'message' => 'Payment successful']);
 
             $this->notification->createNotification(
                 user: $user,
@@ -890,45 +909,39 @@ class WebhookController extends Controller
                 ''
             ));
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Payment successful'
-            ], 200);
+            return response('', 200); // no body per docs
+
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Interswitch webhook error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Processing error'
-            ], 500);
+            $webhook->update(['status' => 'failed', 'message' => $e->getMessage()]);
+            return response('', 200); // still 200 so Interswitch doesn't retry endlessly
         }
     }
 
+    // ---------------------------------------------------------------
+    // INTERSWITCH CALLBACK
+    // ---------------------------------------------------------------
     public function handleInterswitchCallback(Request $request)
     {
+        // Interswitch redirects with txnref param
         $reference = $request->query('txnref') ?? $request->query('reference');
 
         if (!$reference) {
             return response()->json(['status' => false, 'message' => 'No reference'], 400);
         }
 
-        // Verify directly from Interswitch
         $verified = $this->interswitch->verifyPayment($reference);
 
-        Log::info('Interswitch callback verify', [
-            'reference' => $reference,
-            'response'  => $verified,
-        ]);
+        Log::info('Interswitch callback verify', ['reference' => $reference, 'response' => $verified]);
 
-        if (!$verified || ($verified['ResponseCode'] ?? null) !== '00') {
-            return response()->json([
-                'status' => false,
-                'message' => 'Payment verification failed'
-            ], 402);
+        // Interswitch verify response uses responseCode '00'
+        if (!$verified || ($verified['responseCode'] ?? $verified['ResponseCode'] ?? null) !== '00') {
+            return response()->json(['status' => false, 'message' => 'Payment verification failed'], 402);
         }
 
-        $amount   = isset($verified['Amount']) ? $verified['Amount'] / 100 : 0;
-        $currency = $verified['Currency'] ?? 'NGN';
+        $amount   = isset($verified['amount']) ? $verified['amount'] / 100 : 0;
+        $currency = ($verified['currencyCode'] ?? '566') === '566' ? 'NGN' : 'NGN';
 
         DB::beginTransaction();
         try {
@@ -936,27 +949,18 @@ class WebhookController extends Controller
 
             if (!$transaction) {
                 DB::rollBack();
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Transaction not found'
-                ], 404);
+                return response()->json(['status' => false, 'message' => 'Transaction not found'], 404);
             }
 
             if ($transaction->status === 'successful') {
                 DB::rollBack();
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Already processed'
-                ], 200);
+                return response()->json(['status' => false, 'message' => 'Already processed'], 200);
             }
 
             $user = User::find($transaction->user_id);
             if (!$user) {
                 DB::rollBack();
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User not found'
-                ], 404);
+                return response()->json(['status' => false, 'message' => 'User not found'], 404);
             }
 
             $this->walletModel->creditWallet($user, $currency, $amount);
@@ -983,17 +987,11 @@ class WebhookController extends Controller
                 ''
             ));
 
-            return response()->json([
-                'status' => true,
-                'message' => 'Payment successful'
-            ], 200);
+            return response()->json(['status' => true, 'message' => 'Payment successful'], 200);
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Interswitch callback error: ' . $e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Processing error'
-            ], 500);
+            return response()->json(['status' => false, 'message' => 'Processing error'], 500);
         }
     }
 

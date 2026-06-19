@@ -14,6 +14,7 @@ class VirtualAccountController extends Controller
 
     public function generate()
     {
-        return $this->service->generateVirtualAccount();
+        // return $this->service->generateVirtualAccount();
+        return $this->service->generateInterswitchVirtualAccount();
     }
 }

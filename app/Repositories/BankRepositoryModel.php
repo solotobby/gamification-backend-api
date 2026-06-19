@@ -20,7 +20,7 @@ class BankRepositoryModel
        return VirtualAccount::where(
             'user_id',
             $userId
-        )->latest()->first();
+        )->where('status', true)->latest()->first();
     }
 
     public function saveBankDetails($data, $user)

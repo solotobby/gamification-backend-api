@@ -1,0 +1,122 @@
+<?php
+
+namespace App\Services\Providers;
+
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
+
+class SpacesService
+{
+    protected string $disk = 'spaces';
+    protected string $cdnUrl;
+
+    public function __construct()
+    {
+        $this->cdnUrl = rtrim(env('DO_SPACES_CDN_URL', env('DO_SPACES_ENDPOINT')), '/');
+    }
+
+    public function uploadImage(UploadedFile $file, string $folder = 'Freebyz', bool $watermark = false): ?string
+    {
+        try {
+            $image = Image::read($file)->scaleDown(width: 1200);
+
+            if ($watermark) {
+                $image = $this->applyWatermark($image);
+            }
+
+            $encoded = $image->toWebp(quality: 80);
+            $filename = $folder . '/' . Str::uuid() . '.webp';
+
+            Storage::disk($this->disk)->put($filename, $encoded, 'public');
+
+            return $this->cdnUrl . '/' . $filename;
+        } catch (\Throwable $e) {
+            Log::error('Spaces image upload failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function uploadBase64Image(?string $base64, string $folder = 'Freebyz', bool $watermark = false): ?string
+    {
+        if (!$base64) return null;
+
+        $base64 = trim(str_replace(["\n", "\r"], '', $base64));
+
+        if (!preg_match('/^data:image\/(\w+);base64,(.+)$/', $base64, $matches)) {
+            return null;
+        }
+
+        $data = base64_decode($matches[2]);
+
+        if (!$data) return null;
+
+        try {
+            $image = Image::read($data)->scaleDown(width: 1200);
+
+            if ($watermark) {
+                $image = $this->applyWatermark($image);
+            }
+
+            $encoded = $image->toWebp(quality: 80);
+            $filename = $folder . '/' . Str::uuid() . '.webp';
+
+            Storage::disk($this->disk)->put($filename, $encoded, 'public');
+
+            return $this->cdnUrl . '/' . $filename;
+        } catch (\Throwable $e) {
+            Log::error('Spaces base64 upload failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function uploadFile(UploadedFile $file, string $folder = 'Freebyz'): ?string
+    {
+        try {
+            $path = Storage::disk($this->disk)->putFile($folder, $file, 'public');
+            return $path ? $this->cdnUrl . '/' . $path : null;
+        } catch (\Throwable $e) {
+            Log::error('Spaces file upload failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function displayImage(?string $path): string
+    {
+        if (!$path) return '';
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        return $this->cdnUrl . '/' . ltrim($path, '/');
+    }
+
+    public function delete(string $url): bool
+    {
+        try {
+            // Extract relative path from full CDN URL
+            $path = ltrim(str_replace($this->cdnUrl, '', $url), '/');
+            return Storage::disk($this->disk)->delete($path);
+        } catch (\Throwable $e) {
+            Log::error('Spaces delete failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    protected function applyWatermark($image)
+    {
+        $width = $image->width();
+        $height = $image->height();
+
+        return $image->text('FREEBYZ.COM', (int) ($width / 2), (int) ($height / 2), function ($font) {
+            $font->size(48);
+            $font->color([255, 255, 255, 80]);
+            $font->align('center');
+            $font->valign('middle');
+            $font->angle(45);
+        });
+    }
+}

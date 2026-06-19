@@ -21,26 +21,28 @@ class InterswitchServiceProvider
     {
         $this->clientId     = config('services.interswitch.client_id');
         $this->clientSecret = config('services.interswitch.client_secret');
-        $this->baseUrl      = config('services.interswitch.base_url');
-        $this->passportUrl  = config('services.interswitch.passport_url');
+        $this->baseUrl      = config('services.interswitch.base_url');       // https://qa.interswitchng.com
+        $this->passportUrl  = config('services.interswitch.passport_url');   // https://sandbox.interswitchng.com
         $this->merchantCode = config('services.interswitch.merchant_code');
         $this->payableCode  = config('services.interswitch.payable_code');
-        $this->providerCode = config('services.interswitch.provider_code');
+        $this->providerCode = config('services.interswitch.provider_code', 'WEMA');
     }
 
-    // ── Auth ──────────────────────────────────────────────────────────────
+    // ── OAuth 2.0 Token ───────────────────────────────────────────────────
 
     protected function getAccessToken(): ?string
     {
-        return Cache::remember('interswitch_access_token', 3000, function () {
-            $url = "{$this->passportUrl}/passport/oauth/token";
+        return Cache::remember('interswitch_access_token', 39000, function () {
+            $credentials = base64_encode("{$this->clientId}:{$this->clientSecret}");
 
-            $res = Http::withHeaders($this->buildHeaders('POST', $url))
-                ->asForm()
-                ->post($url, [
-                    'grant_type' => 'client_credentials',
-                    'scope'      => 'profile',
-                ]);
+            $res = Http::withHeaders([
+                'Authorization' => 'Basic ' . $credentials,
+                'Content-Type'  => 'application/x-www-form-urlencoded',
+            ])
+            ->asForm()
+            ->post("{$this->passportUrl}/passport/oauth/token", [
+                'grant_type' => 'client_credentials',
+            ]);
 
             Log::info('Interswitch Auth Response: ' . $res->body());
 
@@ -48,102 +50,81 @@ class InterswitchServiceProvider
         });
     }
 
-    /**
-     * Build Interswitch-required auth headers.
-     *
-     * Per docs: https://interswitch-docs.readme.io/reference/header-computation
-     *
-     * InterswitchAuth: Base64(client_id)
-     * Signature: Base64(SHA512(verb + "&" + percentEncode(url) + "&" + timestamp + "&" + nonce + "&" + client_id + "&" + secret))
-     */
-    protected function buildHeaders(string $verb, string $fullUrl): array
+    // ── OAuth 2.0 headers (for payment gateway endpoints) ─────────────────
+
+    protected function oauthHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $this->getAccessToken(),
+            'Content-Type'  => 'application/json',
+            'Accept'        => 'application/json',
+        ];
+    }
+
+    // ── InterswitchAuth headers (for legacy endpoints) ────────────────────
+    // Used by: virtual account, transfers, SVA endpoints
+    // Signature: Base64(SHA1("METHOD&urlEncode(url)&timestamp&nonce&clientId&secret"))
+
+    protected function legacyHeaders(string $method, string $url): array
     {
         $timestamp = (string) time();
-        $nonce     = Str::random(32);
+        $nonce     = Str::random(32); // max 64 chars
 
-        $stringToBeSigned = strtoupper($verb)
-            . '&' . rawurlencode($fullUrl)
+        $signatureString = strtoupper($method)
+            . '&' . urlencode($url)
             . '&' . $timestamp
             . '&' . $nonce
             . '&' . $this->clientId
             . '&' . $this->clientSecret;
 
-        $signature = base64_encode(hash('sha512', $stringToBeSigned, true));
+        $signature = base64_encode(sha1($signatureString, true));
 
         return [
-            'InterswitchAuth' => base64_encode($this->clientId),
-            'Authorization'   => 'Bearer ' . $this->getAccessToken(),
+            'Authorization'   => 'Bearer ' . $this->getAccessToken(), // ← OAuth token, not InterswitchAuth
+        // 'Authorization'   => 'InterswitchAuth ' . base64_encode($this->clientId),
             'Timestamp'       => $timestamp,
             'Nonce'           => $nonce,
             'Signature'       => $signature,
-            'SignatureMethod' => 'SHA512',
+            'SignatureMethod'  => 'SHA1',
             'Content-Type'    => 'application/json',
             'Accept'          => 'application/json',
         ];
     }
 
-    // ── Virtual Account (NGN) ─────────────────────────────────────────────
+    // ── Virtual Account (NGN static) ──────────────────────────────────────
 
-    /**
-     * Create/get virtual account for a user.
-     * Endpoint: POST /api/v1/payments/customer-virtual-account
-     *
-     * @param array $data [
-     *   'customer_id'  => string,  // phone number or unique ID
-     *   'first_name'   => string,
-     *   'last_name'    => string,
-     * ]
-     */
-    public function createVirtualAccount(array $data): ?array
+    public function createVirtualAccount(string $accountName, ?string $provider = null): ?array
     {
-        // $url = "{$this->baseUrl}/api/v1/payments/customer-virtual-account";
+        $url = "{$this->baseUrl}/paymentgateway/api/v1/payable/virtualaccount";
 
-        // $res = Http::withHeaders($this->buildHeaders('POST', $url))
-        //     ->post($url, [
-        //         'customerId'   => $data['customer_id'],
-        //         'customerName' => trim($data['first_name'] . ' ' . $data['last_name']),
-        //         'providerCode' => $this->providerCode,
-        //     ]);
+        $payload = [
+            'accountName'  => $accountName,
+            // 'merchantCode' => (string)$this->merchantCode,
+            'merchantCode' => 'MX162952'
+        ];
 
-        // Log::info('Interswitch Virtual Account Response: ' . $res->body());
+        $provider = $provider ?? $this->providerCode;
+        if ($provider) {
+            $payload['provider'] = $provider;
+        }
 
-        $this->getBanks(); // Call getBanks() to retrieve the list of banks
-        // return $res->successful() ? $res->json() : null;
-    }
+        Log::info('Interswitch Create Virtual Account URL: ' . $url);
 
-    public function getVirtualAccount(string $customerId): ?array
-    {
-        $url = "{$this->baseUrl}/api/v1/payments/customer-virtual-account/{$customerId}";
+        $res = Http::withHeaders($this->legacyHeaders('POST', $url))
+            ->post($url, $payload);
 
-        $res = Http::withHeaders($this->buildHeaders('GET', $url))
-            ->get($url);
-
-        Log::info('Interswitch Get Virtual Account Response: ' . $res->body());
+        Log::info('Interswitch Create Virtual Account Response: ' . $res);
 
         return $res->successful() ? $res->json() : null;
     }
 
-    // ── Payment Initiation (multi-currency via IPG) ───────────────────────
+    // ── Payment Initiation (multi-currency) ───────────────────────────────
 
-    /**
-     * Initialize a payment via Interswitch Payment Gateway.
-     * Interswitch IPG uses a redirect flow — returns a payment URL.
-     *
-     * Supports: NGN, KES, GHS, ZAR, USD
-     *
-     * @param array $data [
-     *   'reference'    => string,
-     *   'amount'       => float,
-     *   'currency'     => string,
-     *   'email'        => string,
-     *   'callback_url' => string,
-     * ]
-     */
     public function initializePayment(array $data): ?array
     {
         $url = "{$this->baseUrl}/collections/api/v1/payments/initiate";
 
-        $res = Http::withHeaders($this->buildHeaders('POST', $url))
+        $res = Http::withHeaders($this->oauthHeaders())
             ->post($url, [
                 'merchantCode'         => $this->merchantCode,
                 'payableCode'          => $this->payableCode,
@@ -156,19 +137,17 @@ class InterswitchServiceProvider
             ]);
 
         Log::info('Interswitch Initialize Payment Response: ' . $res->body());
-        // $this->getBanks();
+
         return $res->successful() ? $res->json() : null;
     }
 
-    /**
-     * Verify a payment by transaction reference.
-     */
+    // ── Verify Payment ────────────────────────────────────────────────────
+
     public function verifyPayment(string $reference): ?array
     {
         $url = "{$this->baseUrl}/collections/api/v1/merchant/transactions/query?transactionReference={$reference}";
 
-        $res = Http::withHeaders($this->buildHeaders('GET', $url))
-            ->get($url);
+        $res = Http::withHeaders($this->oauthHeaders())->get($url);
 
         Log::info('Interswitch Verify Payment Response: ' . $res->body());
 
@@ -187,17 +166,5 @@ class InterswitchServiceProvider
             'ZAR' => '710',
             default => '566',
         };
-    }
-
-    public function getBanks(): ?array
-    {
-        $url = "{$this->baseUrl}/api/v1/payments/banks";
-
-        $res = Http::withHeaders($this->buildHeaders('GET', $url))
-            ->get($url);
-
-        Log::info('Interswitch Banks: ' . $res->body());
-
-        return $res->successful() ? $res->json() : null;
     }
 }

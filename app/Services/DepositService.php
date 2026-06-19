@@ -67,9 +67,9 @@ class DepositService
                 'paystack'        => $this->handlePaystack($user, $amount, $ref, $baseCurrency, $device),
                 'stripe'          => $this->handleStripe($user, $amount, $ref, $baseCurrency),
                 'crypto'          => $this->handleCrypto($user, $amount, $ref, $baseCurrency, 'USDT_TRC20'),
-                'virtual_account' => $this->handleVirtualAccount($user),
-                // 'virtual_account' => $this->handleInterswitchVirtualAccount($user),
-                'interswitch'     => $this->handleInterswitch($user, $amount, $ref, $baseCurrency, $device),
+                // 'virtual_account' => $this->handleVirtualAccount($user),
+                'virtual_account' => $this->handleInterswitchVirtualAccount($user),
+                // 'interswitch'     => $this->handleInterswitch($user, $amount, $ref, $baseCurrency, $device),
 
                 'manual' => $this->handleManualAccount($user, $baseCurrency),
                 default           => response()->json([
@@ -221,49 +221,121 @@ class DepositService
         ]);
     }
 
-    public function generateInterswitchVirtualAccount(User $user)
+    // public function generateInterswitchVirtualAccount(User $user)
+    // {
+    //     $existing = $user->virtualAccount;
+    //     // if ($existing) {
+    //     //     return response()->json([
+    //     //         'status' => true,
+    //     //         'data' => $existing
+    //     //     ]);
+    //     // }
+
+    //     $result = $this->interswitch->createVirtualAccount($user->name, null);
+
+    //     if (!$result) {
+    //         return response()->json([
+    //             'status' => false,
+    //             'message' => 'Could not generate virtual account.'
+    //         ], 500);
+    //     }
+
+    //     // Persist to DB same as existing virtual account flow
+    //     $user->virtualAccount()->create([
+    //         'bank_name'      => $result['bankName']      ?? 'Interswitch',
+    //         'account_name'   => $result['accountName']   ?? $user->name,
+    //         'account_number' => $result['accountNumber'] ?? null,
+    //         'currency'       => 'NGN',
+    //         'status'         => true,
+    //         'channel'       => 'interswitch',
+    //         'customer_id'    => $result['payableCode'] ?? $user->id . now(),
+    //         'customer_intgration'    => $result['merchantCode'] ?? 'Freebyz',
+    //     ]);
+    //     $virtualAccount = $user->virtualAccount;
+
+    //     // Normalize (handle both array and object)
+    //     $bankName = is_array($virtualAccount)
+    //         ? ($virtualAccount['bank_name'] ?? null)
+    //         : $virtualAccount->bank_name;
+
+    //     $accountName = is_array($virtualAccount)
+    //         ? ($virtualAccount['account_name'] ?? null)
+    //         : $virtualAccount->account_name;
+
+    //     $accountNumber = is_array($virtualAccount)
+    //         ? ($virtualAccount['account_number'] ?? null)
+    //         : $virtualAccount->account_number;
+
+    //     return response()->json([
+    //         'status'  => true,
+    //         'message' => 'Transfer to this account to fund your wallet.',
+    //         'data'    => [
+    //             'method'         => 'virtual_account',
+    //             'bank_name'      => $bankName,
+    //             'account_name'   => $accountName,
+    //             'account_number' => $accountNumber,
+    //             'note'           => 'Funds will be credited automatically once payment is confirmed.',
+    //             'manual_verification' => false
+    //         ],
+    //     ]);
+
+    //     // return response()->json(['status' => true, 'data' => $result]);
+    // }
+
+
+    private function handleInterswitchVirtualAccount($user)
     {
-        $existing = $user->virtualAccount;
-        if ($existing) {
-            return response()->json([
-                'status' => true,
-                'data' => $existing
-            ]);
+        // $virtualAccount = VirtualAccount::where('user_id', $user->id)
+        //     ->where('channel', 'interswitch')
+        //     ->first();
+
+            $virtualAccount = $user->virtualAccount;
+
+        if (!$virtualAccount) {
+            $response = $this->virtual->generateInterswitchVirtualAccount($user);
+
+            $virtual = $response->getData(true);
+
+            if (!($virtual['status'] ?? false)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => $virtual['message'] ?? 'Unable to generate virtual account',
+                ], $response->status());
+            }
+
+            $virtualAccount = $virtual['data'] ?? null;
         }
 
-        $data = [
-            'customer_id' => (string) $user->id.'_'.now(),
-            'last_name'   => $user->last_name,
-            'first_name'  => $user->first_name,
-            'email'       => $user->email,
-            // 'phone'       => $user->phone,
-            // 'bvn'         => $user->bvn ?? null,
-        ];
+        // Normalize (handle both array and object)
+        $bankName = is_array($virtualAccount)
+            ? ($virtualAccount['bank_name'] ?? null)
+            : $virtualAccount->bank_name;
 
-        $result = $this->interswitch->createVirtualAccount($data);
+        $accountName = is_array($virtualAccount)
+            ? ($virtualAccount['account_name'] ?? null)
+            : $virtualAccount->account_name;
 
-        if (!$result) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Could not generate virtual account.'
-            ], 500);
-        }
+        $accountNumber = is_array($virtualAccount)
+            ? ($virtualAccount['account_number'] ?? null)
+            : $virtualAccount->account_number;
 
-        // Persist to DB same as existing virtual account flow
-        $user->virtualAccount()->create([
-            'bank_name'      => $result['bankName']      ?? 'Interswitch',
-            'account_name'   => $result['accountName']   ?? $user->name,
-            'account_number' => $result['accountNumber'] ?? null,
-            'provider'       => 'interswitch',
+        return response()->json([
+            'status'  => true,
+            'message' => 'Transfer to this account to fund your wallet.',
+            'data'    => [
+                'method'              => 'virtual_account',
+                'bank_name'           => $bankName,
+                'account_name'        => $accountName,
+                'account_number'      => $accountNumber,
+                'note'                => 'Funds will be credited automatically once payment is confirmed.',
+                'manual_verification' => false,
+            ],
         ]);
-
-        return response()->json(['status' => true, 'data' => $result]);
     }
-
-    private function handleInterswitchVirtualAccount(User $user)
-    {
-        return $this->generateInterswitchVirtualAccount($user);
-    }
+    // private function handleInterswitchVirtualAccount(User $user)
+    // {
+    //     return $this->generateInterswitchVirtualAccount($user);
+    // }
 
     private function handleStripe(User $user, float $amount, string $ref, string $currency)
     {

@@ -278,11 +278,16 @@ class JobListingService
 
             $amount = 300;
 
-            if ($currency->code !== 'NGN') {
-                $rate = $this->campaignService
-                    ->currencyConversion('NGN', $currency->code);
 
-                $amount *= $rate;
+            if ($currency->code !== 'NGN') {
+                // $rate = $this->campaignService
+                //     ->currencyConversion('NGN', $currency->code);
+
+                // $amount *= $rate;
+                 return response()->json([
+                    'status' => false,
+                    'message' => 'You cannot purchase points with your current wallet currency. Please switch to NGN',
+                ], 409);
             }
 
             // if (!checkWalletBalance($user, $currency, $amount)) {

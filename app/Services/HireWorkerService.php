@@ -283,8 +283,12 @@ class HireWorkerService
             $unitPrice = 500;
 
             if ($currency->code !== 'NGN') {
-                $rate = $this->campaignService->currencyConversion('NGN', $currency->code);
-                $unitPrice *= $rate;
+                // $rate = $this->campaignService->currencyConversion('NGN', $currency->code);
+                // $unitPrice *= $rate;
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You cannot purchase points with your current wallet currency. Please switch to NGN',
+                ], 409);
             }
 
             $amount = $unitPrice;
@@ -352,7 +356,7 @@ class HireWorkerService
             ], 200);
         } catch (Throwable $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'status'  => false,
                 'message' => 'Error processing point purchase.',
