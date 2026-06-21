@@ -485,8 +485,11 @@ class JobService
 
             DB::commit();
 
-            Mail::to($user->email)
-                ->queue(new SubmitJob($campaignWorker));
+            // Mail::to($user->email)
+            //     ->queue(new SubmitJob($campaignWorker));
+            
+             Mail::to($user->email)
+                ->send(new SubmitJob($campaignWorker));
 
             $subject = 'Task Submission';
 
@@ -495,15 +498,17 @@ class JobService
                 $campaign->post_title .
                 '. Please login to review.';
 
-            Mail::to($campaign->user->email)
-                ->queue(
-                    new GeneralMail(
-                        $campaign->user,
-                        $content,
-                        $subject,
-                        ''
-                    )
-                );
+            // Mail::to($campaign->user->email)
+            //     ->queue(
+            //         new GeneralMail(
+            //             $campaign->user,
+            //             $content,
+            //             $subject,
+            //             ''
+            //         )
+            //     );
+
+        
 
             unset($campaignWorker['job_id']);
 
@@ -883,14 +888,16 @@ class JobService
                 ], 400);
             }
             
+            $this->jobModel->createDispute($job, $request->reason, $job->proof_url);
             $this->jobModel->createDisputeOnWorker($job->id);
-            $this->jobModel->createDispute($job, $request->reason, $request->job_proof);
+            
+            // $proof = $job->proof_url ? $job->proof_url : null;
 
             $subject = 'New Dispute Raised';
             $content = 'A dispute has been raised by ' . auth()->user()->name . ' on a task. Please attend to it.';
 
 
-            $url = 'https://dashboard.freebyz.com/admin/campaign/disputes/' . $job->id;
+            $url = 'https://staging.e-portal.com.ng/admin/campaign/disputes/' . $job->id;
             Mail::to('freebyzcom@gmail.com')
                 ->cc('favour@freebyztechnologies.com')
                 ->send(new GeneralMail(auth()->user(), $content, $subject, $url));

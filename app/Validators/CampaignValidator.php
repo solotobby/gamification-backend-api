@@ -123,7 +123,7 @@ class CampaignValidator
     public static function disputeCreation($request)
     {
         $validationRules = [
-            'job_proof' => 'required|url',
+            // 'job_proof' => 'required|url',
             'reason' => 'required|string',
             'job_id' => 'required|string|exists:campaign_workers,id',
         ];

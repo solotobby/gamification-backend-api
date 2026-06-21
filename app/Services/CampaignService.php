@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Validators\CampaignValidator;
 use App\Helpers\SystemActivities;
 use App\Mail\AdminCampaignPosted;
+use App\Mail\ApproveCampaign;
 use App\Mail\CreateCampaign;
 use App\Models\Campaign;
 use App\Models\CampaignWorker;
@@ -270,8 +271,10 @@ class CampaignService
             );
 
             // Send email
+            // <!-- Mail::to($user->email)
+            //     ->queue(new CreateCampaign($campaign)); -->
             Mail::to($user->email)
-                ->queue(new CreateCampaign($campaign));
+                ->send(new CreateCampaign($campaign));
 
             return response()->json([
                 'status' => true,
@@ -286,16 +289,16 @@ class CampaignService
                 'user_id' => auth()->id(),
                 'request' => $request->all(),
                 'trace' => $e->getTraceAsString(),
-                ]);
+            ]);
 
-                DB::rollBack();
+            DB::rollBack();
 
-                Log::info('Campaign creation failed', [
+            Log::info('Campaign creation failed', [
                 'message' => $e->getMessage(),
                 'user_id' => auth()->id(),
                 'request' => $request->all(),
                 'trace' => $e->getTraceAsString(),
-                ]);
+            ]);
 
             return response()->json([
                 'status' => false,
@@ -382,7 +385,7 @@ class CampaignService
             }
         }
 
-         if (!empty($request['expected_result_file'] ?? null)) {
+        if (!empty($request['expected_result_file'] ?? null)) {
 
             $expectedURL = app(CloudinaryService::class)
                 ->uploadImage($request['expected_result_file']);
@@ -436,10 +439,14 @@ class CampaignService
         );
 
         // Notify admin
+        // Mail::to('hello@freebyztechnologies.com')
+        //     ->cc('favour@freebyztechnologies.com')
+        //     ->bcc('freebyzcom@gmail.com')
+        //     ->queue(new AdminCampaignPosted($campaign));
         Mail::to('hello@freebyztechnologies.com')
             ->cc('favour@freebyztechnologies.com')
             ->bcc('freebyzcom@gmail.com')
-            ->queue(new AdminCampaignPosted($campaign));
+            ->send(new AdminCampaignPosted($campaign));
 
         return $campaign;
     }
@@ -1122,6 +1129,12 @@ class CampaignService
             // Perform action
             if ($action === 'deny') {
                 $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Denied');
+
+                $subject = 'Job Denied - You have 12 hours to dispute';
+                $status = 'Denied';
+
+                Mail::to($worker->email)->send(new ApproveCampaign($job, $subject, $status));
+
                 // $this->decreasePendingCountAfterDenial($campaign->id);
             } elseif ($action === 'approve') {
                 $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Approved');
@@ -1151,7 +1164,7 @@ class CampaignService
                 'updated_at' => $job->updated_at,
                 'has_dispute' => (bool) $job->is_dispute,
                 'dispute_resolved' => (bool) $job->is_dispute_resolved,
-                'public_link' => "https://stagging.e-portal.com.ng/tasks/" . $campaign->job_id,
+                'public_link' => "https://dashboard.freebyz.com/tasks/" . $campaign->job_id,
 
             ];
 

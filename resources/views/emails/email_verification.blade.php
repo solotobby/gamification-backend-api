@@ -16,14 +16,7 @@
                     {!! $content !!}
                     <br>
                 </p>
-                {{-- <p style="margin-bottom: 10px;">
-                    Click the button below to access more jobs... <br><br>
-                    <a href="{{ url($url) }}" target="_blank" style="background-color:#6576ff;border-radius:4px;color:#ffffff;display:inline-block;font-size:13px;font-weight:600;line-height:44px;text-align:center;text-decoration:none;text-transform: uppercase; padding: 0 30px">
-                        Take More Jobs
-                    </a>
-                </p> --}}
-                {{-- <p style="margin-bottom: 10px;">Its clean, minimal and pre-designed email template that is suitable for multiple purposes email template.</p>
-                <p style="margin-bottom: 15px;">Hope you'll enjoy the experience, we're here if you have any questions, drop us a line at info@yourwebsite.com anytime. </p> --}}
+                
                 <p style="margin-top: 45px; margin-bottom: 15px;">---- <br> Regards, <br><i>Freebyz Team.</i></p>
             </td>
         </tr>

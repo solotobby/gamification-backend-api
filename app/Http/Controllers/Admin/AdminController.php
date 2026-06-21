@@ -906,7 +906,7 @@ class AdminController extends Controller
                 $name = SystemActivities::getInitials($user->name);
                 SystemActivities::activityLog($user, 'withdrawal_sent', 'NGN'.$am.' cash withdrawal by '.$name, 'regular');
                 //send mail
-                $content = 'Your withdrawal request has been granted and your acount credited successfully. Thank you for choosing Freebyz.com';
+                $content = 'Your withdrawal request has been granted and your account credited successfully. Thank you for choosing Freebyz.com';
                 $subject = 'Withdrawal Request Granted';
                 Mail::to($withdrawals->user->email)->send(new GeneralMail($user, $content, $subject, ''));
                 return back()->with('success', 'Withdrawals Updated');

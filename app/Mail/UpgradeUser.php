@@ -30,7 +30,7 @@ class UpgradeUser extends Mailable
      */
     public function build()
     {
-        return $this->markdown('emails.user.upgrade')->subject('Upgrade Successfull')->with([
+        return $this->markdown('emails.user.upgrade')->subject('Upgrade Successful')->with([
             'name' => $this->getUser->name
     ]);
     }
