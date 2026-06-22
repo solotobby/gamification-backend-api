@@ -596,7 +596,7 @@ class CampaignService
                 'KoraPay' => 'korapay',
                 'Virtual Account' => 'virtual_account',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
-                'Manual Account' => 'manual',
+                // 'Manual Account' => 'manual',
                 // 'Interswitch' => 'interswitch',
             ];
         } elseif ($currency === 'USD') {

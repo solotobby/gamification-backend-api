@@ -112,7 +112,7 @@ class HireWorkerService
                 'year_experience'     => 'required|in:0-2,3-5,6-10,10+',
                 'location'            => 'required|string',
                 'availability'        => 'required',
-                'portfolio_link'      => 'nullable|url',
+                'portfolio_link'      => 'required|url',
 
                 // Portfolio (optional at creation)
                 'portfolio'           => 'nullable|array',
