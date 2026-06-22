@@ -1130,7 +1130,7 @@ class CampaignService
             if ($action === 'deny') {
                 $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Denied');
 
-                $subject = 'Job Denied - You have 12 hours to dispute';
+                $subject = 'Task Denied - You have 12 hours to dispute';
                 $status = 'Denied';
 
                 Mail::to($worker->email)->send(new ApproveCampaign($job, $subject, $status));
