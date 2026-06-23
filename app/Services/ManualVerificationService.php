@@ -8,9 +8,8 @@ use App\Models\ManualVerification;
 use App\Repositories\WalletRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
 use App\Services\Providers\CloudinaryService;
-use Database\Seeders\NotificationSeeder;
-use Illuminate\Support\Facades\Storage;
-use Mail;
+use Illuminate\Support\Facades\Mail;
+use App\Services\NotificationService;
 use Throwable;
 
 class ManualVerificationService

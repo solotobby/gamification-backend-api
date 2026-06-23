@@ -202,6 +202,7 @@ class WalletRepositoryModel
             'amount'      => $amount,
             'status'      => 'successful',
             'currency'    => $baseCurrency,
+            'balance'     => $this->getWalletBalance($user->id),
             'channel'     => 'freebyz',
             'type'        => $transactionType,
             'description' => $transactionDescription,
