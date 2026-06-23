@@ -51,6 +51,7 @@ class AuthRepositoryModel
     {
         $user = User::find($user->id);
         $user->is_verified = true;
+        $user->verified_at = now();
         $user->save();
         return $user;
     }
