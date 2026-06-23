@@ -14,10 +14,6 @@ class ConversionRate extends Model
         'to',
         'rate',
         'amount',
-        'status',
-        'referral_commission',
-        'upgrade_fee',
-        'allow_upload',
-        'priotize'
+        'status'
     ];
 }
