@@ -64,6 +64,13 @@ class WalletService
 
             // Check if the user has made a transaction before, if it's exist fund wallet
             if ($user->transactions) {
+
+                $this->walletModel->creditWallet(
+                    $user,
+                    $currency->code,
+                    $amount
+                );
+
                 $this->walletModel->createTransaction(
                     $user,
                     $amount,
@@ -74,18 +81,14 @@ class WalletService
                     'Wallet Topup',
                     'credit',
                 );
-                $this->walletModel->creditWallet(
-                    $user,
-                    $currency->code,
-                    $amount
-                );
+
                 DB::commit();
 
                 return response()->json([
                     'status' => true,
                     'message' => $currency->code . ' Wallet Funded Successfully',
                     'data' => [
-                        'link' => 'https://stagging.e-portal.com.ng/'
+                        'link' => 'https://dashboard.freebyz.com/'
                     ]
                 ], 201);
             }
@@ -98,6 +101,13 @@ class WalletService
                 ], 401);
             }
 
+             $this->walletModel->creditWallet(
+                $user,
+                $currency->code,
+                $amount
+            );
+
+
             // User verification process (if it's not their first transaction)
             $this->walletModel->createTransaction(
                 $user,
@@ -108,11 +118,6 @@ class WalletService
                 'upgrade_payment',
                 'Upgrade Payment',
                 'Debit',
-            );
-            $this->walletModel->creditWallet(
-                $user,
-                $currency->code,
-                $amount
             );
 
             // Update user verification and process referral
@@ -126,7 +131,7 @@ class WalletService
                 'status' => true,
                 'message' => $currency->code . ' Wallet Verified Successfully',
                 'data' => [
-                    'link' => 'https://stagging.e-portal.com.ng/'
+                    'link' => 'https://dashboard.freebyz.com/'
                 ]
             ], 201);
         } catch (Throwable $exception) {
