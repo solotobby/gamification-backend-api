@@ -92,7 +92,7 @@ class WebhookController extends Controller
                     'balance' => $this->walletModel->getWalletBalance($user->id),
                 ]);
 
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             } else {
                 // Virtual account flow
                 if (!$customerCode) {
@@ -135,7 +135,7 @@ class WebhookController extends Controller
                     'user_type'   => 'regular',
                 ]);
 
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             }
 
             DB::commit();
@@ -248,7 +248,7 @@ class WebhookController extends Controller
                 ]);
 
                 // Auto-upgrade if unverified and amount qualifies
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             } else {
                 // Virtual account transfer (no prior transaction record)
                 if (!$customerCode) {
@@ -299,7 +299,7 @@ class WebhookController extends Controller
                 ]);
 
                 // Auto-upgrade if unverified
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             }
 
             DB::commit();
@@ -477,7 +477,7 @@ class WebhookController extends Controller
                         'balance' => $this->walletModel->getWalletBalance($user->id),
                     ]);
 
-                    $this->attemptAutoUpgrade($user, $currency, $amount);
+                    // $this->attemptAutoUpgrade($user, $currency, $amount);
 
                     $webhook->update([
                         'status' => 'processed',
@@ -631,7 +631,7 @@ class WebhookController extends Controller
                     'balance' => $this->walletModel->getWalletBalance($user->id),
                 ]);
 
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             } else {
                 // Virtual account / fallback
                 $userId = $this->getUserFromVirtualAccount($data);
@@ -664,7 +664,7 @@ class WebhookController extends Controller
                     'user_type'   => 'regular',
                 ]);
 
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             }
 
             DB::commit();
@@ -743,7 +743,7 @@ class WebhookController extends Controller
                 'balance' => $this->walletModel->getWalletBalance($user->id),
             ]);
 
-            $this->attemptAutoUpgrade($user, $transaction->currency, $amountPaid);
+            // $this->attemptAutoUpgrade($user, $transaction->currency, $amountPaid);
 
             DB::commit();
 
@@ -867,7 +867,7 @@ class WebhookController extends Controller
                     'user_type'   => 'regular',
                 ]);
 
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             } else {
                 if ($transaction->status === 'successful') {
                     $webhook->update(['status' => 'ignored', 'message' => 'Already processed']);
@@ -888,7 +888,7 @@ class WebhookController extends Controller
                     'balance' => $this->walletModel->getWalletBalance($user->id),
                 ]);
 
-                $this->attemptAutoUpgrade($user, $currency, $amount);
+                // $this->attemptAutoUpgrade($user, $currency, $amount);
             }
 
             DB::commit();
@@ -969,7 +969,7 @@ class WebhookController extends Controller
                 'balance' => $this->walletModel->getWalletBalance($user->id),
             ]);
 
-            $this->attemptAutoUpgrade($user, $currency, $amount);
+            // $this->attemptAutoUpgrade($user, $currency, $amount);
 
             DB::commit();
 
