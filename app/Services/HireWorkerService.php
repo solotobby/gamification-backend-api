@@ -62,10 +62,15 @@ class HireWorkerService
     {
         try {
             $user   = auth()->user();
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency  = $this->walletModel->mapCurrency($baseCurrency);
+            $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
             $worker = $this->repo->getWorkerById($id);
 
             $hasPurchased = $this->repo->hasUserPurchasedPoint($worker->id, $user->id);
 
+            $amount = $currency->hire_worker_points_amount ?? 500; // Default to 500 if not set
             $portfolio = $this->repo->getWorkerPortfolio($worker->user_id);
 
             // Only expose contact info if point has been purchased
@@ -86,7 +91,7 @@ class HireWorkerService
                         'has_purchased'      => $hasPurchased,
                         'professional_info'  => $professionalInfo,
                         'point_required'     => !$hasPurchased ? 1 : null,
-                        'point_cost_ngn'     => !$hasPurchased ? 500 : null,
+                        'point_cost_ngn'     => !$hasPurchased ? $amount : null,
                     ]
                 ),
             ], 200);
@@ -280,18 +285,20 @@ class HireWorkerService
             $mapCurrency  = $this->walletModel->mapCurrency($baseCurrency);
             $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
 
-            $unitPrice = 500;
+            // $unitPrice = 500;
 
-            if ($currency->code !== 'NGN') {
-                // $rate = $this->campaignService->currencyConversion('NGN', $currency->code);
-                // $unitPrice *= $rate;
-                return response()->json([
-                    'status' => false,
-                    'message' => 'You cannot purchase points with your current wallet currency. Please switch to NGN',
-                ], 409);
-            }
+            // $unitPrice = $currency->hire_worker_points_amount ?? 500; // Default to 500 if not set
+            // if ($currency->code !== 'NGN') {
+            //     // $rate = $this->campaignService->currencyConversion('NGN', $currency->code);
+            //     // $unitPrice *= $rate;
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'You cannot purchase points with your current wallet currency. Please switch to NGN',
+            //     ], 409);
+            // }
 
-            $amount = $unitPrice;
+            // $amount = $unitPrice;
+            $amount = $currency->hire_worker_points_amount ?? 500; // Default to 500 if not set
 
             // Insufficient wallet balance
             // if (!checkWalletBalance($user, $currency, $amount)) {

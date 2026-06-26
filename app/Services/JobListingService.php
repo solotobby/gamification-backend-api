@@ -91,6 +91,11 @@ class JobListingService
                     ->hasUserPurchasedJob($job->id, $user->id);
 
                 if (!$hasPurchased) {
+                    $baseCurrency = $user->wallet->base_currency;
+                    $mapCurrency  = $this->walletModel->mapCurrency($baseCurrency);
+                    $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
+                    $amount       = $currency->job_points_amount ?? 300; // Default to 300 if not set
+
                     return response()->json([
                         'status' => true,
                         'message' => 'Premium job requires point purchase.',
@@ -100,7 +105,7 @@ class JobListingService
                             [
                                 'has_purchased' => false,
                                 'point_required' => 1,
-                                'point_cost_ngn' => 300,
+                                'point_cost_ngn' => $amount,
                             ]
                         )
 
@@ -276,19 +281,19 @@ class JobListingService
             $currency = $this->currencyModel
                 ->getCurrencyByCode($mapCurrency);
 
-            $amount = 300;
+            // $amount = 300;
+            $amount = $currency->job_points_amount ?? 300; // Default to 300 if not set
 
+            // if ($currency->code !== 'NGN') {
+            //     // $rate = $this->campaignService
+            //     //     ->currencyConversion('NGN', $currency->code);
 
-            if ($currency->code !== 'NGN') {
-                // $rate = $this->campaignService
-                //     ->currencyConversion('NGN', $currency->code);
-
-                // $amount *= $rate;
-                 return response()->json([
-                    'status' => false,
-                    'message' => 'You cannot purchase points with your current wallet currency. Please switch to NGN',
-                ], 409);
-            }
+            //     // $amount *= $rate;
+            //      return response()->json([
+            //         'status' => false,
+            //         'message' => 'You cannot purchase points with your current wallet currency. Please switch to NGN',
+            //     ], 409);
+            // }
 
             // if (!checkWalletBalance($user, $currency, $amount)) {
             //     return response()->json([
