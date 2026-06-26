@@ -106,9 +106,11 @@ public function getCampaignsByPagination($id, $type, $per_page, $page = null)
         ->where('user_id', $id);
 
     $filters = [
-        'completed' => fn ($q) => $q->where('is_completed', true),
-        'declined'  => fn ($q) => $q->where('status', 'Denied'),
-        'live'      => fn ($q) => $q->where('status', 'Live')->where('is_completed', false),
+        'completed' => fn ($q) => $q->where('status', 'Completed'),
+        // 'completed' => fn ($q) => $q->where('is_completed', true),
+        'declined'  => fn ($q) => $q->where('status', 'Decline'),
+        'live'      => fn ($q) => $q->where('status', 'Live'),
+        // 'live'      => fn ($q) => $q->where('status', 'Live')->where('is_completed', false),
         'pending'   => fn ($q) => $q->where('status', 'Offline'),
         'paused'    => fn ($q) => $q->where('status', 'Paused'),
         'flagged'   => fn ($q) => $q->where('status', 'Flagged'),
@@ -242,6 +244,7 @@ public function getCampaignsByPagination($id, $type, $per_page, $page = null)
         $campaign->number_of_staff += $numberOfStaff;
         $campaign->total_amount += $totalAmount;
         $campaign->is_completed = false;
+        $campaign->status = 'Live';
         $campaign->save();
 
         return $campaign;

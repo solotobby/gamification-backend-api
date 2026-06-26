@@ -46,7 +46,7 @@ class AdminCampaignService
             if ($request->decision === 'approve') {
                 $decision = 'Live';
             } else {
-                $decision = 'Declined';
+                $decision = 'Decline';
             }
             $campaign->status = $decision;
             $campaign->save();

@@ -157,14 +157,16 @@ class CampaignService
 
     public function mapCampaignStatus($campaign): string
     {
-        if ($campaign->is_completed)        return 'completed';
-        if ($campaign->status === 'Denied') return 'declined';
+        // if ($campaign->is_completed)        return 'completed';
+        // if ($campaign->status === 'Denied') return 'declined';
 
         return match ($campaign->status) {
+            'Completed' => 'completed',
             'Flagged' => 'flagged',
             'Paused'  => 'paused',
             'Live'    => 'live',
             'Offline' => 'pending',
+            'Decline' => 'decline',
             default   => strtolower($campaign->status),
         };
     }
@@ -686,19 +688,30 @@ class CampaignService
                 'created_tasks' => [
                     'info' => 'Campaigns with Activity Status Completed will not be available on the dashboard.',
                     'warning' => 'To ensure fairness, kindly avoid denying task submissions without genuine reasons. Repeated denials will lead to your campaigns being suspended without refund.',
-                    'filter' => ['completed', 'pending', 'live', 'paused', 'declined', 'flagged'],
+                    'filter' => [
+                        'pending',
+                        'live',
+                        'paused',
+                        'completed',
+                        'declined',
+                        'flagged'
+                    ],
                 ],
                 'submitted_tasks' => [
                     'info' => 'Campaigns with Activity Status Completed will not be available on the dashboard.',
                     'warning' => 'To ensure fairness, you only have 12 hours to create a dispute if you think your job is denied abruptly.',
-                    'filter' => ['completed', 'pending', 'disputed'],
+                    'filter' => [
+                        'pending',
+                        'disputed',
+                        'completed'
+                    ],
                 ],
                 'task_creation' => [
                     'info' => 'Social media Apps like Facebook, TikTok, YouTube, Instagram has algorithms to detect unusual behaviour and attempt to buy followers or subscribers which can lead to a 10-15% drop in the number of followers/subscribers you actually hired. This may make you think our workers actually unsubcribed/unfollowed your page. Therefore avoid using your direct links (as much as possible). You can also choose the Comment before subscribe/Follow Subcategory or other creative means.'
                 ],
                 'worker_filter' => [
-                    'approved',
                     'pending',
+                    'approved',
                     'denied'
                 ]
             ],

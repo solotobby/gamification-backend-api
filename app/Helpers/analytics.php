@@ -18,7 +18,7 @@ class Analytics{
     public static function dailyVisit($type){
 
         $date = \Carbon\Carbon::today()->toDateString();
-        
+
         $check = Statistics::where('date', $date)->where('type', $type)->first();
         if($check == null)
         {
@@ -30,12 +30,12 @@ class Analytics{
     }
 
     public static function dailyActivities(){
-        // $data = User::select(\DB::raw('DATE(created_at) as date'), \DB::raw('count(*) as total_reg'), 
+        // $data = User::select(\DB::raw('DATE(created_at) as date'), \DB::raw('count(*) as total_reg'),
         // \DB::raw('SUM(is_verified) as verified'))
         // ->where('created_at', '>=', Carbon::now()->subMonths(3))->groupBy('date')
         // ->orderBy('date', 'ASC')
         // ->get();
-        
+
        $data= ActivityLog::select(
             \DB::raw('DATE(created_at) as date'),
             \DB::raw('SUM(CASE WHEN activity_type = "google_account_creation" THEN 1 ELSE 0 END) as google_reg_count'),
@@ -66,13 +66,13 @@ class Analytics{
         }
         return $dailyVisitresult;
     }
-    
+
     public static function monthlyVisits(){
         $MonthlyVisitresult = User::select(\DB::raw('DATE_FORMAT(created_at, "%b %Y") as month, COUNT(*) as user_per_month, SUM(is_verified) as verified_users'))
         // ->whereBetween('created_at',[$start_date, $end_date])
         ->where('created_at', '>=', Carbon::now()->subMonths(6))
-        ->groupBy('month')->get(); 
-        // 
+        ->groupBy('month')->get();
+        //
         $MonthlyVisit[] = ['Month', 'Users','Verified'];
         foreach ($MonthlyVisitresult as $key => $value) {
             $MonthlyVisit[++$key] = [$value->month, (int)$value->user_per_month, (int)$value->verified_users ];
@@ -125,10 +125,10 @@ class Analytics{
         $list = [ ];
         foreach($campaigns as $key => $value){
             $completed =$value->completed()->where('status', '=', 'Approved')->count();
-            $list[] = [ 
+            $list[] = [
                 'completed' => $completed,
                 'incomplete' => $value->number_of_staff - $completed,
-                'number_of_staff' =>(int) $value->number_of_staff, 
+                'number_of_staff' =>(int) $value->number_of_staff,
             ];
         }
 
@@ -140,14 +140,14 @@ class Analytics{
         $data['all_campaigns'] = $campaigns->count();
         $data['live_campaigns'] = $campaigns->where('status', 'Live')->count();
         $data['pending_campaigns'] = $campaigns->where('status', 'Offline')->count();
-        $data['denied_campaigns'] = $campaigns->where('status', 'Declined')->count();
-    
+        $data['denied_campaigns'] = $campaigns->where('status', 'Decline')->count();
+
         return $data;
     }
 
     public static function dashboardAnalytics(){
         $logs = ActivityLog::get(['activity_type', 'user_type', 'created_at']);
-        
+
         $startoftoday = Carbon::now()->startOfDay();
         $currently = Carbon::now();
 
@@ -155,7 +155,7 @@ class Analytics{
 
         $startOfWeek = Carbon::now()->startOfWeek();
         $startofMonth = Carbon::now()->startOfMonth();
-        
+
   //      $endOfWeek = Carbon::now()->endOfWeek();
 
         $data['registered_today'] = $logs->whereIn('activity_type', ['account_creation','google_account_creation'])->whereBetween('created_at', [$startoftoday, $currently])->count();
