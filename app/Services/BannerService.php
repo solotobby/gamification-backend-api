@@ -202,13 +202,27 @@ class BannerService
                 ], 404);
             }
 
-            if (in_array($banner->live_state, ['Under Review', 'Ended'])) {
+            // $banner->live_state === 'Ended' if (in_array($banner->live_state, ['Under Review', 'Ended'])) {
+            //     return response()->json([
+            //         'status'  => false,
+            //         'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
+            //     ], 422);
+            // }
+
+            if ($banner->live_state === 'Under Review') {
                 return response()->json([
                     'status'  => false,
                     'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
                 ], 422);
             }
-            
+
+            if ($banner->live_state === 'Ended') {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
+                ], 422);
+            }
+
 
             if ($request->action === 'activate') {
                 $banner->live_state = 'Started';
