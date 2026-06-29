@@ -46,7 +46,7 @@ class CampaignValidator
             'priotize' => 'required|boolean',
             'allow_upload' => 'required|boolean',
             'expected_result_image' => 'nullable|string',
-            'expected_result_file' => 'image|mimes:jpg,jpeg,png,gif,webp',
+            'expected_result_file' => 'nullable|image|mimes:jpg,jpeg,png,gif,webp',
             'approval_time' => 'required|numeric|in:24,36,48,56,72'
         ];
 

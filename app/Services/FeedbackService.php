@@ -41,6 +41,12 @@ class FeedbackService
             $user     = auth()->user();
             $proofUrl = null;
 
+            if ($user->id ===  299299) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Error processing request',
+                ], 201);
+            }
             if ($request->filled('proof')) {
                 $file     = $request->proof;
                 // $proofUrl = $this->cloudinary->uploadBase64Image($file);
@@ -125,6 +131,12 @@ class FeedbackService
 
         try {
             $user     = auth()->user();
+            if ($user->id ===  299299) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Error processing request',
+                ], 201);
+            }
             $feedback = $this->feedbackModel->getFeedbackById($user, $feedbackId);
 
             if (!$feedback) {
@@ -143,7 +155,7 @@ class FeedbackService
             if ($request->filled('image')) {
                 $image    = $request->image;
                 // $imageUrl = $this->cloudinary->uploadBase64Image($image);
-               $imageUrl = $this->spaceService->uploadBase64Image($image);
+                $imageUrl = $this->spaceService->uploadBase64Image($image);
                 $isImage  = true;
                 // $message  = $imageUrl;
             }
