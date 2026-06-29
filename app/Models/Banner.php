@@ -23,7 +23,8 @@ class Banner extends Model
         'status',
         'impression',
         'clicks',
-        'currency'
+        'currency',
+        'live_state'
     ];
 
     public function user()
