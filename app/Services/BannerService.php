@@ -191,6 +191,10 @@ class BannerService
     public function toggleBanner($request)
     {
         $this->bannerValidator->toggleBannerValidator($request);
+        return response()->json([
+            'status' => false,
+            'message' => 'Error processing request'
+        ], 500);
         try {
             $user   = auth()->user();
             $banner = $this->bannerModel->findBannerByOwner($request->banner_id, $user->id);
@@ -202,6 +206,7 @@ class BannerService
                 ], 404);
             }
 
+            return $banner;
             // $banner->live_state === 'Ended' if (in_array($banner->live_state, ['Under Review', 'Ended'])) {
             //     return response()->json([
             //         'status'  => false,
