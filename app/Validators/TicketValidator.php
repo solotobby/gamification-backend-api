@@ -12,7 +12,7 @@ class TicketValidator
         $validationRules = [
             'category' => 'required|string',
             'message' => 'required|string',
-            'proof' => 'nullable|image|mimes:png,jpeg,gif,jpg',
+            'proof' => 'nullable|image',
         ];
 
         $validator = Validator::make($request->all(), $validationRules);

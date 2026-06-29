@@ -19,6 +19,7 @@ use App\Repositories\AuthRepositoryModel;
 use App\Repositories\HireWorkerRepository;
 use App\Repositories\JobRepositoryModel;
 use App\Services\Providers\CloudinaryService;
+use App\Services\Providers\SpacesService;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -379,9 +380,10 @@ class CampaignService
         // Upload expected result image
         if (!empty($request['expected_result_image'] ?? null)) {
 
-            $expectedURL = app(CloudinaryService::class)
-                ->uploadBase64Image($request['expected_result_image']);
+            // $expectedURL = app(CloudinaryService::class)
+            //     ->uploadBase64Image($request['expected_result_image']);
 
+            $expectedURL = app(SpacesService::class)->uploadBase64Image($request['expected_result_image']);
             if (!$expectedURL) {
                 throw new Exception('Error uploading Proof');
             }
@@ -389,8 +391,10 @@ class CampaignService
 
         if (!empty($request['expected_result_file'] ?? null)) {
 
-            $expectedURL = app(CloudinaryService::class)
-                ->uploadImage($request['expected_result_file']);
+            // $expectedURL = app(CloudinaryService::class)
+            //     ->uploadImage($request['expected_result_file']);
+
+            $expectedURL = app(SpacesService::class)->uploadImage($request['expected_result_file']);
 
             if (!$expectedURL) {
                 throw new Exception('Error uploading Proof');

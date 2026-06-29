@@ -13,6 +13,7 @@ use App\Repositories\LogRepositoryModel;
 use App\Repositories\RatingRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
 use App\Services\Providers\CloudinaryService;
+use App\Services\Providers\SpacesService;
 use App\Validators\CampaignValidator;
 use Exception;
 use Illuminate\Support\Facades\Mail;
@@ -36,6 +37,7 @@ class JobService
     protected $validator;
     protected $cloudinary;
     protected $bannerModel;
+    protected $spacesService;
 
     public function __construct(
         JobRepositoryModel $jobModel,
@@ -49,6 +51,7 @@ class JobService
         LogRepositoryModel $log,
         CloudinaryService $cloudinary,
         BannerRepositoryModel $bannerModel,
+        SpacesService $spacesService
     ) {
         $this->jobModel = $jobModel;
         $this->authModel = $authModel;
@@ -61,6 +64,7 @@ class JobService
         $this->log = $log;
         $this->cloudinary = $cloudinary;
         $this->bannerModel = $bannerModel;
+        $this->spacesService = $spacesService;
     }
 
     public function availableJobs($request)
@@ -438,10 +442,13 @@ class JobService
 
             if ($campaign->allow_upload && $request->hasFile('proof')) {
                 try {
-                    $proofUrl = $this->cloudinary->uploadImage(
-                        $request->file('proof'),
-                        'campaign-proofs',
-                        true
+                    // $proofUrl = $this->cloudinary->uploadImage(
+                    //     $request->file('proof'),
+                    //     'campaign-proofs',
+                    //     true
+                    // );
+                       $proofUrl = $this->spacesService->uploadImage(
+                        $request->file('proof')
                     );
 
                     if (!$proofUrl) {
@@ -487,7 +494,7 @@ class JobService
 
             // Mail::to($user->email)
             //     ->queue(new SubmitJob($campaignWorker));
-            
+
              Mail::to($user->email)
                 ->send(new SubmitJob($campaignWorker));
 
@@ -508,7 +515,7 @@ class JobService
             //         )
             //     );
 
-        
+
 
             unset($campaignWorker['job_id']);
 
@@ -611,7 +618,8 @@ class JobService
             $proofUrl = 'no image';
             if ($request->hasFile('proof') && $campaign->allow_upload) {
                 $file = $request->file('proof');
-                $proofUrl = $this->cloudinary->uploadImage($file, 'uploads', true);
+                // $proofUrl = $this->cloudinary->uploadImage($file, 'uploads', true);
+                $proofUrl = $this->spacesService->uploadImage($file);
                 return response()->json([
                     'status' => false,
                     'message' => 'Error uploading Proof'
@@ -887,10 +895,10 @@ class JobService
                     'message' => 'A dispute cannot be created for this task at this time.'
                 ], 400);
             }
-            
+
             $this->jobModel->createDispute($job, $request->reason, $job->proof_url);
             $this->jobModel->createDisputeOnWorker($job->id);
-            
+
             // $proof = $job->proof_url ? $job->proof_url : null;
 
             $subject = 'New Dispute Raised';

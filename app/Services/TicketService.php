@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Repositories\TicketRepositoryModel;
 use App\Services\Providers\CloudinaryService;
+use App\Services\Providers\SpacesService;
 use App\Validators\TicketValidator;
 use Throwable;
 
@@ -12,14 +13,17 @@ class TicketService
     protected $ticketModel;
     protected $cloudinary;
     protected $validator;
+    protected $spacesService;
     public function __construct(
         TicketRepositoryModel $ticketModel,
         CloudinaryService $cloudinary,
         TicketValidator $validator,
+        SpacesService $spacesService,
     ) {
         $this->ticketModel = $ticketModel;
         $this->cloudinary = $cloudinary;
         $this->validator = $validator;
+        $this->spacesService = $spacesService;
     }
 
     public function createTicket($request)
@@ -31,7 +35,8 @@ class TicketService
             $proofUrl = 'no image';
             if ($request->hasFile('proof')) {
                 $file = $request->hasFile('proof');
-                $proofUrl = $this->cloudinary->uploadImage($file);
+                // $proofUrl = $this->cloudinary->uploadImage($file);
+                $proofUrl = $this->spacesService->uploadImage($file);
             }
             $data = [
                 'user_id' => $user->id,

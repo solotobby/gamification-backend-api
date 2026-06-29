@@ -14,6 +14,8 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use App\Services\NotificationService;
+use App\Services\Providers\SpacesService;
 
 class BannerService
 {
@@ -23,6 +25,7 @@ class BannerService
     protected $walletModel;
     protected $bannerValidator;
     protected $cloudinary;
+    protected $spacesService;
 
     public function __construct(
         BannerRepositoryModel $bannerModel,
@@ -30,7 +33,8 @@ class BannerService
         CurrencyRepositoryModel $currencyModel,
         WalletRepositoryModel $walletModel,
         BannerValidator $bannerValidator,
-        CloudinaryService $cloudinary
+        CloudinaryService $cloudinary,
+        SpacesService $spacesService,
     ) {
         $this->bannerModel = $bannerModel;
         $this->surveyModel = $surveyModel;
@@ -38,6 +42,7 @@ class BannerService
         $this->walletModel = $walletModel;
         $this->bannerValidator = $bannerValidator;
         $this->cloudinary = $cloudinary;
+        $this->spacesService = $spacesService;
     }
 
     public function listBanner()
@@ -128,8 +133,7 @@ class BannerService
 
            // s3 bucket processing
             $file = $request->file('banner_image');
-            // $filePath = 'ad/' . time() . '.' . $file->extension();
-            $bannerUrl = $this->cloudinary->uploadImage($file);
+            $bannerUrl = $this->spacesService->uploadImage($file);
 
             //Save Banner
             $banner = $this->bannerModel->createBanner(
@@ -178,8 +182,8 @@ class BannerService
             Log::error($exception->getMessage());
             return response()->json([
             'status' => false,
-             'error' => $exception->getMessage(),
-                'message' => 'Error processing request'
+            'error' => $exception->getMessage(),
+            'message' => 'Error processing request'
             ], 500);
         }
     }

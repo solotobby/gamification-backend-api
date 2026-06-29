@@ -10,6 +10,7 @@ use App\Repositories\AuthRepositoryModel;
 use App\Services\Providers\CloudinaryService;
 use Illuminate\Support\Facades\Mail;
 use App\Services\NotificationService;
+use App\Services\Providers\SpacesService;
 use Throwable;
 
 class ManualVerificationService
@@ -17,7 +18,8 @@ class ManualVerificationService
     public function __construct(
         protected WalletRepositoryModel $walletModel,
         protected AuthRepositoryModel $authModel,
-        protected CloudinaryService $cloudinary
+        protected CloudinaryService $cloudinary,
+        protected SpacesService $spacesService
     ) {}
 
     public function submit($request)
@@ -26,7 +28,7 @@ class ManualVerificationService
             'amount'         => 'required|numeric|min:1',
             'payment_method' => 'required|in:manual,bank_transfer,crypto,paystack,korapay',
             'reference'      => 'nullable|string',
-            'proof_image'    => 'required|image|max:2048',
+            'proof_image'    => 'required|image',
         ]);
 
         try {
@@ -49,7 +51,8 @@ class ManualVerificationService
             // }
 
             $file = $request->file('proof_image');
-            $imagePath = $this->cloudinary->uploadImage($file);
+            // $imagePath = $this->cloudinary->uploadImage($file);
+            $imagePath = $this->spacesService->uploadImage($file);
 
             ManualVerification::create([
                 'user_id'        => $user->id,

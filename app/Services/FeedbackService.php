@@ -6,12 +6,14 @@ use App\Repositories\FeedbackRepositoryModel;
 use App\Services\Providers\CloudinaryService;
 use App\Validators\FeedbackValidator;
 use Throwable;
+use App\Services\Providers\SpacesService;
 
 class FeedbackService
 {
     protected $feedbackModel;
     protected $cloudinary;
     protected $validator;
+    protected $spaceService;
 
     protected $autoReplies = [
         'transfer_issue' => 'Thank you for taking the time to send this transfer issue. We have received it and will act on it accordingly. Please send a screenshot of proof of payment to info@dominahl.com. Thank you once again.',
@@ -23,10 +25,12 @@ class FeedbackService
         FeedbackRepositoryModel $feedbackModel,
         CloudinaryService $cloudinary,
         FeedbackValidator $validator,
+        SpacesService $spacesService
     ) {
         $this->feedbackModel = $feedbackModel;
         $this->cloudinary    = $cloudinary;
         $this->validator     = $validator;
+        $this->spaceService  = $spacesService;
     }
 
     public function createFeedback($request)
@@ -39,7 +43,8 @@ class FeedbackService
 
             if ($request->filled('proof')) {
                 $file     = $request->proof;
-                $proofUrl = $this->cloudinary->uploadBase64Image($file);
+                // $proofUrl = $this->cloudinary->uploadBase64Image($file);
+                $proofUrl = $this->spaceService->uploadBase64Image($file);
             }
 
             $data = [
@@ -137,7 +142,8 @@ class FeedbackService
 
             if ($request->filled('image')) {
                 $image    = $request->image;
-                $imageUrl = $this->cloudinary->uploadBase64Image($image);
+                // $imageUrl = $this->cloudinary->uploadBase64Image($image);
+               $imageUrl = $this->spaceService->uploadBase64Image($image);
                 $isImage  = true;
                 // $message  = $imageUrl;
             }
