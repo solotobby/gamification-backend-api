@@ -21,6 +21,18 @@ class BannerValidator
             throw new ValidationException($validator);
         }
     }
+    public function increaseClicksValidator($request)
+    {
+        $validationRules = [
+            'banner_id'    => 'required|string',
+            'extra_budget' => 'required|numeric|min:1',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+    }
+
 
     public function toggleBannerValidator($request)
     {

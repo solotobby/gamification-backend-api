@@ -131,7 +131,7 @@ class BannerService
                 ], 401);
             }
 
-           // s3 bucket processing
+            // s3 bucket processing
             $file = $request->file('banner_image');
             $bannerUrl = $this->spacesService->uploadImage($file);
 
@@ -181,12 +181,141 @@ class BannerService
             DB::rollBack();
             Log::error($exception->getMessage());
             return response()->json([
-            'status' => false,
-            'error' => $exception->getMessage(),
-            'message' => 'Error processing request'
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request'
             ], 500);
         }
     }
+
+    public function toggleBanner($request)
+    {
+        $this->bannerValidator->toggleBannerValidator($request);
+        try {
+            $user   = auth()->user();
+            $banner = $this->bannerModel->findBannerByOwner($request->banner_id, $user->id);
+
+            if (!$banner) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Banner not found.'
+                ], 404);
+            }
+
+            if (in_array($banner->live_state, ['Under Review', 'Ended'])) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
+                ], 422);
+            }
+
+            if ($request->action === 'activate') {
+                $banner->live_state = 'Started';
+                $banner->status     = true;
+            } else {
+                $banner->live_state = 'Paused';
+                $banner->status     = false;
+            }
+            $banner->save();
+
+            if ($request->device === 'web') {
+                return response()->json([
+                    'status'  => true,
+                    'message' => 'Banner ' . ($request->action === 'activate' ? 'activated' : 'paused') . ' successfully.',
+                    'data'    =>
+                    ['live_state' => $banner->live_state],
+
+                ]);
+            }
+            return response()->json([
+                'status'  => true,
+                'message' => 'Banner ' . ($request->action === 'activate' ? 'activated' : 'paused') . ' successfully.',
+                'data'    => [
+                    $banner->refresh()
+                ],
+            ]);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
+    public function increaseClicks($request)
+    {
+        $this->bannerValidator->increaseClicksValidator($request);
+        try {
+            $user     = auth()->user();
+            $banner   = $this->bannerModel->findBannerByOwner($request->banner_id, $user->id);
+
+            if (!$banner) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Banner not found.'
+                ], 404);
+            }
+
+            $baseCurrency = $user->wallet->base_currency;
+            $mapCurrency  = $this->walletModel->mapCurrency($baseCurrency);
+            $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
+
+            DB::beginTransaction();
+
+            if (!$this->walletModel->checkWalletBalance($user, $currency->code, (int) $request->extra_budget)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Insufficient wallet balance.'
+                ], 401);
+            }
+
+            if (!$this->walletModel->debitWallet($user, $currency->code, (int) $request->extra_budget)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Wallet debit failed.'
+                ], 401);
+            }
+
+            $extraClicks = $request->extra_budget / $currency->banner_clicks_amount;
+            $amount = $request->extra_budget;
+            $banner      = $this->bannerModel->addClicks($banner, $extraClicks, $amount);
+
+            $this->walletModel->createTransaction(
+                $user,
+                $request->extra_budget,
+                time(),
+                $banner->id,
+                $currency->code,
+                'ad_banner',
+                'Banner Click Top-up by ' . $user->name,
+                'debit',
+            );
+
+            app(NotificationService::class)->createNotification(
+                $user,
+                'Banner Clicks Increased',
+                "Your banner clicks have been topped up successfully.",
+                'banner'
+            );
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Banner clicks increased successfully.',
+                'data'    => ['clicks' => $banner->clicks],
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Error processing request'
+            ], 500);
+        }
+    }
+
 
     public function getPreference()
     {

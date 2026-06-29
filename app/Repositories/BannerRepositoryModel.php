@@ -67,6 +67,24 @@ class BannerRepositoryModel
     }
 
 
+    public function findBannerByOwner($bannerId, $userId)
+    {
+        return Banner::where('banner_id', $bannerId)->where('user_id', $userId)->first();
+    }
+
+    public function addClicks($banner, $extraClicks, $amount)
+    {
+        $banner->clicks += $extraClicks;
+        $banner->amount += $amount;
+        // Re-open ended banner if it was ended due to click exhaustion
+        if ($banner->live_state === 'Ended') {
+            $banner->live_state = 'Started';
+            $banner->status     = true;
+        }
+        $banner->save();
+        return $banner;
+    }
+
     public function createBannerInterest($audience, $banner)
     {
         foreach ($audience as $id) {

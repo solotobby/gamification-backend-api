@@ -33,4 +33,14 @@ class BannerController extends Controller
     {
         return $this->bannerService->adView($bannerId);
     }
+
+    public function toggleBanner(Request $request)
+    {
+        return $this->bannerService->toggleBanner($request);
+    }
+
+    public function increaseClicks(Request $request)
+    {
+        return $this->bannerService->increaseClicks($request);
+    }
 }

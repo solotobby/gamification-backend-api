@@ -13,4 +13,6 @@ Route::middleware([
     Route::post('/click-ad/{bannerId}', [BannerController::class, 'clickAdCount']);
     Route::get('/list', [BannerController::class, 'getUserBanner']);
     Route::get('/preference-list', [BannerController::class, 'getBannerPreference']);
+    Route::post('/toggle',         [BannerController::class, 'toggleBanner']);
+    Route::post('/increase-clicks', [BannerController::class, 'increaseClicks']);
 });

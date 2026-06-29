@@ -196,10 +196,10 @@ class CampaignService
     {
         $this->validator->validateCampaignCreation($request);
 
-        Log::info('Initiating campaign creation', [
-            'user_id' => auth()->id(),
-            'request' => $request->all(),
-        ]);
+        // Log::info('Initiating campaign creation', [
+        //     'user_id' => auth()->id(),
+        //     'request' => $request->all(),
+        // ]);
 
         DB::beginTransaction();
 
