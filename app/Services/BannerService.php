@@ -208,6 +208,7 @@ class BannerService
                     'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
                 ], 422);
             }
+            
 
             if ($request->action === 'activate') {
                 $banner->live_state = 'Started';
