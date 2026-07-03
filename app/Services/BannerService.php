@@ -184,42 +184,42 @@ class BannerService
     }
 
     public function toggleBanner($request)
-{
-    $this->bannerValidator->toggleBannerValidator($request);
-    try {
-        $user   = auth()->user();
-        $banner = $this->bannerModel->findBannerByOwner($request->banner_id, $user->id);
+    {
+        $this->bannerValidator->toggleBannerValidator($request);
+        try {
+            $user   = auth()->user();
+            $banner = $this->bannerModel->findBannerByOwner($request->banner_id, $user->id);
 
-        if (!$banner) {
-            return response()->json(['status' => false, 'message' => 'Banner not found.'], 404);
-        }
+            if (!$banner) {
+                return response()->json(['status' => false, 'message' => 'Banner not found.'], 404);
+            }
 
-        if (in_array($banner->live_state, ['Under Review', 'Ended'])) {
+            if (in_array($banner->live_state, ['Under Review', 'Ended', 'Rejected'])) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Banner in "' . $banner->live_state . '" state cannot be toggled.',
+                ], 422);
+            }
+
+            if ($request->action === 'activate') {
+                $banner->live_state = 'Started';
+                $banner->status     = true;
+            } else {
+                $banner->live_state = 'Paused';
+                $banner->status     = false;
+            }
+            $banner->save();
+
             return response()->json([
-                'status'  => false,
-                'message' => 'Banner in "' . $banner->live_state . '" state cannot be toggled.',
-            ], 422);
+                'status'  => true,
+                'message' => 'Banner ' . ($request->action === 'activate' ? 'activated' : 'paused') . ' successfully.',
+                'data'    => ['live_state' => $banner->live_state],
+            ]);
+        } catch (Exception $e) {
+            Log::error($e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Error processing request'], 500);
         }
-
-        if ($request->action === 'activate') {
-            $banner->live_state = 'Started';
-            $banner->status     = true;
-        } else {
-            $banner->live_state = 'Paused';
-            $banner->status     = false;
-        }
-        $banner->save();
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Banner ' . ($request->action === 'activate' ? 'activated' : 'paused') . ' successfully.',
-            'data'    => ['live_state' => $banner->live_state],
-        ]);
-    } catch (Exception $e) {
-        Log::error($e->getMessage());
-        return response()->json(['status' => false, 'message' => 'Error processing request'], 500);
     }
-}
 
     public function increaseClicks($request)
     {
@@ -233,6 +233,13 @@ class BannerService
                     'status' => false,
                     'message' => 'Banner not found.'
                 ], 404);
+            }
+
+            if ($banner->live_state === 'Rejected') {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Rejected banners cannot be topped up.',
+                ], 422);
             }
 
             $baseCurrency = $user->wallet->base_currency;
