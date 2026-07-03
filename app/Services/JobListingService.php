@@ -120,7 +120,7 @@ class JobListingService
                     ], 401);
                 }
 
-                $validated['is_active'] = true;
+                // $validated['is_active'] = true;
 
                 $job = $this->jobRepository->createUserJob($user, $validated);
 
@@ -138,7 +138,7 @@ class JobListingService
                 DB::commit();
 
             } else {
-                $validated['is_active'] = true;
+                // $validated['is_active'] = true;
                 $job = $this->jobRepository->createUserJob($user, $validated);
             }
 
@@ -161,8 +161,8 @@ class JobListingService
             DB::rollBack();
             return response()->json([
                 'status'  => false,
-                'message' => 'Error posting job.',
-                'error'   => $e->getMessage(),
+                'error' => 'Error posting job.',
+                'message'   => $e->getMessage(),
             ], 500);
         }
     }
