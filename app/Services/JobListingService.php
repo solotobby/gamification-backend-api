@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Mail\GeneralMail;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\JobListingRepository;
 use App\Repositories\WalletRepositoryModel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 class JobListingService
@@ -65,6 +67,176 @@ class JobListingService
                 'status'  => false,
                 'message' => 'Error retrieving job listings',
                 'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function createUserJob($request)
+    {
+        try {
+            $user = auth()->user();
+
+            $validated = $request->validate([
+                'title'               => 'required|string|max:255',
+                'description'         => 'required|string',
+                'requirements'        => 'nullable|string',
+                'responsibilities'    => 'nullable|string',
+                'benefits'            => 'nullable|string',
+                'type'                => 'required|in:fulltime,parttime,contract,internship,gig,nysc',
+                'tier'                => 'required|in:free,premium',
+                'location'            => 'required|string|max:255',
+                'remote_allowed'      => 'boolean',
+                'salary_min'          => 'nullable|numeric|min:0',
+                'salary_max'          => 'nullable|numeric|min:0|gte:salary_min',
+                'currency'            => 'nullable|string|max:3',
+                'company_name'        => 'required|string|max:255',
+                'company_description' => 'nullable|string',
+                'company_website'     => 'nullable|url',
+                'application_link'    => 'nullable|url',
+                'expires_at'          => 'nullable|date|after:today',
+            ]);
+
+            $validated['remote_allowed'] = $request->boolean('remote_allowed');
+
+            if ($validated['tier'] === 'premium') {
+                $baseCurrency = $user->wallet->base_currency;
+                $mapCurrency  = $this->walletModel->mapCurrency($baseCurrency);
+                $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
+                $amount       = $currency->job_listing_amount ?? 5000;
+
+                DB::beginTransaction();
+
+                if (!$this->walletModel->checkWalletBalance($user, $currency->code, $amount)) {
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Insufficient wallet balance. You need ' . $currency->code . ' ' . number_format($amount, 2) . ' to post a premium job.',
+                    ], 401);
+                }
+
+                if (!$this->walletModel->debitWallet($user, $currency->code, $amount)) {
+                    return response()->json([
+                        'status'  => false,
+                        'message' => 'Wallet debit failed. Please try again.',
+                    ], 401);
+                }
+
+                $validated['is_active'] = true;
+
+                $job = $this->jobRepository->createUserJob($user, $validated);
+
+                $this->walletModel->createTransaction(
+                    $user,
+                    $amount,
+                    time(),
+                    $job->id,
+                    $currency->code,
+                    'job_listing',
+                    'Premium Job Listing: ' . $job->title,
+                    'debit',
+                );
+
+                DB::commit();
+
+            } else {
+                $validated['is_active'] = true;
+                $job = $this->jobRepository->createUserJob($user, $validated);
+            }
+
+             $content = 'Your job listing is successfully created. It is currently under review, you will get a notification when it goes live!';
+            $subject = 'Job Listing Created Successfully';
+            Mail::to(auth()->user()->email)->send(new GeneralMail(auth()->user(), $content, $subject, ''));
+
+            app(NotificationService::class)->createNotification(
+                $user,
+                'Job Listing Created',
+                "Your Job Listing has been Created Successfully and pending approval from the admin",
+                'job_listing'
+            );
+            return response()->json([
+                'status'  => true,
+                'message' => 'Job posted successfully.',
+                'data'    => $this->formatJob($job),
+            ], 201);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error posting job.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function updateUserJob($request, $jobId)
+    {
+        try {
+            $user = auth()->user();
+            $job  = $this->jobRepository->getUserJobById($jobId, $user->id);
+
+            $validated = $request->validate([
+                'title'               => 'sometimes|string|max:255',
+                'description'         => 'sometimes|string',
+                'requirements'        => 'nullable|string',
+                'responsibilities'    => 'nullable|string',
+                'benefits'            => 'nullable|string',
+                'type'                => 'sometimes|in:fulltime,parttime,contract,internship,gig,nysc',
+                'location'            => 'sometimes|string|max:255',
+                'remote_allowed'      => 'boolean',
+                'salary_min'          => 'nullable|numeric|min:0',
+                'salary_max'          => 'nullable|numeric|min:0|gte:salary_min',
+                'currency'            => 'nullable|string|max:3',
+                'company_name'        => 'sometimes|string|max:255',
+                'company_description' => 'nullable|string',
+                'company_website'     => 'nullable|url',
+                'application_link'    => 'nullable|url',
+                'expires_at'          => 'nullable|date',
+            ]);
+
+            if (isset($validated['remote_allowed'])) {
+                $validated['remote_allowed'] = $request->boolean('remote_allowed');
+            }
+
+            $job = $this->jobRepository->updateUserJob($job, $validated);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Job updated successfully.',
+                'data'    => $this->formatJob($job),
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error updating job.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getUserJobs($request)
+    {
+        try {
+            $user = auth()->user();
+            $jobs = $this->jobRepository->getUserJobs($user->id, $request->query('page'));
+
+            $data = [];
+            foreach ($jobs as $job) {
+                $data[] = array_merge($this->formatJobSummary($job), [
+                    'applications_count' => $job->applications_count,
+                    'is_active'          => $job->is_active,
+                    'application_link'   => $job->application_link,
+                ]);
+            }
+
+            return response()->json([
+                'status'     => true,
+                'message'    => 'Your job listings retrieved.',
+                'data'       => $data,
+                'pagination' => $this->buildPagination($jobs),
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving your jobs.',
             ], 500);
         }
     }
@@ -381,6 +553,7 @@ class JobListingService
             'company_logo'        => $job->company_logo,
             'company_description' => $job->company_description,
             'company_website'     => $job->company_website,
+            'application_link'    =>  $job->application_link ? $job->company_website : null,
             'views_count'         => $job->views_count,
             'applications_count'  => $job->applications_count,
             'has_purchased'          => $hasPurchased,

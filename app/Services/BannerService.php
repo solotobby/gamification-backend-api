@@ -155,11 +155,6 @@ class BannerService
                 'debit',
             );
 
-            //Save banner Interest
-            // $this->bannerModel->createBannerInterest(
-            //     $request->audience,
-            //     $banner
-            // );
 
             $content = 'Your ad banner placement is successfully created. It is currently under review, you will get a notification when it goes live!';
             $subject = 'Ad Banner Placement - Under Review';
@@ -189,79 +184,42 @@ class BannerService
     }
 
     public function toggleBanner($request)
-    {
-        $this->bannerValidator->toggleBannerValidator($request);
-        return response()->json([
-            'status' => false,
-            'message' => 'Error processing request'
-        ], 500);
-        try {
-            $user   = auth()->user();
-            $banner = $this->bannerModel->findBannerByOwner($request->banner_id, $user->id);
+{
+    $this->bannerValidator->toggleBannerValidator($request);
+    try {
+        $user   = auth()->user();
+        $banner = $this->bannerModel->findBannerByOwner($request->banner_id, $user->id);
 
-            if (!$banner) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Banner not found.'
-                ], 404);
-            }
-
-            return $banner;
-            // $banner->live_state === 'Ended' if (in_array($banner->live_state, ['Under Review', 'Ended'])) {
-            //     return response()->json([
-            //         'status'  => false,
-            //         'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
-            //     ], 422);
-            // }
-
-            if ($banner->live_state === 'Under Review') {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
-                ], 422);
-            }
-
-            if ($banner->live_state === 'Ended') {
-                return response()->json([
-                    'status'  => false,
-                    'message' => 'Banner in ' . $banner->live_state . ' state cannot be toggled.',
-                ], 422);
-            }
-
-
-            if ($request->action === 'activate') {
-                $banner->live_state = 'Started';
-                $banner->status     = true;
-            } else {
-                $banner->live_state = 'Paused';
-                $banner->status     = false;
-            }
-            $banner->save();
-
-            if ($request->device === 'web') {
-                return response()->json([
-                    'status'  => true,
-                    'message' => 'Banner ' . ($request->action === 'activate' ? 'activated' : 'paused') . ' successfully.',
-                    'data'    =>
-                    ['live_state' => $banner->live_state],
-
-                ]);
-            }
-            return response()->json([
-                'status'  => true,
-                'message' => 'Banner ' . ($request->action === 'activate' ? 'activated' : 'paused') . ' successfully.',
-                'data'    => [
-                    $banner->refresh()
-                ],
-            ]);
-        } catch (Exception $e) {
-            Log::error($e->getMessage());
-            return response()->json([
-                'status' => false,
-                'message' => 'Error processing request'
-            ], 500);
+        if (!$banner) {
+            return response()->json(['status' => false, 'message' => 'Banner not found.'], 404);
         }
+
+        if (in_array($banner->live_state, ['Under Review', 'Ended'])) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Banner in "' . $banner->live_state . '" state cannot be toggled.',
+            ], 422);
+        }
+
+        if ($request->action === 'activate') {
+            $banner->live_state = 'Started';
+            $banner->status     = true;
+        } else {
+            $banner->live_state = 'Paused';
+            $banner->status     = false;
+        }
+        $banner->save();
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Banner ' . ($request->action === 'activate' ? 'activated' : 'paused') . ' successfully.',
+            'data'    => ['live_state' => $banner->live_state],
+        ]);
+    } catch (Exception $e) {
+        Log::error($e->getMessage());
+        return response()->json(['status' => false, 'message' => 'Error processing request'], 500);
     }
+}
 
     public function increaseClicks($request)
     {

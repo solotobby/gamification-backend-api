@@ -17,6 +17,38 @@ class JobListingRepository
             ->paginate(12, ['*'], 'page', $page);
     }
 
+    public function createUserJob($user, array $data)
+    {
+        return JobListing::create(array_merge($data, [
+            'posted_by'   => $user->id,
+            'user_posted' => true,
+            'is_active'   => false,
+        ]));
+    }
+
+    public function getUserJobs($userId, $page = null)
+    {
+        return JobListing::where('posted_by', $userId)
+            ->where('user_posted', true)
+            ->withCount('applications')
+            ->latest()
+            ->paginate(10, ['*'], 'page', $page);
+    }
+
+    public function getUserJobById($jobId, $userId)
+    {
+        return JobListing::where('id', $jobId)
+            ->where('posted_by', $userId)
+            ->where('user_posted', true)
+            ->firstOrFail();
+    }
+
+    public function updateUserJob($job, array $data)
+    {
+        $job->update($data);
+        return $job->fresh();
+    }
+
     public function getJobById($id)
     {
         return JobListing::active()
