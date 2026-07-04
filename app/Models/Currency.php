@@ -25,7 +25,8 @@ class Currency extends Model
         'referral_withdrawal_percent',
         'banner_clicks_amount',
         'hire_worker_points_amount',
+        // 'job_listing_amount',
         'job_points_amount',
-        'job_listing_amount'
+        'job_listing_amount',
     ];
 }

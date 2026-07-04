@@ -48,4 +48,9 @@ class RemoteJobController extends Controller
     {
         return $this->jobService->getUserJobs($request);
     }
+
+    public function myJobDetails(Request $request, $id)
+    {
+        return $this->jobService->getUserJobDetails($request, $id);
+    }
 }

@@ -7,6 +7,7 @@ use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\JobListingRepository;
 use App\Repositories\WalletRepositoryModel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -104,6 +105,12 @@ class JobListingService
                 $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
                 $amount       = $currency->job_listing_amount ?? 5000;
 
+                // Log::info('User Job Listing Creation: ', [
+                //     'user_id' => $user->id,
+                //     'tier' => $validated['tier'],
+                //     'currency' => $currency,
+                //     'amount' => $amount,
+                // ]);
                 DB::beginTransaction();
 
                 if (!$this->walletModel->checkWalletBalance($user, $currency->code, $amount)) {
@@ -218,6 +225,7 @@ class JobListingService
             $user = auth()->user();
             $jobs = $this->jobRepository->getUserJobs($user->id, $request->query('page'));
 
+            // Log::info('User Jobs Data: ', ['data' => $jobs]);
             $data = [];
             foreach ($jobs as $job) {
                 $data[] = array_merge($this->formatJobSummary($job), [
@@ -237,6 +245,27 @@ class JobListingService
             return response()->json([
                 'status'  => false,
                 'message' => 'Error retrieving your jobs.',
+            ], 500);
+        }
+    }
+
+    public function getUserJobDetails($request, $id){
+
+        try {
+            $user = auth()->user();
+            $job  = $this->jobRepository->getUserJobById($id, $user->id);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Job details retrieved successfully.',
+                'data'    => $this->formatJob($job),
+            ]);
+
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving job details.',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -302,6 +331,7 @@ class JobListingService
                 ),
             ], 200);
         } catch (Throwable $e) {
+            Log::error('Error retrieving job: ' . $e->getMessage());
             return response()->json([
                 'status'  => false,
                 'message' => 'Job not found',

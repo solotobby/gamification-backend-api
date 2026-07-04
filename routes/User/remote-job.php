@@ -10,10 +10,11 @@ Route::middleware([
 ])->prefix('remote-jobs')->group(function () {
 
     Route::get('/', [RemoteJobController::class, 'index']);
+    Route::get('/my-listings',  [RemoteJobController::class, 'myJobs']);
+    Route::get('/my-listings/{id}',  [RemoteJobController::class, 'myJobDetails']);
     Route::get('/{id}', [RemoteJobController::class, 'show']);
     Route::post('/{id}/apply', [RemoteJobController::class, 'apply']);
     Route::post('/{id}/purchase-point', [RemoteJobController::class, 'purchasePoint']);
-    Route::get('/my-listings',  [RemoteJobController::class, 'myJobs']);
     Route::post('/',            [RemoteJobController::class, 'store']);
     Route::put('/{id}',         [RemoteJobController::class, 'update']);
 });
