@@ -8,11 +8,21 @@ use App\Models\PaymentTransaction;
 
 class JobListingRepository
 {
+    // public function getJobListings(array $filters = [], $page = null)
+    // {
+    //     return JobListing::active()
+    //         ->filter($filters)
+    //         ->with('postedBy:id,name')
+    //         ->latest()
+    //         ->paginate(12, ['*'], 'page', $page);
+    // }
+
     public function getJobListings(array $filters = [], $page = null)
     {
         return JobListing::active()
             ->filter($filters)
             ->with('postedBy:id,name')
+            ->orderByRaw("CASE WHEN tier = 'sponsored' THEN 0 ELSE 1 END")
             ->latest()
             ->paginate(12, ['*'], 'page', $page);
     }
