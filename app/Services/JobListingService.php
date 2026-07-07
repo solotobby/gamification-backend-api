@@ -84,7 +84,7 @@ class JobListingService
                 'responsibilities'    => 'nullable|string',
                 'benefits'            => 'nullable|string',
                 'type'                => 'required|in:fulltime,parttime,contract,internship,gig,nysc',
-                'tier'                => 'required|in:free,premium',
+                'tier'                => 'required|in:free,sponsored', // was: free,premium
                 'location'            => 'required|string|max:255',
                 'remote_allowed'      => 'boolean',
                 'salary_min'          => 'nullable|numeric|min:0',
@@ -99,7 +99,7 @@ class JobListingService
 
             $validated['remote_allowed'] = $request->boolean('remote_allowed');
 
-            if ($validated['tier'] === 'premium') {
+            if ($validated['tier'] === 'sponsored') {
                 $baseCurrency = $user->wallet->base_currency;
                 $mapCurrency  = $this->walletModel->mapCurrency($baseCurrency);
                 $currency     = $this->currencyModel->getCurrencyByCode($mapCurrency);
@@ -138,18 +138,17 @@ class JobListingService
                     $job->id,
                     $currency->code,
                     'job_listing',
-                    'Premium Job Listing: ' . $job->title,
+                    'Sponsored Job Listing: ' . $job->title,
                     'debit',
                 );
 
                 DB::commit();
-
             } else {
                 // $validated['is_active'] = true;
                 $job = $this->jobRepository->createUserJob($user, $validated);
             }
 
-             $content = 'Your job listing is successfully created. It is currently under review, you will get a notification when it goes live!';
+            $content = 'Your job listing is successfully created. It is currently under review, you will get a notification when it goes live!';
             $subject = 'Job Listing Created Successfully';
             Mail::to(auth()->user()->email)->send(new GeneralMail(auth()->user(), $content, $subject, ''));
 
@@ -161,7 +160,7 @@ class JobListingService
             );
             return response()->json([
                 'status'  => true,
-                'message' => 'Job posted successfully.',
+                'message' => 'Vacancy posted successfully.',
                 'data'    => $this->formatJob($job),
             ], 201);
         } catch (Throwable $e) {
@@ -207,7 +206,7 @@ class JobListingService
 
             return response()->json([
                 'status'  => true,
-                'message' => 'Job updated successfully.',
+                'message' => 'Vacancy updated successfully.',
                 'data'    => $this->formatJob($job),
             ]);
         } catch (Throwable $e) {
@@ -232,6 +231,8 @@ class JobListingService
                     'applications_count' => $job->applications_count,
                     'is_active'          => $job->is_active,
                     'application_link'   => $job->application_link,
+                    'status'             => $this->getJobStatus($job),
+                    'decision_reason'    => $job->decision_reason,
                 ]);
             }
 
@@ -249,7 +250,18 @@ class JobListingService
         }
     }
 
-    public function getUserJobDetails($request, $id){
+    private function getJobStatus($job): string
+    {
+        if ($job->trashed()) return 'deleted';
+        if ($job->paused_at) return 'paused';
+        if (!$job->is_active && $job->decision_reason) return 'declined';
+        if (!$job->is_active && is_null($job->decision_reason)) return 'pending';
+        if ($job->is_active && $job->expires_at && $job->expires_at < now()) return 'expired';
+        if ($job->is_active) return 'active';
+        return 'inactive';
+    }
+    public function getUserJobDetails($request, $id)
+    {
 
         try {
             $user = auth()->user();
@@ -260,7 +272,6 @@ class JobListingService
                 'message' => 'Job details retrieved successfully.',
                 'data'    => $this->formatJob($job),
             ]);
-
         } catch (Throwable $e) {
             return response()->json([
                 'status'  => false,
@@ -586,6 +597,8 @@ class JobListingService
             'application_link'    =>  $job->application_link ? $job->company_website : null,
             'views_count'         => $job->views_count,
             'applications_count'  => $job->applications_count,
+            'status'             => $this->getJobStatus($job),
+            'decision_reason'    => $job->decision_reason,
             'has_purchased'          => $hasPurchased,
             'posted_by'           => $job->postedBy ? [
                 'id'   => $job->postedBy->id,

@@ -109,12 +109,12 @@ class SpacesService
         string $folder = 'Freebyz'
     ): ?string {
         try {
-            $path = Storage::disk($this->disk)
-                ->putFile($folder, $file, 'public');
+            // $path = Storage::disk($this->disk)
+            //     ->putFile($folder, $file, 'public');
 
-            return $path
-                ? $this->cdnUrl . '/' . $path
-                : null;
+            // return $path
+            //     ? $this->cdnUrl . '/' . $path
+            //     : null;
         } catch (\Throwable $e) {
             Log::error('Spaces file upload failed: ' . $e->getMessage());
 
