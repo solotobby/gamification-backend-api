@@ -50,6 +50,10 @@ return [
     //     'server_key' => env('FIREBASE_SERVER_KEY'),
     // ],
 
+    'public_api' => [
+        'token' => env('PUBLIC_API_TOKEN'),
+    ],
+    
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

@@ -33,6 +33,24 @@ class NotificationService
             return false;
         }
     }
+
+    public function createPublicNotification($userId, $title, $body, $type)
+    {
+        try {
+            // $this->notifRepo->createForUser($user->id, $title, $body, $type);
+
+            // $tokens = User::where('id', $user->id)->whereNotNull('fcm_token')->pluck('fcm_token');
+            $tokens = User::where('id', $userId)->whereNotNull('fcm_token')->value('fcm_token');
+
+            if ($tokens) {
+                $this->firebase->send($tokens, $title, $body);
+            }
+
+            return true;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
     public function getUserNotifications()
     {
         try {

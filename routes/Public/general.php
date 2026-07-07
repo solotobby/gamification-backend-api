@@ -19,6 +19,7 @@ Route::group(['namespace' => 'auth'], function () {
 
     /// test apis
     Route::get('test/list', [GeneralController::class, 'apiTest']);
+    Route::post('notifications', [PublicController::class, 'sendNotification']);
 
     //get location
     Route::get('device/location', [GeneralController::class, 'deviceLocation']);

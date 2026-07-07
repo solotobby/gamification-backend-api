@@ -5,19 +5,25 @@ namespace App\Http\Controllers;
 use App\Services\JobListingService;
 use App\Services\JobService;
 use Illuminate\Http\Request;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class PublicController extends Controller
 {
 
     protected $jobService;
     protected $jobListingService;
-    public function __construct(JobService $jobService,
-    JobListingService $jobListingService)
-    {
+    protected $notificationService;
+    public function __construct(
+        JobService $jobService,
+        JobListingService $jobListingService,
+        NotificationService $notificationService
+    ) {
         $this->jobService = $jobService;
         $this->jobListingService = $jobListingService;
+        $this->notificationService = $notificationService;
     }
-
 
 
 
@@ -31,7 +37,7 @@ class PublicController extends Controller
         return $this->jobService->taskDetails($jobId);
     }
 
-     public function publicJobs(Request $request)
+    public function publicJobs(Request $request)
     {
         return $this->jobListingService->publicJobs($request);
     }
@@ -41,8 +47,47 @@ class PublicController extends Controller
         return $this->jobListingService->jobDetails($slug);
     }
 
-      public function getCategories()
+    public function getCategories()
     {
         return $this->jobService->getTaskCategories();
+    }
+
+    public function sendNotification(Request $request)
+    {
+        $validationRules = [
+            'user_id' => 'required|integer',
+            'title' => 'required|string',
+            'body' => 'required|string',
+            'type' => 'required|string',
+            'api_token' => 'required|string',
+        ];
+        $validator = Validator::make($request->all(), $validationRules);
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        if ($request->api_token !== config('services.public_api.token')) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+        $send = $this->notificationService->createPublicNotification(
+            $request->user_id,
+            $request->title,
+            $request->body,
+            $request->type
+        );
+        if ($send) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Notification sent successfully.'
+            ], 200);
+        } else {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to send notification.'
+            ], 500);
+        }
     }
 }
