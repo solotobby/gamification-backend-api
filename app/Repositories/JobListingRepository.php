@@ -69,7 +69,8 @@ class JobListingRepository
     public function getJobBySlug($id)
     {
         return JobListing::active()
-            ->with('postedBy:id,name')->where('slug', $id)->first();
+            ->with('postedBy:id,name')
+            ->where('slug', $id)->first();
         // ->findOrFail($id);
     }
 
