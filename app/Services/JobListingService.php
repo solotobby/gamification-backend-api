@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\GeneralMail;
 use App\Repositories\Admin\CurrencyRepositoryModel;
+use App\Repositories\BannerRepositoryModel;
 use App\Repositories\JobListingRepository;
 use App\Repositories\WalletRepositoryModel;
 use Illuminate\Support\Facades\DB;
@@ -17,17 +18,21 @@ class JobListingService
     protected $walletModel;
     protected $currencyModel;
     protected $campaignService;
+    protected $bannerModel;
+
 
     public function __construct(
         JobListingRepository $jobRepository,
         WalletRepositoryModel $walletModel,
         CurrencyRepositoryModel $currencyModel,
-        CampaignService $campaignService
+        CampaignService $campaignService,
+        BannerRepositoryModel $bannerModel
     ) {
         $this->jobRepository = $jobRepository;
         $this->walletModel = $walletModel;
         $this->currencyModel = $currencyModel;
         $this->campaignService = $campaignService;
+        $this->bannerModel = $bannerModel;
     }
 
     public function getJobListings($request)
@@ -452,11 +457,32 @@ class JobListingService
             foreach ($jobs as $job) {
                 $data[] = $this->formatJobSummary($job);
             }
+            // Fetching 2 random active banners
+            $banners = $this->bannerModel->getRandomActiveBanners();
+
+            $bannerData = [];
+
+            foreach ($banners as $bannerItem) {
+
+                //Increase impression upon display
+                $bannerItem->impression_count += 1;
+                $bannerItem->save();
+
+                $bannerData[] = [
+                    'banner_id' => $bannerItem->banner_id,
+                    'banner_url' => $bannerItem->banner_url,
+                    'clicks' => $bannerItem->click_count,
+                    'created_at' => $bannerItem->created_at,
+                    'updated_at' => $bannerItem->updated_at,
+                ];
+            }
+
 
             return response()->json([
                 'status'     => true,
                 'message'    => 'Job listings retrieved successfully.',
                 'data'       => $data,
+                'banners'    => $bannerData,
                 'pagination' => $this->buildPagination($jobs),
             ], 200);
         } catch (Throwable $e) {

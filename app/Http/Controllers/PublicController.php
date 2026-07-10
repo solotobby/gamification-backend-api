@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\JobListingService;
 use App\Services\JobService;
+use App\Services\BannerService;
 use Illuminate\Http\Request;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Validator;
@@ -15,14 +16,18 @@ class PublicController extends Controller
     protected $jobService;
     protected $jobListingService;
     protected $notificationService;
+    protected $bannerService;
+
     public function __construct(
         JobService $jobService,
         JobListingService $jobListingService,
-        NotificationService $notificationService
+        NotificationService $notificationService,
+        BannerService $bannerService
     ) {
         $this->jobService = $jobService;
         $this->jobListingService = $jobListingService;
         $this->notificationService = $notificationService;
+        $this->bannerService = $bannerService;
     }
 
 
@@ -52,6 +57,11 @@ class PublicController extends Controller
         return $this->jobService->getTaskCategories();
     }
 
+    public function clickAdCount($bannerId)
+    {
+        return $this->bannerService->adViewPublic($bannerId);
+    }
+    
     public function sendNotification(Request $request)
     {
         $validationRules = [

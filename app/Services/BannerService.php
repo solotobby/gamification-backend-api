@@ -374,4 +374,53 @@ class BannerService
             ], 500);
         }
     }
+
+    public function adViewPublic($bannerId)
+    {
+        DB::beginTransaction();
+
+        try {
+            // $user = auth()->user();
+            $ban = $this->bannerModel->findBanner($bannerId);
+            // Check if banner exists
+            if (!$ban) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Banner not found.'
+                ], 404);
+            }
+
+            // Update click count
+            $ban->click_count += 1;
+            $ban->save();
+
+            // Check if the banner has reached the maximum click count
+            if ($ban->click_count >= $ban->clicks) {
+                $ban->live_state = 'Ended';
+                $ban->status = false;
+                $ban->banner_end_date = Carbon::now();
+                $ban->save();
+            }
+
+            // Log the click for the banner
+            // $this->bannerModel->logBannerClicks($user, $ban->id);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Banner click recorded successfully',
+                'data' => [
+                    'link' => $ban->external_link
+                ]
+            ], 200);
+        } catch (Exception $exception) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing banner view.'
+            ], 500);
+        }
+    }
 }

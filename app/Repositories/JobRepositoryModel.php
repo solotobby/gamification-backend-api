@@ -409,7 +409,7 @@ class JobRepositoryModel
             default      => $query->orderBy('created_at', 'desc'),
         };
 
-        return $query->paginate(12, ['*'], 'page', $page);
+        return $query->paginate(15, ['*'], 'page', $page);
     }
     public function getJobById($jobId)
     {

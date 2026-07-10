@@ -229,6 +229,29 @@ class JobService
                 ];
             }
 
+            // Fetching 2 random active banners
+            $banners = $this->bannerModel->getRandomActiveBanners();
+
+            $bannerData = [];
+
+            foreach ($banners as $bannerItem) {
+
+                //Increase impression upon display
+                $bannerItem->impression_count += 1;
+                $bannerItem->save();
+
+                $bannerData[] = [
+                    'banner_id' => $bannerItem->banner_id,
+                    'banner_url' => $bannerItem->banner_url,
+                    //  'external_link' => $bannerItem->external_link,
+                    // 'status' => $bannerItem->status ? true : false,
+                    'clicks' => $bannerItem->click_count,
+                    'created_at' => $bannerItem->created_at,
+                    'updated_at' => $bannerItem->updated_at,
+                ];
+            }
+
+
             // Pagination data for jobs
             $pagination = [
                 'current_page' => $jobs->currentPage(),
@@ -243,6 +266,7 @@ class JobService
                 'status' => true,
                 'message' => 'Tasks retrieved successfully.',
                 'data' => $data,
+                'banners' => $bannerData,
                 'pagination' => $pagination,
             ]);
         } catch (Throwable $exception) {
