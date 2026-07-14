@@ -30,6 +30,12 @@ class JobsController extends Controller
         return $this->jobService->myJobDetails($jobId);
     }
 
+
+    public function taskDetail($jobId)
+    {
+        return $this->jobService->myTaskDetail($jobId);
+    }
+
     public function createDispute(Request $request)
     {
         return $this->jobService->createDispute($request);

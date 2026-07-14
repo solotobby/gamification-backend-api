@@ -408,6 +408,55 @@ class JobService
         }
     }
 
+    public function myTaskDetail($id)
+    {
+        try {
+            $user = auth()->user();
+
+            $job = $this->jobModel->getTask($user->id, $id);
+
+            $campaignDetails = $this->campaignModel->getCampaignById($job->campaign_id);
+
+            $data = [
+                'id' => $job->id,
+                'worker_id' => $job->user_id,
+                'worker_name' => $user->name,
+                'campaign_id' => $campaignDetails->job_id,
+                'campaign_name' => $campaignDetails->post_title,
+                'campaign_owner_id' => $campaignDetails->user_id,
+                'campaign_category' => $campaignDetails->campaignType->name,
+                'campaign_category_url' => $campaignDetails->campaignType->url,
+                'comment' => $job->comment,
+                'currency' => $user->wallet->base_currency,
+                'amount' => $job->amount,
+                'proof_url' => $job->proof_url,
+                'expected_image_url' => $campaignDetails->proof_url,
+                'status' => $job->status,
+                'reason' => $job->reason,
+                'created_at' => $job->created_at,
+                'can_dispute' =>  $job->canCreateDispute(),
+                'has_dispute' => $job->is_dispute ? true : false,
+                'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
+                'public_link' => "https://dashboard.freebyz.com/tasks/" . $campaignDetails->job_id,
+            ];
+            // }
+
+            // Fetching 2 random active banners
+            return response()->json([
+                'status' => true,
+                'message' => 'Tasks retrieved successfully.',
+                'data' => $data,
+
+            ]);
+        } catch (Throwable $exception) {
+            return response()->json([
+                'status' => false,
+                'error' => $exception->getMessage(),
+                'message' => 'Error processing request',
+            ], 500);
+        }
+    }
+
     public function submitWork($request)
     {
         try {
@@ -471,7 +520,7 @@ class JobService
                     //     'campaign-proofs',
                     //     true
                     // );
-                       $proofUrl = $this->spacesService->uploadImage(
+                    $proofUrl = $this->spacesService->uploadImage(
                         $request->file('proof')
                     );
 
@@ -519,7 +568,7 @@ class JobService
             // Mail::to($user->email)
             //     ->queue(new SubmitJob($campaignWorker));
 
-             Mail::to($user->email)
+            Mail::to($user->email)
                 ->send(new SubmitJob($campaignWorker));
 
             $subject = 'Task Submission';

@@ -35,6 +35,15 @@ class JobRepositoryModel
         );
     }
 
+
+    public function getTask($userId, $id)
+    {
+        return CampaignWorker::where(
+            'user_id',
+            $userId
+        )->where('id', $id)
+            ->first();
+    }
     public function getAllJobs($user, $page = null)
     {
         return CampaignWorker::where('user_id', $user->id)
@@ -449,7 +458,7 @@ class JobRepositoryModel
         if ($status === 'Denied') {
             $updateStatus->slot_released = false;
             $updateStatus->denied_at = now();
-            } else {
+        } else {
             $updateStatus->slot_released = true;
             $updateStatus->denied_at = null;
         }
