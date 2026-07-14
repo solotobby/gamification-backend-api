@@ -598,7 +598,7 @@ class CampaignService
 
         if ($currency === 'NGN') {
             $paymentProcessors = [
-                'Paystack' => 'paystack',
+                // 'Paystack' => 'paystack',
                 'KoraPay' => 'korapay',
                 'Virtual Account' => 'virtual_account',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
@@ -613,7 +613,7 @@ class CampaignService
             ];
         } else {
             $paymentProcessors = [
-                'Paystack' => 'paystack',
+                // 'Paystack' => 'paystack',
                 // 'Interswitch' => 'interswitch',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
             ];
@@ -636,7 +636,7 @@ class CampaignService
             ];
         } else {
             $verifyProcessors = [
-                'Paystack' => 'paystack',
+                // 'Paystack' => 'paystack',
                 // 'Interswitch' => 'interswitch',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
             ];
