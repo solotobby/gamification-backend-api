@@ -24,7 +24,7 @@ class JobListingRepository
             ->with('postedBy:id,name')
             ->orderByRaw("CASE WHEN tier = 'sponsored' THEN 0 ELSE 1 END")
             ->latest()
-            ->paginate(15, ['*'], 'page', $page);
+            ->paginate($filters['per_page'] ?? 15, ['*'], 'page', $page);
     }
 
     public function createUserJob($user, array $data)

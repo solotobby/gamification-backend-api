@@ -377,7 +377,7 @@ class JobRepositoryModel
         return $query->paginate(10, ['*'], 'page', $page);
     }
 
-    public function availableTasks($categoryID = null, $page = null, $sort = null, $search = null)
+    public function availableTasks($categoryID = null, $per_page = 15, $page = null, $sort = null, $search = null)
     {
         $query = Campaign::query()
             ->with(['campaignType', 'campaignCategory'])
@@ -418,7 +418,7 @@ class JobRepositoryModel
             default      => $query->orderBy('created_at', 'desc'),
         };
 
-        return $query->paginate(15, ['*'], 'page', $page);
+        return $query->paginate($per_page, ['*'], 'page', $page);
     }
     public function getJobById($jobId)
     {

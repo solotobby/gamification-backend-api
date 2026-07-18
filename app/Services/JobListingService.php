@@ -46,6 +46,7 @@ class JobListingService
                 'salary_max',
                 'remote',
                 'search',
+                'per_page',
             ]);
 
             $jobs = $this->jobRepository->getJobListings($filters);
@@ -449,6 +450,7 @@ class JobListingService
                 'salary_max',
                 'remote',
                 'search',
+                'per_page',
             ]);
 
             $jobs = $this->jobRepository->getJobListings($filters);

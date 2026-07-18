@@ -184,8 +184,9 @@ class JobService
             $page       = $request->query('page');
             $sort       = $request->query('sort');
             $search     = $request->query('search');
+            $per_page   = $request->query('per_page');
 
-            $jobs = $this->jobModel->availableTasks($category, $page, $sort, $search)
+            $jobs = $this->jobModel->availableTasks($category, $per_page, $page, $sort, $search)
                 ->appends([
                     'page' => $page,
                     'sort' => $sort,
