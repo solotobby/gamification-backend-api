@@ -23,66 +23,40 @@ class ReferralService
     }
 
     public function referralStat()
-    {
-        $user = auth()->user();
+{
+    $user = auth()->user();
 
-        // Get all referrals for the authenticated user
-        $referrals = $this->referralModel->getUserReferrals($user);
+    $referrals = $this->referralModel->getUserReferrals($user);
 
-        // return $referrals;
-        // Total referrals
-        $totalReferral = $referrals->count();
+    $totalReferral = $referrals->count();
+    $verifiedReferral = $referrals->where('is_paid', true)->count();
+    $pendingReferral = $referrals->where('is_paid', false)->count();
 
-        // Count verified referrals
-        $verifiedReferral = $referrals->where('is_paid', true)->count();
+    // Only sum actual amounts for referrals that were actually paid
+    $totalSum = $referrals->where('is_paid', true)->sum(function ($referral) {
+        return (float) ($referral->amount ?? 0);
+    });
 
-        // Count pending referrals
-        $pendingReferral = $referrals->where('is_paid', false)->count();
+    $data = [
+        'total_user_referred' => $totalReferral,
+        'verified_user_referred' => $verifiedReferral,
+        'pending_user_referred' => $pendingReferral,
+        'total_referral_income' => $totalSum,
+        'referral_link' => 'https://freebyz.com/register/' . $user->referral_code
+    ];
 
-        // Count how many referrals have null or empty amount and calculate the total empty amount
-        $emptyAmount = 0;
-        $emptyCount = $referrals->filter(function ($referral) {
-            return empty($referral->amount);
-        })->count();
-
-        // Calculate the referral commission for empty referrals
-        $baseCurrency = $user->wallet->base_currency;
-        $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
-        $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
-
-        if ($emptyCount > 0) {
-            $emptyAmount = $emptyCount * $referralCommission;
-        }
-
-        // Sum the amount of referrals, including the empty amount as calculated
-        $totalSum = $referrals->sum(function ($referral) {
-            return (float) ($referral->amount ?? 0);
-        });
-
-
-        $data = [
-            'total_user_referred' => $totalReferral,
-            'verified_user_referred' => $verifiedReferral,
-            'pending_user_referred' => $pendingReferral,
-            'total_referral_income' => $totalSum + $emptyAmount,
-            'referral_link' => 'https://dashboard.freebyz.com/register/' . $user->referral_code
-        ];
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Referral Stats Retrieved Successfully',
-            'data' => $data
-        ]);
-    }
+    return response()->json([
+        'status' => true,
+        'message' => 'Referral Stats Retrieved Successfully',
+        'data' => $data
+    ]);
+}
 
 
 
     public function referralList()
     {
         $user = auth()->user();
-        $baseCurrency = $user->wallet->base_currency;
-        $mapCurrency = $this->walletModel->mapCurrency($baseCurrency);
-        $referralCommission = $this->walletModel->checkReferralCommission($mapCurrency);
 
         $referrals = $this->referralModel->getUserReferralsPaginated($user);
 
@@ -91,14 +65,14 @@ class ReferralService
         foreach ($referrals as $referral) {
             $referredUser = $this->authModel->findUserById($referral->user_id);
 
-            // Check if amount is not empty, otherwise set to referral commission
-            $amount = !empty($referral->amount) ? $referral->amount : $referralCommission;
+            // Only show an amount if the referrer was actually paid; otherwise 0
+            $income = $referral->is_paid ? (float) ($referral->amount ?? 0) : 0;
 
             $data[] = [
                 'id' => $referral->id,
                 'name' => $referredUser->name,
                 'is_paid' => $referral->is_paid ? true : false,
-                'income' => $amount,
+                'income' => $income,
                 'status' => $referredUser->is_verified ? 'Verified' : 'Unverified',
                 'created_at' => $referral->created_at,
             ];
