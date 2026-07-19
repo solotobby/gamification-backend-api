@@ -576,7 +576,7 @@ class WalletService
     private function processReferrerBonus($user, $referrer, $amount, $currency)
     {
         $this->walletModel->creditWallet($referrer, $currency, $amount);
-        $referrer = $this->referralModel->markAsPaid($user->id);
+        $this->referralModel->markAsPaid($user->id);
 
         $ref = time();
         $this->walletModel->createTransaction(

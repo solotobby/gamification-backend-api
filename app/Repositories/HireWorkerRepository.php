@@ -100,7 +100,7 @@ class HireWorkerRepository
             'campaign_id' => '1',
             'reference'   => time(),
             'amount'      => $amount,
-            'balance'     => walletBalance()->balance,
+            'balance'     => app(WalletRepositoryModel::class)->getWalletBalance($userId),
             'status'      => 'successful',
             'currency'    => $currency->code,
             'channel'     => 'paystack',
