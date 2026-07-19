@@ -93,7 +93,7 @@ class DepositService
         }
 
         $redirectUrl = $device === 'web'
-            ? 'https://app.freebyz.com/wallet'
+            ? 'https://dashboard.freebyz.com/wallet'
             : route('webhook.korapay.callback');
 
         $payload = [
@@ -144,7 +144,7 @@ class DepositService
         }
 
         $redirectUrl = $device === 'web'
-            ? 'https://app.freebyz.com/wallet'
+            ? 'https://dashboard.freebyz.com/wallet'
             : route('webhook.paystack.callback');
 
         $link = $this->paystack->initializeTransaction(
@@ -189,7 +189,7 @@ class DepositService
         }
 
         $redirectUrl = $device === 'web'
-            ? 'https://app.freebyz.com/wallet'
+            ? 'https://dashboard.freebyz.com/wallet'
             : route('webhook.interswitch.callback');
 
         $result = $this->interswitch->initializePayment([

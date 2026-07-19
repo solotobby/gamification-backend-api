@@ -76,7 +76,7 @@ class AuthRepositoryModel
     public function findUserByReferralCode($id)
     {
         return User::where(
-            'referral_code',
+            'id',
             $id
         )->first();
     }

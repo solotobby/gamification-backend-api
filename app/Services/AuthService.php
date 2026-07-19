@@ -377,7 +377,10 @@ class AuthService
             $otp = $this->auth->findOtp($request->otp);
 
             if (!$otp) {
-                return response()->json(['status' => false, 'message' => 'OTP is not correct, please request another one'], 401);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'OTP is not correct, please request another one'
+                ], 401);
             }
 
             // Check OTP expiration

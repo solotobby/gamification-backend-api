@@ -128,6 +128,11 @@ class User extends Authenticatable
         return $this->hasMany(CampaignWorker::class, 'user_id');
     }
 
+    public function referredBy()
+    {
+        return $this->hasOne(Referral::class, 'user_id');
+    }
+
 
     public function myCampaigns()
     {
