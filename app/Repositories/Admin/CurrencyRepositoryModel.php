@@ -22,12 +22,20 @@ class CurrencyRepositoryModel
 
     public function getActiveCurrenciesList()
     {
-        return Cache::remember(
+        $currencies = Cache::remember(
             'currencies.active',
             self::CACHE_TTL,
             fn() =>
             Currency::where('is_active', true)->orderByDesc('created_at')->get()
         );
+
+        $user = auth()->user();
+
+        if ($user && $user->country === 'Nigeria') {
+            return $currencies->where('code', 'NGN')->values();
+        }
+
+        return $currencies;
     }
 
     public function getCurrencyById($id)

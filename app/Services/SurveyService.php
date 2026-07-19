@@ -56,6 +56,7 @@ class SurveyService
 
             // Fetch interests sorted by name
             $data['interests'] = $this->survey->listAllInterest();
+            
             $currency = $this->currency->getActiveCurrenciesList();
 
             $data['currency'] = [];
