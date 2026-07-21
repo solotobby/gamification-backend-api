@@ -924,6 +924,175 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleInterswitchCallback(Request $request)
     {
+        $reference = $request->query('txnref') ?? $request->query('reference');
+        $amount    = $request->query('amount') ?? 0;
+
+        if (!$reference) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No reference supplied',
+            ], 400);
+        }
+
+        $verified = $this->interswitch->verifyPayment($reference, $amount);
+
+        Log::info('Interswitch callback verify', [
+            'reference' => $reference,
+            'response'  => $verified,
+        ]);
+
+        if (
+            !$verified ||
+            (($verified['ResponseCode'] ?? $verified['responseCode'] ?? null) !== '00')
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Payment verification failed',
+            ], 402);
+        }
+
+        $reference = $verified['MerchantReference']
+            ?? $verified['merchantReference']
+            ?? $reference;
+
+        $amount = isset($verified['Amount'])
+            ? $verified['Amount'] / 100
+            : (isset($verified['amount']) ? $verified['amount'] / 100 : 0);
+
+        $currency = (($verified['CurrencyCode'] ?? $verified['currencyCode'] ?? '566') === '566')
+            ? 'NGN'
+            : 'NGN';
+
+        DB::beginTransaction();
+
+        try {
+
+            $transaction = PaymentTransaction::where('reference', $reference)->first();
+
+            if (!$transaction) {
+
+                // Fallback to Virtual Account
+                $accountNumber = $verified['RetrievalReferenceNumber']
+                    ?? $verified['retrievalReferenceNumber']
+                    ?? null;
+
+                if (!$accountNumber) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Virtual account number missing',
+                    ], 404);
+                }
+
+                $virtualAccount = VirtualAccount::where('account_number', $accountNumber)
+                    ->where('channel', 'interswitch')
+                    ->first();
+
+                if (!$virtualAccount) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Virtual account not found',
+                    ], 404);
+                }
+
+                $user = User::find($virtualAccount->user_id);
+
+                if (!$user) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'User not found',
+                    ], 404);
+                }
+
+                $transaction = PaymentTransaction::create([
+                    'user_id'     => $user->id,
+                    'campaign_id' => 1,
+                    'reference'   => $reference,
+                    'amount'      => $amount,
+                    'balance'     => 0,
+                    'status'      => 'pending',
+                    'currency'    => $currency,
+                    'channel'     => 'interswitch',
+                    'type'        => 'transfer_topup',
+                    'description' => 'Virtual Account Transfer',
+                    'tx_type'     => 'Credit',
+                    'user_type'   => 'regular',
+                ]);
+            } else {
+
+                if ($transaction->status === 'successful') {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => true,
+                        'message' => 'Already processed',
+                    ], 200);
+                }
+
+                $user = User::find($transaction->user_id);
+
+                if (!$user) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'User not found',
+                    ], 404);
+                }
+            }
+
+            $this->walletModel->creditWallet($user, $currency, $amount);
+
+            $transaction->update([
+                'status'  => 'successful',
+                'balance' => $this->walletModel->getWalletBalance($user->id),
+            ]);
+
+            // $this->attemptAutoUpgrade($user, $currency, $amount);
+
+            DB::commit();
+
+            $this->notification->createNotification(
+                user: $user,
+                title: 'Wallet Credited',
+                body: "{$currency} {$amount} has been added to your wallet.",
+                type: 'wallet',
+            );
+
+            Mail::to($user->email)->send(new GeneralMail(
+                $user,
+                "Congratulations, your wallet has been credited with {$currency} {$amount}",
+                'Wallet Credited',
+                ''
+            ));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Payment successful',
+            ], 200);
+        } catch (Throwable $e) {
+
+            DB::rollBack();
+
+            Log::error('Interswitch callback error', [
+                'reference' => $reference,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Processing error',
+            ], 500);
+        }
+    }
+
+    public function handleInterswitchCallbackOld(Request $request)
+    {
         // Interswitch redirects with txnref param
         $reference = $request->query('txnref') ?? $request->query('reference');
         $amount    = $request->query('amount') ?? 0;
@@ -931,7 +1100,7 @@ class WebhookController extends Controller
             return response()->json(['status' => false, 'message' => 'No reference'], 400);
         }
 
-        $verified = $this->interswitch->verifyPayment($reference ,$amount);
+        $verified = $this->interswitch->verifyPayment($reference, $amount);
 
         Log::info('Interswitch callback verify', ['reference' => $reference, 'response' => $verified]);
 
