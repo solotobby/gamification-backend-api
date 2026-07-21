@@ -98,7 +98,7 @@ class InterswitchServiceProvider
         $url = "{$this->baseUrl}/paymentgateway/api/v1/payable/virtualaccount";
 
         $payload = [
-            'accountName'  => $accountName,
+            'accountName'  => 'Freebyz Technologies/' . $accountName,
             'merchantCode' => (string)$this->merchantCode,
         ];
 
@@ -145,7 +145,7 @@ class InterswitchServiceProvider
 
     public function verifyPayment(string $reference): ?array
     {
-        $url = "{$this->baseUrl}/collections/api/v1/merchant/transactions/query?transactionReference={$reference}";
+        $url = "{$this->baseUrl}/collections/api/v1/gettransaction?merchantcode={$this->merchantCode}&transactionreference={$reference}";
 
         $res = Http::withHeaders($this->oauthHeaders())->get($url);
 
