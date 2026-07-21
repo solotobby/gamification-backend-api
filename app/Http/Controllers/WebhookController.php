@@ -926,12 +926,13 @@ class WebhookController extends Controller
     {
         // Interswitch redirects with txnref param
         $reference = $request->query('txnref') ?? $request->query('reference');
-
+        $amount    = $request->query('amount') ?? 0;
         if (!$reference) {
             return response()->json(['status' => false, 'message' => 'No reference'], 400);
         }
 
-        $verified = $this->interswitch->verifyPayment($reference);
+        $newAmount = $amount * 100;
+        $verified = $this->interswitch->verifyPayment($reference ,$newAmount);
 
         Log::info('Interswitch callback verify', ['reference' => $reference, 'response' => $verified]);
 

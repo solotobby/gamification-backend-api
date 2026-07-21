@@ -143,7 +143,7 @@ class InterswitchServiceProvider
 
     // ── Verify Payment ────────────────────────────────────────────────────
 
-    public function verifyPayment(string $reference): ?array
+    public function verifyPayment(string $reference, $amount): ?array
     {
         $url = "{$this->baseUrl}/collections/api/v1/gettransaction?merchantcode={$this->merchantCode}&transactionreference={$reference}";
 
