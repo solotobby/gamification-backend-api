@@ -931,8 +931,7 @@ class WebhookController extends Controller
             return response()->json(['status' => false, 'message' => 'No reference'], 400);
         }
 
-        $newAmount = $amount * 100;
-        $verified = $this->interswitch->verifyPayment($reference ,$newAmount);
+        $verified = $this->interswitch->verifyPayment($reference ,$amount);
 
         Log::info('Interswitch callback verify', ['reference' => $reference, 'response' => $verified]);
 

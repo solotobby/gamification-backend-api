@@ -143,9 +143,9 @@ class InterswitchServiceProvider
 
     // ── Verify Payment ────────────────────────────────────────────────────
 
-    public function verifyPayment(string $reference, $amount): ?array
+    public function verifyPayment(string $reference, float $amount): ?array
     {
-        $url = "{$this->baseUrl}/collections/api/v1/gettransaction?merchantcode={$this->merchantCode}&transactionreference={$reference}";
+        $url = "{$this->baseUrl}/collections/api/v1/gettransaction?merchantcode={$this->merchantCode}&transactionreference={$reference}&amount=" . (int) ($amount * 100);
 
         $res = Http::withHeaders($this->oauthHeaders())->get($url);
 
