@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Auth as FirebaseAuth;
 use Kreait\Firebase\Exception\Auth\FailedToVerifyToken;
+use App\Services\Providers\TurnstileService;
 
 class AuthService
 {
@@ -35,6 +36,7 @@ class AuthService
     protected $log;
     protected $walletModel;
     protected $firebaseAuth;
+    protected $turnstileService;
 
     public function __construct(
         AuthValidator $validator,
@@ -45,6 +47,7 @@ class AuthService
         WalletRepositoryModel $walletModel,
         BankRepositoryModel $bank,
         FirebaseAuth  $firebaseAuth,
+        TurnstileService $turnstileService
 
     ) {
         $this->validator = $validator;
@@ -55,6 +58,7 @@ class AuthService
         $this->bank = $bank;
         $this->walletModel = $walletModel;
         $this->firebaseAuth = $firebaseAuth;
+        $this->turnstileService = $turnstileService;
     }
 
     public function registerUser($request)
@@ -62,6 +66,12 @@ class AuthService
         $this->validator->validateRegistration($request);
         try {
 
+            // if (isset($request['cf-turnstile-response']) && !$this->turnstileService->verify(
+            //     $request['cf-turnstile-response'],
+            //     $request->ip()
+            // )) {
+            //     throw new BadRequestException('Captcha verification failed');
+            // }
             // Create the user and related resources
             $result = $this->createUser($request);
 
@@ -258,7 +268,12 @@ class AuthService
         $this->validator->validateLogin($request);
 
         try {
-
+            // if (isset($request['cf-turnstile-response']) && !$this->turnstileService->verify(
+            //     $request['cf-turnstile-response'],
+            //     $request->ip()
+            // )) {
+            //     throw new BadRequestException('Captcha verification failed');
+            // }
 
             // Find user by email
             $user = $this->auth->findUser($request->email);
@@ -313,7 +328,7 @@ class AuthService
                 'trace' => $e->getTraceAsString(),
             ]);
             DB::rollBack();
-            throw new BadRequestException('Error processing request');
+            throw new BadRequestException('Error processing login');
         }
     }
 
@@ -417,6 +432,12 @@ class AuthService
         $this->validator->validateResetPasswordLink($request);
 
         try {
+            //     if (isset($request['cf-turnstile-response']) && !$this->turnstileService->verify(
+            //         $request['cf-turnstile-response'],
+            //         $request->ip()
+            //     )) {
+            //         throw new BadRequestException('Captcha verification failed');
+            //     }
             // Find user by email
             $validateEmail = $this->auth->findUser($request->email);
 

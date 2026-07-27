@@ -53,7 +53,7 @@ return [
     'public_api' => [
         'token' => env('PUBLIC_API_TOKEN'),
     ],
-    
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
@@ -70,5 +70,10 @@ return [
         'provider_code' => env('INTERSWITCH_PROVIDER_CODE'),
         'base_url'      => env('INTERSWITCH_BASE_URL', 'https://qa.interswitchng.com'),
         'passport_url'  => env('INTERSWITCH_PASSPORT_URL', 'https://passport.interswitchng.com'),
+    ],
+
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
     ],
 ];
