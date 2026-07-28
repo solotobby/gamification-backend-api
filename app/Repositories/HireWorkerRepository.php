@@ -68,7 +68,7 @@ class HireWorkerRepository
         }
 
         return $query->with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])
-            ->latest()
+            ->inRandomOrder()
             ->paginate(20, ['*'], 'page', $page);
     }
 
@@ -102,7 +102,7 @@ class HireWorkerRepository
         }
 
         return $query->with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])
-            ->latest()
+            ->inRandomOrder()
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
