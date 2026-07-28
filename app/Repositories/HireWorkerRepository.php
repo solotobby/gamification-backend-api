@@ -72,6 +72,40 @@ class HireWorkerRepository
             ->paginate(20, ['*'], 'page', $page);
     }
 
+
+     public function getWorkersPublic(array $filters = [], $page = 1, $perPage = 20)
+    {
+        // $purchasedIds = DB::table('skill_user')
+        //     ->where('user_id', auth()->id())
+        //     ->pluck('skill_asset_id');
+
+        $query = SkillAsset::query()
+            ->where('status', 'active');
+            // ->whereNotIn('id', $purchasedIds);
+
+        if (!empty($filters['skill_id'])) {
+            $query->where('skill_id', $filters['skill_id']);
+        }
+
+        if (!empty($filters['availability'])) {
+            $query->where('availability', $filters['availability']);
+        }
+
+        if (!empty($filters['year_experience'])) {
+            match ($filters['year_experience']) {
+                '0-2'  => $query->whereBetween('year_experience', [0, 2]),
+                '3-5'  => $query->whereBetween('year_experience', [3, 5]),
+                '6-10' => $query->whereBetween('year_experience', [6, 10]),
+                '10+'  => $query->where('year_experience', '>=', 10),
+                default => null,
+            };
+        }
+
+        return $query->with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])
+            ->latest()
+            ->paginate($perPage, ['*'], 'page', $page);
+    }
+
     public function getWorkerById($id)
     {
         return SkillAsset::with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])

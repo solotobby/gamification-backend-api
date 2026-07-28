@@ -26,6 +26,8 @@ class HireWorkerController extends Controller
         return $this->hireWorkerService->getWorkers($request);
     }
 
+    
+
     // GET /hire-workers/{id}
     public function show($id)
     {

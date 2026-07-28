@@ -58,6 +58,63 @@ class HireWorkerService
         }
     }
 
+    public function getWorkersPublic($request)
+    {
+        try {
+            $page    = $request->query('page');
+            $perPage = $request->query('per_page');
+
+            $filters = $request->only(['skill_id', 'availability', 'year_experience']);
+            $workers = $this->repo->getWorkersPublic($filters, $page, $perPage);
+
+            $data = [];
+            foreach ($workers as $worker) {
+                $data[] = $this->formatWorkerSummary($worker);
+            }
+
+            return response()->json([
+                'status'     => true,
+                'message'    => 'Workers retrieved successfully.',
+                'data'       => $data,
+                'pagination' => $this->buildPagination($workers),
+                'filters'    => [
+                    'skills'             => $this->repo->getSkills(),
+                    'proficiency_levels' => $this->repo->getProficiencyLevels(),
+                    'year_experience'    => ['0-2', '3-5', '6-10', '10+'],
+                    'availability'       => ['full-time', 'part-time', 'remote', 'contract'],
+                ],
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error retrieving workers.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getWorkerPublic($id)
+    {
+        try {
+            $worker    = $this->repo->getWorkerById($id);
+            $portfolio = $this->repo->getWorkerPortfolio($worker->user_id);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Worker retrieved successfully.',
+                'data'    => array_merge(
+                    $this->formatWorkerDetail($worker),
+                    ['portfolio' => $portfolio]
+                ),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Worker not found.',
+            ], 404);
+        }
+    }
+
     public function getWorker($id)
     {
         try {
