@@ -456,6 +456,7 @@ class HireWorkerService
     {
         return [
             'id'               => $worker->id,
+            'slug'             => $worker->slug,
             'name'             => $worker->user->name ?? null,
             'title'            => $worker->title,
             'skill'            => $worker->skill->name ?? null,
@@ -473,6 +474,7 @@ class HireWorkerService
     {
         return [
             'id'               => $worker->id,
+            'slug'             => $worker->slug,
             'name'             => $worker->user->name ?? null,
             'title'            => $worker->title,
             'description'      => $worker->description,

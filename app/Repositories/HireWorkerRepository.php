@@ -73,7 +73,7 @@ class HireWorkerRepository
     }
 
 
-     public function getWorkersPublic(array $filters = [], $page = 1, $perPage = 20)
+    public function getWorkersPublic(array $filters = [], $page = 1, $perPage = 20)
     {
         // $purchasedIds = DB::table('skill_user')
         //     ->where('user_id', auth()->id())
@@ -81,7 +81,7 @@ class HireWorkerRepository
 
         $query = SkillAsset::query()
             ->where('status', 'active');
-            // ->whereNotIn('id', $purchasedIds);
+        // ->whereNotIn('id', $purchasedIds);
 
         if (!empty($filters['skill_id'])) {
             $query->where('skill_id', $filters['skill_id']);
@@ -106,12 +106,26 @@ class HireWorkerRepository
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
-    public function getWorkerById($id)
+    public function getWorkerById($idOrSlug)
     {
         return SkillAsset::with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])
             ->where('status', 'active')
-            ->findOrFail($id);
+            ->where(function ($q) use ($idOrSlug) {
+                if (is_numeric($idOrSlug)) {
+                    $q->where('id', $idOrSlug);
+                } else {
+                    $q->where('slug', $idOrSlug);
+                }
+            })
+            ->firstOrFail();
     }
+
+    // public function getWorkerById($id)
+    // {
+    //     return SkillAsset::with(['user:id,name,email,phone', 'skill:id,name', 'profeciencyLevel:id,name'])
+    //         ->where('status', 'active')
+    //         ->findOrFail($id);
+    // }
 
     public function getWorkerPortfolio($userId)
     {
