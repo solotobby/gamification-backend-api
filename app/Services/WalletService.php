@@ -284,7 +284,7 @@ class WalletService
             if ($user->referredBy) {
                 // Process user withdrawal and get actual withdrawal amount
                 $this->debitUserWallet($user, $currency, $amount, $ref, $nextFriday, $request->paypal_email);
-                $this->handleReferralCommission($user, $currency, $amount, $ref);
+                // $this->handleReferralCommission($user, $currency, $amount, $ref);
             } else {
                 // Process user withdrawal and get actual withdrawal amount
                 $this->debitUserWallet($user, $currency, $amount, $ref, $nextFriday, $request->paypal_email);
