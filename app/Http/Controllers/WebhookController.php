@@ -1195,6 +1195,36 @@ class WebhookController extends Controller
     }
 
 
+    public function zeptoWebhookBounces(Request $request)
+    {
+        $data = $request->json()->all();
+
+        $eventName = strtolower($data['event_name'][0] ?? '');
+        $message = $data['event_message'][0] ?? [];
+
+        // Only process bounce events
+        if (! in_array($eventName, ['hardbounce', 'softbounce'], true)) {
+            return response()->json(['status' => 'ignored']);
+        }
+
+        $details = $message['event_data'][0]['details'] ?? [];
+
+        foreach ($details as $detail) {
+            $email = $detail['bounced_recipient'] ?? null;
+
+            if (! $email) {
+                continue;
+            }
+
+            User::where('email', $email)
+                ->update([
+                    'email_preference' => false,
+                ]);
+        }
+
+        return response()->json(['status' => 'success']);
+    }
+
 
     // ---------------------------------------------------------------
     // PRIVATE HELPERS
