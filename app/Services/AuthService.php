@@ -100,7 +100,8 @@ class AuthService
                 'message' => 'Registration successfully',
                 'data' => $data
             ], 201);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Log::error($e->getMessage());
             throw new BadRequestException('Error processing request');
         }
     }

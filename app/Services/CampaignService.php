@@ -449,7 +449,7 @@ class CampaignService
         //     ->cc('favour@freebyztechnologies.com')
         //     ->bcc('freebyzcom@gmail.com')
         //     ->queue(new AdminCampaignPosted($campaign));
-        Mail::to('hello@freebyztechnologies.com')
+        Mail::to('holla@freebyz.com')
             ->cc('favour@freebyztechnologies.com')
             ->bcc('freebyzcom@gmail.com')
             ->send(new AdminCampaignPosted($campaign));
