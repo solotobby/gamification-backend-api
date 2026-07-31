@@ -19,7 +19,7 @@ class AuthValidator
             'country' => ['required', 'string', 'max:255'],
             'country_code' => ['required', 'string', 'max:255'],
             'source' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email|rfc,dns', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'email:rfc,dns', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'ref_id' => ['nullable', 'string', 'max:255'],
             'phone' => ['required', 'numeric', 'regex:/^([0-9\s\-\+\(\)]*)$/', 'unique:users,phone']
@@ -45,7 +45,7 @@ class AuthValidator
     public static function validateLogin($request)
     {
         $validationRules = [
-            'email' => 'required|email|max:255|exists:users,email',
+            'email' => 'required|email:rfc,dns|max:255|exists:users,email',
             'password' => 'required',
         ];
 
@@ -67,7 +67,7 @@ class AuthValidator
     public static function validateResendOTP($request)
     {
         $validationRules = [
-            'email' => 'required|email|max:255|exists:users,email|rfc,dns',
+            'email' => ['required', 'string', 'email:rfc,dns', 'max:255', 'unique:users,email'],
         ];
 
         $validator = Validator::make($request->all(), $validationRules);
@@ -93,7 +93,7 @@ class AuthValidator
     public static function validateResetPasswordLink($request)
     {
         $validationRules = [
-            'email' => 'required|email|max:255|exists:users,email|rfc,dns',
+            'email' => ['required', 'string', 'email:rfc,dns', 'max:255', 'unique:users,email'],
         ];
         $validator = Validator::make($request->all(), $validationRules);
 
@@ -115,11 +115,16 @@ class AuthValidator
         }
     }
 
-     public static function verifyToken($request)
+    public static function verifyToken($request)
     {
         $validationRules = [
             'token' => 'required|string',
-            'email' => 'required|email|max:255|exists:users,email|rfc,dns',
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'max:255',
+                'unique:users,email'
+            ],
         ];
         $validator = Validator::make($request->all(), $validationRules);
 
