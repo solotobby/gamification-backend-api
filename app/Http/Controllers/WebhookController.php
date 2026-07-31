@@ -1199,6 +1199,7 @@ class WebhookController extends Controller
     {
         $data = $request->json()->all();
 
+        Log::info('zeptomail webhook', [$data]);
         $eventName = strtolower($data['event_name'][0] ?? '');
         $message = $data['event_message'][0] ?? [];
 
