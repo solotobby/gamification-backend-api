@@ -33,6 +33,14 @@ class isUser
             ], 403);
         }
 
+        if ($user->is_blacklisted) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account has been blacklisted. Please contact support for assistance.'
+            ], 403);
+        }
+
+
         return $next($request);
     }
 }

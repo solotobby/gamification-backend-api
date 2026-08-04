@@ -279,12 +279,20 @@ class AuthService
             // Find user by email
             $user = $this->auth->findUser($request->email);
 
+            if (!$user || $user->is_blacklisted) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your account has been blacklisted. Please contact support for assistance.'
+                ], 403);
+            }
+
             if (!$user || !$user->role || $user->role === 'admin' || $user->role === 'super_admin') {
                 return response()->json([
                     'status' => false,
                     'message' => 'Incorrect Credentials'
-                ], 404);
+                ], 403);
             }
+
             $deviceSource = $request->header('X-Device-Source');
 
             if ($deviceSource === 'app') {
