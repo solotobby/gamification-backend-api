@@ -147,6 +147,14 @@ class AuthService
                 ], 404);
             }
 
+             if (!$user || $user->is_blacklisted) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'
+                ], 403);
+            }
+
+
             $deviceSource = $request->header('X-Device-Source');
 
             if ($deviceSource === 'app') {
