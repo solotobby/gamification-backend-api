@@ -282,7 +282,7 @@ class AuthService
             if (!$user || $user->is_blacklisted) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Your account has been blacklisted. Please contact support for assistance.'
+                    'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'
                 ], 403);
             }
 
