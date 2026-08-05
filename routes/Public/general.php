@@ -26,4 +26,10 @@ Route::group(['namespace' => 'auth'], function () {
 
     //get location
     Route::get('device/location', [GeneralController::class, 'deviceLocation']);
+
+    // career profile public apis
+    Route::get('/public/career-profile/{slug}', [PublicController::class, 'careerProfile']);
+    Route::get('/public/talent/{category}', [PublicController::class, 'careerCategory']);
+    Route::get('/public/skills/{skill}', [PublicController::class, 'careerSkillPage']);
+    Route::get('/public/university/{university}', [PublicController::class, 'careerUniversityPage']);
 });

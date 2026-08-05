@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use App\Services\CareerProfileService;
 
 class PublicController extends Controller
 {
@@ -19,19 +20,23 @@ class PublicController extends Controller
     protected $notificationService;
     protected $bannerService;
     protected $hireWorkerService;
+    protected $careerProfileService;
+
 
     public function __construct(
         JobService $jobService,
         JobListingService $jobListingService,
         NotificationService $notificationService,
         BannerService $bannerService,
-        HireWorkerService $hireWorkerService
+        HireWorkerService $hireWorkerService,
+        CareerProfileService $careerProfileService
     ) {
         $this->jobService = $jobService;
         $this->jobListingService = $jobListingService;
         $this->notificationService = $notificationService;
         $this->bannerService = $bannerService;
         $this->hireWorkerService = $hireWorkerService;
+        $this->careerProfileService = $careerProfileService;
     }
 
 
@@ -113,5 +118,25 @@ class PublicController extends Controller
                 'message' => 'Failed to send notification.'
             ], 500);
         }
+    }
+
+    public function careerProfile(string $slug)
+    {
+        return $this->careerProfileService->getPublic($slug);
+    }
+
+    public function careerCategory(Request $request, string $category)
+    {
+        return $this->careerProfileService->categoryIndex($category, $request->query('page', 1));
+    }
+
+    public function careerSkillPage(Request $request, string $skill)
+    {
+        return $this->careerProfileService->skillPage($skill, $request->query('page', 1));
+    }
+
+    public function careerUniversityPage(Request $request, string $university)
+    {
+        return $this->careerProfileService->universityPage($university, $request->query('page', 1));
     }
 }
