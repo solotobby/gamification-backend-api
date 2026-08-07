@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Services\CareerProfileService;
@@ -59,5 +60,23 @@ class CareerProfileController extends Controller
     public function skillOptions()
     {
         return $this->service->getSkillOptions();
+    }
+
+    public function analytics()
+    {
+        return $this->service->getAnalytics();
+    }
+
+    public function uploadPhoto(Request $request)
+    {
+        return $this->service->uploadPhoto($request);
+    }
+    public function uploadCv(Request $request)
+    {
+        return $this->service->uploadCv($request);
+    }
+    public function uploadCertificationFile(Request $request, $id)
+    {
+        return $this->service->uploadCertificationFile($request, $id);
     }
 }

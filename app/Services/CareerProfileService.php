@@ -1,14 +1,16 @@
 <?php
-// app/Services/CareerProfileService.php
+
 namespace App\Services;
 
 use App\Repositories\CareerProfileRepository;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use App\Services\Providers\SpacesService;
+
 
 class CareerProfileService
 {
-    public function __construct(protected CareerProfileRepository $repo) {}
+    public function __construct(protected CareerProfileRepository $repo, protected SpacesService $spaces) {}
 
     public function getMyProfile()
     {
@@ -23,6 +25,21 @@ class CareerProfileService
             ], 200);
         } catch (Throwable $e) {
             return response()->json(['status' => false, 'message' => 'Error retrieving profile.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getAnalytics()
+    {
+        try {
+            return response()->json([
+                'status' => true,
+                'data' => $this->repo->getAnalytics(auth()->id())
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Error retrieving analytics.'
+            ], 500);
         }
     }
 
@@ -124,7 +141,8 @@ class CareerProfileService
         $edu = $this->repo->addEducation(auth()->id(), $validated);
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
 
-        return response()->json(['status' => true, 'message' => 'Education added.', 'data' => $edu->load('university')], 201);
+        return response()->json(['status' => true,
+        'message' => 'Education added.', 'data' => $edu->load('university')], 201);
     }
 
     public function updateEducation($request, $id)
@@ -139,14 +157,16 @@ class CareerProfileService
         ]);
 
         $edu = $this->repo->updateEducation($id, auth()->id(), $validated);
-        return response()->json(['status' => true, 'message' => 'Education updated.', 'data' => $edu], 200);
+        return response()->json(['status' => true,
+        'message' => 'Education updated.', 'data' => $edu], 200);
     }
 
     public function deleteEducation($id)
     {
         $this->repo->deleteEducation($id, auth()->id());
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
-        return response()->json(['status' => true, 'message' => 'Education removed.'], 200);
+        return response()->json(['status' => true,
+        'message' => 'Education removed.'], 200);
     }
 
     public function addCertification($request)
@@ -170,7 +190,8 @@ class CareerProfileService
     {
         $this->repo->deleteCertification($id, auth()->id());
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
-        return response()->json(['status' => true, 'message' => 'Certification removed.'], 200);
+        return response()->json(['status' => true,
+        'message' => 'Certification removed.'], 200);
     }
 
     public function updateSocialProfiles($request)
@@ -279,6 +300,75 @@ class CareerProfileService
             ], 200);
         } catch (Throwable $e) {
             return response()->json(['status' => false, 'message' => 'University not found.'], 404);
+        }
+    }
+
+
+    public function uploadPhoto($request)
+    {
+        try {
+            $request->validate([
+                'photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            ]);
+
+            $profile = $this->repo->getOrCreate(auth()->id());
+
+            // reuse the same WebP-conversion path used for other Freebyz uploads
+            $path = $this->spaces->uploadImage(
+                $request->file('photo'),
+                "career-profiles/{$profile->id}/photo",
+                watermark: false
+            );
+
+            $profile = $this->repo->updateFile(auth()->id(), 'photo_path', $path);
+            $this->recalculate($profile);
+
+            return response()->json(['status' => true, 'message' => 'Photo uploaded.', 'data' => ['photo_path' => $path]], 200);
+        } catch (Throwable $e) {
+            Log::error('Career profile photo upload failed: ' . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Error uploading photo.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function uploadCv($request)
+    {
+        try {
+            $request->validate([
+                'cv' => 'required|mimes:pdf,doc,docx|max:10240',
+            ]);
+
+            $path = $this->spaces->uploadFile(
+                $request->file('cv'),
+                "career-profiles/" . auth()->id() . "/cv"
+            );
+
+            $profile = $this->repo->updateFile(auth()->id(), 'cv_file_path', $path);
+            $this->recalculate($profile);
+
+            return response()->json(['status' => true, 'message' => 'CV uploaded.', 'data' => ['cv_file_path' => $path]], 200);
+        } catch (Throwable $e) {
+            Log::error('Career profile CV upload failed: ' . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Error uploading CV.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function uploadCertificationFile($request, $id)
+    {
+        try {
+            $request->validate(['file' => 'required|mimes:pdf,jpg,jpeg,png|max:8192']);
+
+            $cert = \App\Models\Certification::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+
+            $path = $this->spaces->uploadFile(
+                $request->file('file'),
+                "career-profiles/" . auth()->id() . "/certifications/{$cert->id}"
+            );
+
+            $cert->update(['file_path' => $path]);
+
+            return response()->json(['status' => true, 'message' => 'Certificate file uploaded.', 'data' => $cert], 200);
+        } catch (Throwable $e) {
+            return response()->json(['status' => false, 'message' => 'Error uploading certificate.', 'error' => $e->getMessage()], 500);
         }
     }
 

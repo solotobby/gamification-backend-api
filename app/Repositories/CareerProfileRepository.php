@@ -124,6 +124,14 @@ class CareerProfileRepository
         Certification::where('id', $id)->where('user_id', $userId)->delete();
     }
 
+
+    public function updateFile($userId, string $field, string $path): CareerProfile
+    {
+        $profile = $this->getOrCreate($userId);
+        $profile->update([$field => $path]);
+        return $profile->fresh();
+    }
+
     // ── Social profiles ─────────────────────────────────────────
     public function syncSocialProfiles($userId, array $profiles): void
     {
@@ -141,8 +149,23 @@ class CareerProfileRepository
         return Skill::all(['id', 'name']);
     }
 
-    // app/Repositories/CareerProfileRepository.php (append)
+    public function getAnalytics($userId): array
+    {
+        $profile = CareerProfile::where('user_id', $userId)->first();
+        if (!$profile) {
+            return ['profile_views' => 0, 'cv_downloads' => 0, 'shares' => 0, 'countries' => []];
+        }
 
+        $rows = DB::table('profile_views')->where('career_profile_id', $profile->id);
+
+        return [
+            'profile_views' => (clone $rows)->where('action', 'view')->count(),
+            'cv_downloads'  => (clone $rows)->where('action', 'cv_download')->count(),
+            'shares'        => (clone $rows)->where('action', 'share')->count(),
+            'countries'     => (clone $rows)->whereNotNull('country')->distinct()->pluck('country'),
+            'views_last_30_days' => (clone $rows)->where('action', 'view')->where('created_at', '>=', now()->subDays(30))->count(),
+        ];
+    }
     public function findPublicBySlug(string $slug): ?CareerProfile
     {
         return CareerProfile::with([

@@ -57,4 +57,8 @@ Route::middleware([
     Route::delete('career-profile/certification/{id}', [CareerProfileController::class, 'destroyCertification']);
 
     Route::put('career-profile/social-profiles', [CareerProfileController::class, 'updateSocialProfiles']);
+    Route::post('career-profile/photo', [CareerProfileController::class, 'uploadPhoto']);
+    Route::post('career-profile/cv', [CareerProfileController::class, 'uploadCv']);
+    Route::get('career-profile/analytics', [CareerProfileController::class, 'analytics']);
+    Route::post('career-profile/certification/{id}/file', [CareerProfileController::class, 'uploadCertificationFile']);
 });
