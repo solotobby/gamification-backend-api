@@ -61,4 +61,7 @@ Route::middleware([
     Route::post('career-profile/cv', [CareerProfileController::class, 'uploadCv']);
     Route::get('career-profile/analytics', [CareerProfileController::class, 'analytics']);
     Route::post('career-profile/certification/{id}/file', [CareerProfileController::class, 'uploadCertificationFile']);
+
+    //
+    Route::post('career-profile/complete-onboarding', [CareerProfileController::class, 'completeOnboarding']);
 });

@@ -141,8 +141,11 @@ class CareerProfileService
         $edu = $this->repo->addEducation(auth()->id(), $validated);
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
 
-        return response()->json(['status' => true,
-        'message' => 'Education added.', 'data' => $edu->load('university')], 201);
+        return response()->json([
+            'status' => true,
+            'message' => 'Education added.',
+            'data' => $edu->load('university')
+        ], 201);
     }
 
     public function updateEducation($request, $id)
@@ -157,16 +160,21 @@ class CareerProfileService
         ]);
 
         $edu = $this->repo->updateEducation($id, auth()->id(), $validated);
-        return response()->json(['status' => true,
-        'message' => 'Education updated.', 'data' => $edu], 200);
+        return response()->json([
+            'status' => true,
+            'message' => 'Education updated.',
+            'data' => $edu
+        ], 200);
     }
 
     public function deleteEducation($id)
     {
         $this->repo->deleteEducation($id, auth()->id());
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
-        return response()->json(['status' => true,
-        'message' => 'Education removed.'], 200);
+        return response()->json([
+            'status' => true,
+            'message' => 'Education removed.'
+        ], 200);
     }
 
     public function addCertification($request)
@@ -190,8 +198,10 @@ class CareerProfileService
     {
         $this->repo->deleteCertification($id, auth()->id());
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
-        return response()->json(['status' => true,
-        'message' => 'Certification removed.'], 200);
+        return response()->json([
+            'status' => true,
+            'message' => 'Certification removed.'
+        ], 200);
     }
 
     public function updateSocialProfiles($request)
@@ -328,6 +338,20 @@ class CareerProfileService
             Log::error('Career profile photo upload failed: ' . $e->getMessage());
             return response()->json(['status' => false, 'message' => 'Error uploading photo.', 'error' => $e->getMessage()], 500);
         }
+    }
+
+    public function completeOnboarding()
+    {
+        $profile = $this->repo->getOrCreate(auth()->id());
+
+        $profile->update([
+            'onboarding_completed' => true
+        ]);
+        
+        return response()->json([
+            'status' => true,
+            'message' => 'Onboarding complete.'
+        ], 200);
     }
 
     public function uploadCv($request)

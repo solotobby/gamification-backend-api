@@ -54,6 +54,7 @@ class AuthController extends Controller
         return $this->authService->resetPassword($request);
     }
 
+
     public function verifyToken(Request $request)
     {
         return $this->authService->verifyToken($request);
@@ -63,5 +64,15 @@ class AuthController extends Controller
     {
 
         return $this->authService->logout($request);
+    }
+
+    public function setUsername(Request $request)
+    {
+        return $this->authService->setUsername($request);
+    }
+    
+    public function checkUsername(Request $request)
+    {
+        return $this->authService->checkUsername($request);
     }
 }

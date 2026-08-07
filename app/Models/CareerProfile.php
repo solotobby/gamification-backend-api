@@ -22,6 +22,7 @@ class CareerProfile extends Model
         'photo_path',
         'cv_file_path',
         'is_public',
+        'onboarding_completed',
     ];
 
     protected static function boot()

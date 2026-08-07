@@ -6,7 +6,6 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-// use Laravel\Sanctum\HasApiTokens;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -70,7 +69,6 @@ class User extends Authenticatable
         'is_blacklisted' => 'boolean',
         'streak_redeemed' => 'boolean',
         'is_wallet_transfered' => 'boolean',
-
     ];
 
     public function hasRole($role = []): bool
@@ -80,6 +78,7 @@ class User extends Authenticatable
         }
         return $this->role == $role;
     }
+
     public function getWalletCurrencyAttribute()
     {
         if ($this->hasRole('super_admin')) {
@@ -87,6 +86,11 @@ class User extends Authenticatable
         }
 
         return $this->wallet->base_currency ?? 'NGN';
+    }
+
+    public function careerProfile()
+    {
+        return $this->hasOne(CareerProfile::class, 'user_id');
     }
 
     public function staff()
@@ -103,6 +107,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(User::class, 'referral', 'referee_id');
     }
+
     public function usd_referees()
     {
         return $this->belongsToMany(User::class, 'usdverifieds', 'referral_id');
@@ -133,7 +138,6 @@ class User extends Authenticatable
         return $this->hasOne(Referral::class, 'user_id');
     }
 
-
     public function myCampaigns()
     {
         return $this->hasMany(Campaign::class);
@@ -141,17 +145,17 @@ class User extends Authenticatable
 
     public function accountDetails()
     {
-        return $this->hasOne(BankInformation::class,  'user_id');
+        return $this->hasOne(BankInformation::class, 'user_id');
     }
 
     public function myFeedBackList()
     {
-        return $this->hasMany(Feedback::class,  'user_id');
+        return $this->hasMany(Feedback::class, 'user_id');
     }
 
     public function myFeedBackReplies()
     {
-        return $this->hasMany(FeedbackReplies::class,  'user_id');
+        return $this->hasMany(FeedbackReplies::class, 'user_id');
     }
 
     public function interests()
@@ -183,6 +187,7 @@ class User extends Authenticatable
     {
         return $this->hasOne(Usdverified::class, 'user_id');
     }
+
     public function virtualAccount()
     {
         return $this->hasOne(VirtualAccount::class, 'user_id');

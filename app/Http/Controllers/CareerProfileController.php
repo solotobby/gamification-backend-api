@@ -18,6 +18,11 @@ class CareerProfileController extends Controller
         return $this->service->updateProfile($request);
     }
 
+    public function completeOnboarding()
+    {
+        return $this->service->completeOnboarding();
+    }
+
     public function storeExperience(Request $request)
     {
         return $this->service->addExperience($request);

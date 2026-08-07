@@ -147,7 +147,7 @@ class AuthService
                 ], 404);
             }
 
-             if (!$user || $user->is_blacklisted) {
+            if (!$user || $user->is_blacklisted) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'
@@ -662,6 +662,41 @@ class AuthService
                 'message' => 'Error processing request'
             ], 500);
         }
+    }
+
+    public function checkUsername(Request $request)
+    {
+        $request->validate(['username' => 'required|string|min:3|max:30|regex:/^[a-zA-Z0-9-]+$/']);
+
+        $taken = \App\Models\User::where('username', $request->username)
+            ->where('id', '!=', auth()->id())
+            ->exists();
+
+        return response()->json(['status' => true, 'available' => !$taken]);
+    }
+
+    public function setUsername(Request $request)
+    {
+        $validated = $request->validate([
+            'username' => 'required|string|min:3|max:30|regex:/^[a-z0-9-]+$/|unique:users,username,' . auth()->id(),
+        ]);
+
+        $username = strtolower($validated['username']);
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        $user->update(['username' => $username]);
+
+        $user->careerProfile()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['slug' => $username]
+        );
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Username set successfully.'
+        ]);
     }
 
     public function phoneVerification(Request $request)

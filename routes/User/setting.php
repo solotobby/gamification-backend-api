@@ -15,6 +15,9 @@ Route::middleware([
     Route::post('/logout',  [AuthController::class, 'logout']);
     Route::get('/user-details', [UserController::class, 'userResource']);
 
+    Route::get('username/check', [AuthController::class, 'checkUsername']);
+    Route::post('username', [AuthController::class, 'setUsername']);
+
     Route::post('email/verification', [AuthController::class, 'emailVerification']);
     Route::post('email/verify/code', [AuthController::class, 'emailVerifyCode']);
 
