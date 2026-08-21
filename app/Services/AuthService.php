@@ -143,11 +143,11 @@ class AuthService
             if (!$user) {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'User not found'
-                ], 404);
+                    'message' => 'Invalid Credentials'
+                ], 403);
             }
 
-            if (!$user || $user->is_blacklisted) {
+            if ($user->is_blacklisted) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'
@@ -287,17 +287,18 @@ class AuthService
             // Find user by email
             $user = $this->auth->findUser($request->email);
 
-            if (!$user || $user->is_blacklisted) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'
-                ], 403);
-            }
 
-            if (!$user || !$user->role || $user->role === 'admin' || $user->role === 'super_admin') {
+            if (!$user || !$user->role || $user->role != 'regular') {
                 return response()->json([
                     'status' => false,
                     'message' => 'Incorrect Credentials'
+                ], 403);
+            }
+
+              if ($user->is_blacklisted) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'
                 ], 403);
             }
 
