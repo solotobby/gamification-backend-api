@@ -112,6 +112,45 @@ class CareerProfileRepository
         return Certification::create(array_merge($data, ['user_id' => $userId]));
     }
 
+    public function getCareerProfiles(array $filters = [], $page = null, bool $publicOnly = false)
+    {
+        $query = CareerProfile::query()
+            ->with(['user:id,name', 'skills:id,name'])
+            ->when($publicOnly, fn($q) => $q->where('is_public', true))
+            ->when($filters['skill'] ?? null, fn($q, $skillId) =>
+            $q->whereHas('skills', fn($sq) => $sq->where('skills.id', $skillId)))
+            ->when($filters['availability'] ?? null, fn($q, $avail) =>
+            $q->whereHas('availabilities', fn($aq) => $aq->where('type', $avail)))
+            ->when($filters['location'] ?? null, fn($q, $loc) =>
+            $q->where(fn($lq) => $lq->where('city', 'like', "%{$loc}%")->orWhere('country', 'like', "%{$loc}%")))
+            ->when($filters['professional_level'] ?? null, fn($q, $lvl) =>
+            $q->where('professional_level', $lvl))
+            ->when($filters['price_min'] ?? null, fn($q, $min) =>
+            $q->where('price_max', '>=', $min))
+            ->when($filters['price_max'] ?? null, fn($q, $max) =>
+            $q->where('price_min', '<=', $max))
+            ->when($filters['search'] ?? null, fn($q, $search) =>
+            $q->where(fn($sq) => $sq->where('headline', 'like', "%{$search}%")
+                ->orWhere('professional_title', 'like', "%{$search}%")))
+            ->latest();
+
+        return $query->paginate($filters['per_page'] ?? 15, ['*'], 'page', $page);
+    }
+
+    public function getCareerProfileById($id): CareerProfile
+    {
+        return CareerProfile::with([
+            'user:id,name',
+            'skills:id,name',
+            'experiences',
+            'educations.university',
+            'certifications',
+            'socialProfiles',
+            'availabilities',
+            'badges',
+        ])->findOrFail($id);
+    }
+
     public function updateCertification($id, $userId, array $data): Certification
     {
         $cert = Certification::where('id', $id)->where('user_id', $userId)->firstOrFail();

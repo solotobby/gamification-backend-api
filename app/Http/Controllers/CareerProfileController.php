@@ -48,6 +48,16 @@ class CareerProfileController extends Controller
     {
         return $this->service->deleteEducation($id);
     }
+    public function indexCareer(Request $request)
+    {
+        return $this->service->getCareerProfiles($request, publicOnly: true);
+    }
+
+    public function showCareer($id)
+    {
+        return $this->service->getCareerProfileDetail($id);
+    }
+
 
     public function storeCertification(Request $request)
     {

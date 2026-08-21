@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 
 class CareerProfile extends Model
 {
+    protected $appends = ['price_range'];
     protected $fillable = [
         'user_id',
         'slug',
@@ -23,6 +24,14 @@ class CareerProfile extends Model
         'cv_file_path',
         'is_public',
         'onboarding_completed',
+        'price_min',
+        'price_max',
+        'price_currency',
+    ];
+
+    protected $casts = [
+        'price_min' => 'decimal:2',
+        'price_max' => 'decimal:2',
     ];
 
     protected static function boot()
@@ -33,7 +42,19 @@ class CareerProfile extends Model
             if (empty($p->slug)) {
                 $p->slug = static::generateUniqueSlug($p->resolveUserName());
             }
+
+            if (empty($p->price_currency)) {
+                $p->price_currency = optional(User::find($p->user_id))->wallet_currency ?? 'NGN';
+            }
         });
+    }
+
+    public function getPriceRangeAttribute(): ?string
+    {
+        if (!$this->price_min) return null;
+        $min = number_format((float) $this->price_min);
+        $max = $this->price_max ? number_format((float) $this->price_max) : null;
+        return $max ? "{$this->price_currency} {$min} - {$max}" : "{$this->price_currency} {$min}";
     }
 
     protected function resolveUserName(): string

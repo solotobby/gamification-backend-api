@@ -10,8 +10,8 @@ Route::group(['namespace' => 'auth'], function () {
     Route::get('landing', [GeneralController::class, 'ladingPageApi']);
     Route::get('country/list', [GeneralController::class, 'country']);
     Route::get('/public/tasks', [PublicController::class, 'publicTasks']);
-    Route::get('/public/hire-workers', [PublicController::class, 'publicWorkers']);
-    Route::get('/public/hire-workers/{id}', [PublicController::class, 'publicWorkerDetails']);
+    // Route::get('/public/hire-workers', [PublicController::class, 'publicWorkers']);
+    // Route::get('/public/hire-workers/{id}', [PublicController::class, 'publicWorkerDetails']);
     Route::get('/public/tasks-details/{job_id}', [PublicController::class, 'taskDetails']);
     Route::get('/public/task/categories', [PublicController::class, 'getCategories']);
 
@@ -32,4 +32,7 @@ Route::group(['namespace' => 'auth'], function () {
     Route::get('/public/talent/{category}', [PublicController::class, 'careerCategory']);
     Route::get('/public/skills/{skill}', [PublicController::class, 'careerSkillPage']);
     Route::get('/public/university/{university}', [PublicController::class, 'careerUniversityPage']);
+
+    Route::get('/public/career', [PublicController::class, 'publicCareerWorkers']);
+    Route::get('/public/utility/{key}', [PublicController::class, 'publicUtility']);
 });

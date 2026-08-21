@@ -589,10 +589,9 @@ class CampaignService
         })->toArray();
     }
 
-    private function getUtilityData(): array
+    public function getUtilityData(): array
     {
-
-        $currency = auth()->user()->wallet->base_currency;
+        $currency = optional(optional(auth()->user())->wallet)->base_currency;
 
         $paymentProcessors = [];
 
@@ -641,12 +640,12 @@ class CampaignService
                 // 'Crypto (USDT_TRC20)' => 'crypto',
             ];
         }
+
         return [
             'dashboard' => [
                 'info' => [
                     'title' => 'Welcome to Freebyz remote jobs, Get Full Time Jobs OR Micro Tasks | Hire Skilled workers for Full Time Job ',
                     'description' => '<p>Job PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your friends.</br></br>Learn how to COMPLETE SIMPLE tasks online & earn <a href="https://youtube.com/shorts/sn64O_osLbs?si=P75AwS0Of9Sc-jA3">here</a></p>',
-                    // 'description' => ' Job PROMO: Freebyz is giving out 50k weekly to users with the highest referrals. Copy your referral link below to invite your Friends.\nLearn how to COMPLETE SIMPLE tasks online & earn here (https://youtube.com/shorts/sn64O_osLbs?si=P75AwS0Of9Sc-jA3).'
                 ],
                 'ads' => [
                     [
@@ -669,14 +668,12 @@ class CampaignService
                     'Price: Lowest to Highest'  => 'price_low',
                     'Prioritized First'         => 'priority_first',
                 ],
-
             ],
             'withdraw' => [
                 'info' => 'Withdrawals are made every Friday of the week. Only verified users can withdraw',
                 'payment_processor' => [
                     'Local Withdrawal' => 'wallet',
                 ]
-
             ],
             'wallet' => [
                 'info' => 'Fund your wallet through any means of payment below. Your wallet gets credited in less than 1 min for all except the Manual Account funding',
@@ -719,9 +716,46 @@ class CampaignService
                     'denied'
                 ]
             ],
+            'career_profiles' => [
+                'info' => 'Discover verified professionals across Africa. Filter by skill, experience level, and location to find the right talent.',
+                'skills' => $this->repo->getSkills(),
+                'filter' => [
+                    'professional_level' => [
+                        'Student / Talent'       => 'student_talent',
+                        'Junior Professional'    => 'junior_professional',
+                        'Mid-level Professional' => 'mid_level_professional',
+                        'Senior Professional'    => 'senior_professional',
+                        'Expert'                 => 'expert',
+                    ],
+                    'availability' => [
+                        'open_to_work'           => 'Open to Work',
+                        'available_immediately'  => 'Available Immediately',
+                        'available_this_week'    => 'Available This Week',
+                        'available_next_month'   => 'Available Next Month',
+                        'freelance'              => 'Open to Freelance',
+                        'remote'                 => 'Open to Remote Work',
+                        'hybrid'                 => 'Open to Hybrid',
+                        'onsite'                 => 'Open to Onsite',
+                        'internship'             => 'Open to Internship',
+                        'volunteer'              => 'Open to Volunteer',
+                        'consulting'             => 'Open to Consulting',
+                        'research'               => 'Open to Research',
+                        'speaking'               => 'Open to Speaking Engagements',
+                    ],
+                    'price_ranges' => [
+                        'Under 500'      => '0-500',
+                        '500 - 1,000'    => '500-1000',
+                        '1,000 - 2,500'  => '1000-2500',
+                        '2,500 - 5,000'  => '2500-5000',
+                        '5,000 - 10,000' => '5000-10000',
+                        '10,000+'        => '10000-',
+                    ],
+                    'location' => [],
+                ],
+            ],
             'hire_workers' => [
                 'info' => 'Filter skilled worker based on your preferences',
-                'skills'           => $this->repo->getSkills(),
+                'skills'              => $this->repo->getSkills(),
                 'proficiency_levels'  => $this->repo->getProficiencyLevels(),
                 'year_experience'     => ['0-2', '3-5', '6-10', '10+'],
                 'availability'        => ['full-time', 'part-time', 'remote', 'contract'],
@@ -787,7 +821,6 @@ class CampaignService
                     'Others' => 'others'
                 ]
             ],
-            ''
         ];
     }
 

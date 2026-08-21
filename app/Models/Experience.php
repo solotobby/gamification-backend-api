@@ -17,4 +17,9 @@ class Experience extends Model
         'responsibilities',
         'achievements',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

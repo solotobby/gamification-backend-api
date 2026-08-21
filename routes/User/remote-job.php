@@ -22,14 +22,14 @@ Route::middleware([
 
 
 
-Route::middleware([
-    'auth:api',
-    'isUser'
-])->prefix('hire-workers')->group(function () {
+Route::middleware(['auth:api', 'isUser'])->prefix('hire-workers')->group(function () {
 
-    // Route::get('/filters', [HireWorkerController::class, 'filters']);
     Route::get('/purchased', [HireWorkerController::class, 'purchased']);
     Route::get('/my-skill', [HireWorkerController::class, 'mySkill']);
+
+    Route::get('/career', [CareerProfileController::class, 'indexCareer']);
+    Route::get('/career/{id}', [CareerProfileController::class, 'showCareer']);
+
     Route::get('/', [HireWorkerController::class, 'index']);
     Route::post('/create-skill', [HireWorkerController::class, 'store']);
     Route::get('/{id}', [HireWorkerController::class, 'show']);

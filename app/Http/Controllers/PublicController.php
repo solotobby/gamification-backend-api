@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Services\JobListingService;
 use App\Services\JobService;
 use App\Services\BannerService;
+use App\Services\CampaignService;
 use App\Services\HireWorkerService;
 use Illuminate\Http\Request;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use App\Services\CareerProfileService;
+use Illuminate\Support\Facades\Log;
 
 class PublicController extends Controller
 {
@@ -21,6 +23,7 @@ class PublicController extends Controller
     protected $bannerService;
     protected $hireWorkerService;
     protected $careerProfileService;
+    protected $campaignService;
 
 
     public function __construct(
@@ -29,7 +32,8 @@ class PublicController extends Controller
         NotificationService $notificationService,
         BannerService $bannerService,
         HireWorkerService $hireWorkerService,
-        CareerProfileService $careerProfileService
+        CareerProfileService $careerProfileService,
+        CampaignService $campaignService
     ) {
         $this->jobService = $jobService;
         $this->jobListingService = $jobListingService;
@@ -37,6 +41,7 @@ class PublicController extends Controller
         $this->bannerService = $bannerService;
         $this->hireWorkerService = $hireWorkerService;
         $this->careerProfileService = $careerProfileService;
+        $this->campaignService = $campaignService;
     }
 
 
@@ -80,6 +85,12 @@ class PublicController extends Controller
     {
         return $this->hireWorkerService->getWorkerPublic($id);
     }
+
+    public function publicCareerWorkers(Request $request)
+    {
+        return $this->careerProfileService->getCareerProfiles($request, publicOnly: true);
+    }
+
 
     public function sendNotification(Request $request)
     {
@@ -138,5 +149,25 @@ class PublicController extends Controller
     public function careerUniversityPage(Request $request, string $university)
     {
         return $this->careerProfileService->universityPage($university, $request->query('page', 1));
+    }
+
+    public function publicUtility(string $key)
+    {
+        $allowedPublicKeys = ['career_profiles', 'remote_jobs', 'hire_workers'];
+
+        if (!in_array($key, $allowedPublicKeys)) {
+            return response()->json(['status' => false, 'message' => 'Not available.'], 404);
+        }
+
+        $data = $this->campaignService->getUtilityData();
+        $section = $data[$key] ?? null;
+
+        if (!$section) {
+            return response()->json(['status' => false, 'message' => 'Not found.'], 404);
+        }
+
+        Log::info('Public utility data request', ['key' => $key]);
+
+        return response()->json(['status' => true, 'data' => $section], 200);
     }
 }

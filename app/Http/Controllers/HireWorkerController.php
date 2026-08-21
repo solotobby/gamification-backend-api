@@ -3,15 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Services\HireWorkerService;
+use App\Services\JobListingService;
 use Illuminate\Http\Request;
 
 class HireWorkerController extends Controller
 {
     protected $hireWorkerService;
+    protected $jobListingService;
 
-    public function __construct(HireWorkerService $hireWorkerService)
-    {
+    public function __construct(
+        HireWorkerService $hireWorkerService,
+        JobListingService $jobListingService
+    ) {
         $this->hireWorkerService = $hireWorkerService;
+        $this->jobListingService = $jobListingService;
     }
 
     // GET /hire-workers/filters
@@ -26,7 +31,7 @@ class HireWorkerController extends Controller
         return $this->hireWorkerService->getWorkers($request);
     }
 
-    
+
 
     // GET /hire-workers/{id}
     public function show($id)
