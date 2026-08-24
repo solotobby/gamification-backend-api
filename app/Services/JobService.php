@@ -227,6 +227,7 @@ class JobService
                     'expected_image_url' => $value->expected_result_image,
                     'public_link' => "https://dashbaord.freebyz.com/tasks/" . $value->job_id,
                     'created_at' => $value->created_at,
+                    'updated_at' => $value->updated_at,
                 ];
             }
 

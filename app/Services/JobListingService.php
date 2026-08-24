@@ -659,6 +659,8 @@ class JobListingService
             // 'can_perform_task'        => $check === true,
             // 'can_perform_task_reason' => $check === true ? '' : $check,
             'created_at'              => $job->created_at,
+            'updated_at'              => $job->updated_at, // NEW
+
 
         ];
     }

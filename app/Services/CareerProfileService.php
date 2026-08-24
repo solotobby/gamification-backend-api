@@ -268,8 +268,11 @@ class CareerProfileService
             'country'             => $profile->country,
             'photo_path'          => $profile->photo_path,
             'talent_score'        => $profile->talent_score,
+            'profile_completeness'  => $profile->profile_completeness, 
             'skills'              => $profile->skills,
             'created_at'          => $profile->created_at,
+            'updated_at'            => $profile->updated_at,
+
         ];
     }
 
