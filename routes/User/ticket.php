@@ -19,4 +19,5 @@ Route::middleware([
     Route::get('/details/{id}', [FeedbackController::class, 'getFeedback']);
     Route::post('/send-message/{feedbackId}', [FeedbackController::class, 'sendReply']);
     Route::get('/messages/{feedbackId}', [FeedbackController::class, 'getReplies']);
+    Route::post('/mark-read/{feedbackId}', [FeedbackController::class, 'markAsRead']); 
 });

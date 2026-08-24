@@ -39,22 +39,15 @@ class FeedbackRepositoryModel
 
     public function sendReply($user, $feedbackId, $message, $isImage = false, $imageUrl = null)
     {
-        // return FeedbackReplies::create([
-        //     'feedback_id'   => $feedbackId,
-        //     'user_id'       => $user->id,
-        //     'message'       => $message ?? $imageUrl,
-        //     'is_image'      => $isImage,
-        //     'image_url'     => $imageUrl,
-        // ]);
-
-         return FeedbackReplies::create([
-        'feedback_id'  => $feedbackId,
-        'user_id'      => $user->id,
-        'message'      => $message ?? $imageUrl,        // legacy fallback
-        'text_message' => $message,        // new text field
-        'is_image'     => $isImage,
-        'image_url'    => $imageUrl,
-    ]);
+        return FeedbackReplies::create([
+            'feedback_id'  => $feedbackId,
+            'user_id'      => $user->id,
+            'message'      => $message ?? $imageUrl,
+            'text_message' => $message,
+            'is_image'     => $isImage,
+            'image_url'    => $imageUrl,
+            'read_at'      => null,
+        ]);
     }
 
     public function getReplies($feedbackId, $page = null)
@@ -63,5 +56,44 @@ class FeedbackRepositoryModel
             ->with('user:id,name,role')
             ->latest()
             ->paginate(10, ['*'], 'page', $page);
+    }
+
+    /**
+     * Mark every reply NOT sent by $viewerUserId as read.
+     * Called whenever a party opens/polls a thread — marks the other party's messages seen.
+     */
+    public function markRepliesAsRead($feedbackId, $viewerUserId): int
+    {
+        return FeedbackReplies::where('feedback_id', $feedbackId)
+            ->where('user_id', '!=', $viewerUserId)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+    }
+
+    /**
+     * Count of unread replies in a thread, from the viewer's perspective
+     * (i.e. messages sent by the OTHER party that viewer hasn't read yet).
+     */
+    public function getUnreadCount($feedbackId, $viewerUserId): int
+    {
+        return FeedbackReplies::where('feedback_id', $feedbackId)
+            ->where('user_id', '!=', $viewerUserId)
+            ->whereNull('read_at')
+            ->count();
+    }
+
+    /**
+     * Bulk unread counts keyed by feedback_id, for a list of feedback IDs — avoids N+1
+     * when rendering a ticket list with per-ticket unread badges.
+     */
+    public function getUnreadCountsBulk(array $feedbackIds, $viewerUserId): array
+    {
+        return FeedbackReplies::whereIn('feedback_id', $feedbackIds)
+            ->where('user_id', '!=', $viewerUserId)
+            ->whereNull('read_at')
+            ->selectRaw('feedback_id, COUNT(*) as unread_count')
+            ->groupBy('feedback_id')
+            ->pluck('unread_count', 'feedback_id')
+            ->all();
     }
 }

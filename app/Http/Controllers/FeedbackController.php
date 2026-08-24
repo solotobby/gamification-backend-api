@@ -38,4 +38,9 @@ class FeedbackController extends Controller
     {
         return $this->feedbackService->getReplies($feedbackId);
     }
+
+    public function markAsRead($feedbackId)
+    {
+        return $this->feedbackService->markAsRead($feedbackId);
+    }
 }

@@ -19,6 +19,11 @@ class FeedbackReplies extends Model
         'status',
         'is_image',
         'image_url',
+        'read_at',
+    ];
+
+    protected $casts = [
+        'read_at' => 'datetime',
     ];
 
     public function user()
@@ -30,8 +35,14 @@ class FeedbackReplies extends Model
     {
         return $this->belongsTo(Feedback::class);
     }
-     public function hasBoth(): bool
+
+    public function hasBoth(): bool
     {
         return !empty($this->text_message) && !empty($this->image_url);
+    }
+
+    public function isRead(): bool
+    {
+        return !is_null($this->read_at);
     }
 }

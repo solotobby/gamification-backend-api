@@ -80,50 +80,6 @@ class FeedbackService
         }
     }
 
-    public function getUserFeedbacks()
-    {
-        try {
-            $user    = auth()->user();
-            $feedbacks = $this->feedbackModel->getFeedbacks($user);
-
-            $data = [];
-            foreach ($feedbacks as $feedback) {
-                $data[] = $this->formatFeedback($feedback);
-            }
-
-            return response()->json([
-                'status'     => true,
-                'message'    => 'User feedbacks retrieved.',
-                'data'       => $data,
-                'pagination' => $this->buildPagination($feedbacks),
-            ], 200);
-        } catch (Throwable $e) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Error processing request',
-                'error'   => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function getFeedback($id)
-    {
-        $user     = auth()->user();
-        $feedback = $this->feedbackModel->getFeedbackById($user, $id);
-
-        if (!$feedback) {
-            return response()->json([
-                'status'  => false,
-                'message' => 'Feedback not found',
-            ], 404);
-        }
-
-        return response()->json([
-            'status'  => true,
-            'message' => 'Feedback retrieved.',
-            'data'    => $this->formatFeedback($feedback),
-        ], 200);
-    }
 
     public function sendReply($request, $feedbackId)
     {
@@ -178,7 +134,8 @@ class FeedbackService
             $feedback->status = true;
             $feedback->save();
 
-            $replies = $this->getRepliesFormatted($feedbackId);
+            // $replies = $this->getRepliesFormatted($feedbackId);
+            $replies = $this->getRepliesFormatted($feedbackId, $user->id);
 
             return response()->json([
                 'status'  => true,
@@ -192,6 +149,58 @@ class FeedbackService
                 'message' => 'Error processing request',
             ], 500);
         }
+    }
+
+    public function getUserFeedbacks()
+    {
+        try {
+            $user      = auth()->user();
+            $feedbacks = $this->feedbackModel->getFeedbacks($user);
+
+            $unreadCounts = $this->feedbackModel->getUnreadCountsBulk(
+                $feedbacks->pluck('id')->all(),
+                $user->id
+            );
+
+            $data = [];
+            foreach ($feedbacks as $feedback) {
+                $data[] = $this->formatFeedback($feedback, $unreadCounts[$feedback->id] ?? 0);
+            }
+
+            return response()->json([
+                'status'     => true,
+                'message'    => 'User feedbacks retrieved.',
+                'data'       => $data,
+                'pagination' => $this->buildPagination($feedbacks),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error processing request',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getFeedback($id)
+    {
+        $user     = auth()->user();
+        $feedback = $this->feedbackModel->getFeedbackById($user, $id);
+
+        if (!$feedback) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Feedback not found',
+            ], 404);
+        }
+
+        $unread = $this->feedbackModel->getUnreadCount($feedback->id, $user->id);
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'Feedback retrieved.',
+            'data'    => $this->formatFeedback($feedback, $unread),
+        ], 200);
     }
 
     public function getReplies($feedbackId)
@@ -209,13 +218,46 @@ class FeedbackService
         return response()->json([
             'status'  => true,
             'message' => 'Replies retrieved successfully',
-            'data'    => $this->getRepliesFormatted($feedbackId),
+            'data'    => $this->getRepliesFormatted($feedbackId, $user->id),
         ]);
+    }
+
+    /**
+     * NEW — marks every reply from the other party as read.
+     * Called by the frontend whenever a thread is opened or actively polled.
+     */
+    public function markAsRead($feedbackId)
+    {
+        try {
+            $user     = auth()->user();
+            $feedback = $this->feedbackModel->getFeedbackById($user, $feedbackId);
+
+            if (!$feedback) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Feedback not found',
+                ], 404);
+            }
+
+            $marked = $this->feedbackModel->markRepliesAsRead($feedback->id, $user->id);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'Marked as read.',
+                'data'    => ['marked_count' => $marked],
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Error processing request',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // ─── Private Helpers ────────────────────────────────────────────────────────
 
-    private function getRepliesFormatted($feedbackId)
+    private function getRepliesFormatted($feedbackId, $viewerUserId = null)
     {
         $replies = $this->feedbackModel->getReplies($feedbackId);
 
@@ -224,10 +266,11 @@ class FeedbackService
 
             $type = 'text';
             if ($reply->image_url && $reply->text_message) {
-                $type = 'mixed';    // both text and image
+                $type = 'mixed';
             } elseif ($reply->image_url) {
-                $type = 'image';    // image only
+                $type = 'image';
             }
+
             $data[] = [
                 'id'          => $reply->id,
                 'sender_id'   => $reply->user_id,
@@ -237,10 +280,12 @@ class FeedbackService
                 'sender_role' => $reply->user->role,
                 'type'        => $type,
                 'message'     => $reply->text_message ?? $reply->message,
-                // 'is_image'    => (bool) $reply->is_image,
                 'image_url'   => $reply->image_url,
                 'created_at'  => $reply->created_at,
                 'updated_at'  => $reply->updated_at,
+                'read_at'     => $reply->read_at,
+                'is_read'     => $reply->isRead(),
+                'is_mine'     => $viewerUserId !== null ? ($reply->user_id === $viewerUserId) : null,
             ];
         }
 
@@ -250,17 +295,20 @@ class FeedbackService
         ];
     }
 
-    private function formatFeedback($feedback)
+    private function formatFeedback($feedback, $unreadCount = 0)
     {
         return [
-            'id'         => $feedback->id,
-            'user_id'    => $feedback->user_id,
-            'category'   => $feedback->category,
-            'message'    => $feedback->message,
-            'proof_url'  => $feedback->proof_url,
-            'status'     => $feedback->status,
-            'created_at' => $feedback->created_at,
-            'updated_at' => $feedback->updated_at,
+            'id'            => $feedback->id,
+            'user_id'       => $feedback->user_id,
+            'category'      => $feedback->category,
+            'message'       => $feedback->message,
+            'proof_url'     => $feedback->proof_url,
+            'status'        => $feedback->status,
+            'created_at'    => $feedback->created_at,
+            'updated_at'    => $feedback->updated_at,
+            'unread_count'  => $unreadCount,
+            'has_admin_reply' => !is_null($feedback->respondent_id), // NEW, additive
+
         ];
     }
 
