@@ -3,14 +3,16 @@
 namespace App\Services;
 
 use App\Repositories\CareerProfileRepository;
+use App\Services\Providers\SpacesService;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use App\Services\Providers\SpacesService;
-
 
 class CareerProfileService
 {
-    public function __construct(protected CareerProfileRepository $repo, protected SpacesService $spaces) {}
+    public function __construct(
+        protected CareerProfileRepository $repo,
+        protected SpacesService $spaces
+    ) {}
 
     public function getMyProfile()
     {
@@ -43,65 +45,65 @@ class CareerProfileService
         }
     }
 
-   public function updateProfile($request)
-{
-    try {
-        $validated = $request->validate([
-            'professional_title' => 'sometimes|string|max:150',
-            'headline'            => 'sometimes|string|max:150',
-            'summary'             => 'sometimes|string|max:3000',
-            'professional_level'  => 'sometimes|in:student_talent,junior_professional,mid_level_professional,senior_professional,expert',
-            'city'                => 'sometimes|string|max:120',
-            'state'               => 'sometimes|nullable|string|max:120',
-            'country'             => 'sometimes|string|max:120',
-            'price_min'           => 'sometimes|nullable|numeric|min:0',
-            'price_max'           => 'sometimes|nullable|numeric|min:0|gte:price_min',
-            'is_public'           => 'sometimes|boolean',
-            'availabilities'      => 'sometimes|array',
-            'availabilities.*'    => 'string|in:open_to_work,available_immediately,available_this_week,available_next_month,freelance,remote,hybrid,onsite,internship,volunteer,consulting,research,speaking',
-            'skill_ids'           => 'sometimes|array',
-            'skill_ids.*'         => 'integer|exists:skills,id',
-        ]);
+    public function updateProfile($request)
+    {
+        try {
+            $validated = $request->validate([
+                'professional_title' => 'sometimes|string|max:150',
+                'headline' => 'sometimes|string|max:150',
+                'summary' => 'sometimes|string|max:3000',
+                'professional_level' => 'sometimes|in:student_talent,junior_professional,mid_level_professional,senior_professional,expert',
+                'city' => 'sometimes|string|max:120',
+                'state' => 'sometimes|nullable|string|max:120',
+                'country' => 'sometimes|string|max:120',
+                'price_min' => 'sometimes|nullable|numeric|min:0',
+                'price_max' => 'sometimes|nullable|numeric|min:0|gte:price_min',
+                'is_public' => 'sometimes|boolean',
+                'availabilities' => 'sometimes|array',
+                'availabilities.*' => 'string|in:open_to_work,available_immediately,available_this_week,available_next_month,freelance,remote,hybrid,onsite,internship,volunteer,consulting,research,speaking',
+                'skill_ids' => 'sometimes|array',
+                'skill_ids.*' => 'integer|exists:skills,id',
+            ]);
 
-        $userId = auth()->id();
-        $wantsPublic = array_key_exists('is_public', $validated) ? (bool) $validated['is_public'] : null;
+            $userId = auth()->id();
+            $wantsPublic = array_key_exists('is_public', $validated) ? (bool) $validated['is_public'] : null;
 
-        // Persist everything except is_public first, so completeness reflects this update
-        $updateData = collect($validated)->except(['availabilities', 'skill_ids', 'is_public'])->toArray();
-        $profile = $this->repo->updateProfile($userId, $updateData);
+            // Persist everything except is_public first, so completeness reflects this update
+            $updateData = collect($validated)->except(['availabilities', 'skill_ids', 'is_public'])->toArray();
+            $profile = $this->repo->updateProfile($userId, $updateData);
 
-        if (array_key_exists('availabilities', $validated)) {
-            $this->repo->syncAvailabilities($profile->id, $validated['availabilities']);
-        }
-        if (array_key_exists('skill_ids', $validated)) {
-            $this->repo->syncSkills($userId, $validated['skill_ids']);
-        }
-
-        $this->recalculate($profile->fresh());
-        $profile = $profile->fresh();
-
-        if (!is_null($wantsPublic)) {
-            if ($wantsPublic && $profile->profile_completeness < 50) {
-                return response()->json([
-                    'status'  => false,
-                    'message' => "Your profile must be at least 50% complete before it can go public. It's currently {$profile->profile_completeness}% complete.",
-                    'data'    => ['profile_completeness' => $profile->profile_completeness],
-                ], 422);
+            if (array_key_exists('availabilities', $validated)) {
+                $this->repo->syncAvailabilities($profile->id, $validated['availabilities']);
+            }
+            if (array_key_exists('skill_ids', $validated)) {
+                $this->repo->syncSkills($userId, $validated['skill_ids']);
             }
 
-            $profile->update(['is_public' => $wantsPublic]);
-        }
+            $this->recalculate($profile->fresh());
+            $profile = $profile->fresh();
 
-        return response()->json([
-            'status'  => true,
-            'message' => 'Profile updated successfully.',
-            'data'    => $profile->fresh(['skills:id,name', 'availabilities']),
-        ], 200);
-    } catch (Throwable $e) {
-        Log::error('Career profile update failed: ' . $e->getMessage());
-        return response()->json(['status' => false, 'message' => 'Error updating profile.', 'error' => $e->getMessage()], 500);
+            if (!is_null($wantsPublic)) {
+                if ($wantsPublic && $profile->profile_completeness < 50) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => "Your profile must be at least 50% complete before it can go public. It's currently {$profile->profile_completeness}% complete.",
+                        'data' => ['profile_completeness' => $profile->profile_completeness],
+                    ], 422);
+                }
+
+                $profile->update(['is_public' => $wantsPublic]);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Profile updated successfully.',
+                'data' => $profile->fresh(['skills:id,name', 'availabilities']),
+            ], 200);
+        } catch (Throwable $e) {
+            Log::error('Career profile update failed: ' . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Error updating profile.', 'error' => $e->getMessage()], 500);
+        }
     }
-}
 
     public function addExperience($request)
     {
@@ -149,12 +151,12 @@ class CareerProfileService
     public function addEducation($request)
     {
         $validated = $request->validate([
-            'institution'   => 'required|string|max:200',
+            'institution' => 'required|string|max:200',
             'qualification' => 'required|string|max:150',
-            'course'        => 'nullable|string|max:150',
-            'start_year'    => 'required|integer|min:1950|max:' . (date('Y') + 1),
-            'end_year'      => 'nullable|integer|min:1950|max:' . (date('Y') + 10),
-            'is_current'    => 'sometimes|boolean',
+            'course' => 'nullable|string|max:150',
+            'start_year' => 'required|integer|min:1950|max:' . (date('Y') + 1),
+            'end_year' => 'nullable|integer|min:1950|max:' . (date('Y') + 10),
+            'is_current' => 'sometimes|boolean',
         ]);
 
         $edu = $this->repo->addEducation(auth()->id(), $validated);
@@ -170,12 +172,12 @@ class CareerProfileService
     public function updateEducation($request, $id)
     {
         $validated = $request->validate([
-            'institution'   => 'sometimes|string|max:200',
+            'institution' => 'sometimes|string|max:200',
             'qualification' => 'sometimes|string|max:150',
-            'course'        => 'sometimes|nullable|string|max:150',
-            'start_year'    => 'sometimes|integer',
-            'end_year'      => 'sometimes|nullable|integer',
-            'is_current'    => 'sometimes|boolean',
+            'course' => 'sometimes|nullable|string|max:150',
+            'start_year' => 'sometimes|integer',
+            'end_year' => 'sometimes|nullable|integer',
+            'is_current' => 'sometimes|boolean',
         ]);
 
         $edu = $this->repo->updateEducation($id, auth()->id(), $validated);
@@ -199,12 +201,12 @@ class CareerProfileService
     public function addCertification($request)
     {
         $validated = $request->validate([
-            'name'              => 'required|string|max:200',
-            'issuer'            => 'required|string|max:150',
-            'issue_date'        => 'nullable|date',
-            'expiry_date'       => 'nullable|date|after_or_equal:issue_date',
-            'credential_id'     => 'nullable|string|max:100',
-            'verification_url'  => 'nullable|url',
+            'name' => 'required|string|max:200',
+            'issuer' => 'required|string|max:150',
+            'issue_date' => 'nullable|date',
+            'expiry_date' => 'nullable|date|after_or_equal:issue_date',
+            'credential_id' => 'nullable|string|max:100',
+            'verification_url' => 'nullable|url',
         ]);
 
         $cert = $this->repo->addCertification(auth()->id(), $validated);
@@ -213,31 +215,32 @@ class CareerProfileService
         return response()->json(['status' => true, 'message' => 'Certification added.', 'data' => $cert], 201);
     }
 
-  public function getCareerProfiles($request, bool $publicOnly = true)
-{
-    try {
-        $request->validate([
-            'availability' => 'sometimes|nullable|string|in:open_to_work,available_immediately,available_this_week,available_next_month,freelance,remote,hybrid,onsite,internship,volunteer,consulting,research,speaking',
-        ]);
+    public function getCareerProfiles($request, bool $publicOnly = true)
+    {
+        try {
+            $request->validate([
+                'availability' => 'sometimes|nullable|string|in:open_to_work,available_immediately,available_this_week,available_next_month,freelance,remote,hybrid,onsite,internship,volunteer,consulting,research,speaking',
+            ]);
 
-        $filters = $request->only(['skill', 'location', 'professional_level', 'availability', 'price_min', 'price_max', 'search', 'per_page']);
-        $profiles = $this->repo->getCareerProfiles($filters, $request->query('page'), $publicOnly);
+            $filters = $request->only(['skill', 'location', 'professional_level', 'availability', 'price_min', 'price_max', 'search', 'per_page']);
+            $profiles = $this->repo->getCareerProfiles($filters, $request->query('page'), $publicOnly);
 
-        $data = [];
-        foreach ($profiles as $profile) {
-            $data[] = $this->formatProfileSummary($profile);
+            $data = [];
+            foreach ($profiles as $profile) {
+                $data[] = $this->formatProfileSummary($profile);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Career profiles retrieved successfully.',
+                'data' => $data,
+                'pagination' => $this->pagination($profiles),
+            ], 200);
+        } catch (Throwable $e) {
+            return response()->json(['status' => false, 'message' => 'Error retrieving career profiles.', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json([
-            'status'     => true,
-            'message'    => 'Career profiles retrieved successfully.',
-            'data'       => $data,
-            'pagination' => $this->pagination($profiles),
-        ], 200);
-    } catch (Throwable $e) {
-        return response()->json(['status' => false, 'message' => 'Error retrieving career profiles.', 'error' => $e->getMessage()], 500);
     }
-}
+
     public function getCareerProfileDetail($id)
     {
         try {
@@ -245,9 +248,9 @@ class CareerProfileService
             $this->repo->trackView($profile->id);
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Profile retrieved successfully.',
-                'data'    => $profile,
+                'data' => $profile,
             ], 200);
         } catch (Throwable $e) {
             return response()->json(['status' => false, 'message' => 'Profile not found.', 'error' => $e->getMessage()], 404);
@@ -257,22 +260,21 @@ class CareerProfileService
     private function formatProfileSummary($profile): array
     {
         return [
-            'id'                  => $profile->id,
-            'slug'                => $profile->slug,
-            'name'                => optional($profile->user)->name,
-            'professional_title'  => $profile->professional_title,
-            'headline'            => $profile->headline,
-            'professional_level'  => $profile->professional_level,
-            'price_range'         => $profile->price_range,
-            'city'                => $profile->city,
-            'country'             => $profile->country,
-            'photo_path'          => $profile->photo_path,
-            'talent_score'        => $profile->talent_score,
-            'profile_completeness'  => $profile->profile_completeness, 
-            'skills'              => $profile->skills,
-            'created_at'          => $profile->created_at,
-            'updated_at'            => $profile->updated_at,
-
+            'id' => $profile->id,
+            'slug' => $profile->slug,
+            'name' => optional($profile->user)->name,
+            'professional_title' => $profile->professional_title,
+            'headline' => $profile->headline,
+            'professional_level' => $profile->professional_level,
+            'price_range' => $profile->price_range,
+            'city' => $profile->city,
+            'country' => $profile->country,
+            'photo_path' => $profile->photo_path,
+            'talent_score' => $profile->talent_score,
+            'profile_completeness' => $profile->profile_completeness,
+            'skills' => $profile->skills,
+            'created_at' => $profile->created_at,
+            'updated_at' => $profile->updated_at,
         ];
     }
 
@@ -289,9 +291,9 @@ class CareerProfileService
     public function updateSocialProfiles($request)
     {
         $validated = $request->validate([
-            'profiles'            => 'required|array',
+            'profiles' => 'required|array',
             'profiles.*.platform' => 'required|string|max:50',
-            'profiles.*.url'      => 'required|url',
+            'profiles.*.url' => 'required|url',
         ]);
 
         $this->repo->syncSocialProfiles(auth()->id(), $validated['profiles']);
@@ -302,7 +304,9 @@ class CareerProfileService
 
     public function getSkillOptions()
     {
-        return response()->json(['status' => true, 'data' => $this->repo->getSkillsList()], 200);
+        return response()->json(['status' => true,
+            'message' => 'Skill options retrieved successfully.',
+            'data' => $this->repo->getSkillsList()], 200);
     }
 
     /**
@@ -314,23 +318,23 @@ class CareerProfileService
         $profile->loadCount(['experiences', 'educations', 'certifications', 'skills']);
 
         $checks = [
-            'headline'    => !empty($profile->headline) ? 10 : 0,
-            'summary'     => !empty($profile->summary) ? 10 : 0,
-            'skills'      => $profile->skills_count > 0 ? 15 : 0,
-            'experience'  => $profile->experiences_count > 0 ? 20 : 0,
-            'education'   => $profile->educations_count > 0 ? 15 : 0,
-            'portfolio'   => 0, // wired up once Portfolio is linked to career profile
+            'headline' => !empty($profile->headline) ? 10 : 0,
+            'summary' => !empty($profile->summary) ? 10 : 0,
+            'skills' => $profile->skills_count > 0 ? 15 : 0,
+            'experience' => $profile->experiences_count > 0 ? 20 : 0,
+            'education' => $profile->educations_count > 0 ? 15 : 0,
+            'portfolio' => 0,  // wired up once Portfolio is linked to career profile
             'certificate' => $profile->certifications_count > 0 ? 10 : 0,
-            'cv'          => !empty($profile->cv_file_path) ? 10 : 0,
-            'photo'       => !empty($profile->photo_path) ? 10 : 0,
+            'cv' => !empty($profile->cv_file_path) ? 10 : 0,
+            'photo' => !empty($profile->photo_path) ? 10 : 0,
         ];
 
         $completeness = array_sum($checks);
-        $talentScore  = (int) round($completeness * 0.86); // placeholder weighting until verification/recommendations land
+        $talentScore = (int) round($completeness * 0.86);  // placeholder weighting until verification/recommendations land
 
         $profile->forceFill([
             'profile_completeness' => min($completeness, 100),
-            'talent_score'         => min($talentScore, 100),
+            'talent_score' => min($talentScore, 100),
         ])->saveQuietly();
     }
 
@@ -395,7 +399,6 @@ class CareerProfileService
         }
     }
 
-
     public function uploadPhoto($request)
     {
         try {
@@ -445,7 +448,7 @@ class CareerProfileService
 
             $path = $this->spaces->uploadFile(
                 $request->file('cv'),
-                "career-profiles/" . auth()->id() . "/cv"
+                'career-profiles/' . auth()->id() . '/cv'
             );
 
             $profile = $this->repo->updateFile(auth()->id(), 'cv_file_path', $path);
@@ -467,7 +470,7 @@ class CareerProfileService
 
             $path = $this->spaces->uploadFile(
                 $request->file('file'),
-                "career-profiles/" . auth()->id() . "/certifications/{$cert->id}"
+                'career-profiles/' . auth()->id() . "/certifications/{$cert->id}"
             );
 
             $cert->update(['file_path' => $path]);

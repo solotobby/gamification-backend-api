@@ -115,7 +115,7 @@ class CareerProfileRepository
     public function getCareerProfiles(array $filters = [], $page = null, bool $publicOnly = false)
     {
         $query = CareerProfile::query()
-            ->with(['user:id,name', 'skills:id,name'])
+            ->with(['user:id,name,email', 'skills:id,name'])
             ->when($publicOnly, fn($q) => $q->where('is_public', true))
             ->when($filters['skill'] ?? null, fn($q, $skillId) =>
             $q->whereHas('skills', fn($sq) => $sq->where('skills.id', $skillId)))
@@ -140,7 +140,7 @@ class CareerProfileRepository
     public function getCareerProfileById($id): CareerProfile
     {
         return CareerProfile::with([
-            'user:id,name',
+            'user:id,name,email',
             'skills:id,name',
             'experiences',
             'educations.university',
@@ -208,7 +208,7 @@ class CareerProfileRepository
     public function findPublicBySlug(string $slug): ?CareerProfile
     {
         return CareerProfile::with([
-            'user:id,name',
+            'user:id,name,email',
             'skills:id,name',
             'experiences',
             'educations.university',
@@ -221,7 +221,6 @@ class CareerProfileRepository
 
     public function categoryIndex(string $categorySlug, $page = 1, $perPage = 20)
     {
-        // category matches against Skill::name slug — e.g. /talent/software-developers -> "Software Developer" skill
         $skill = Skill::whereRaw('LOWER(REPLACE(name, " ", "-")) LIKE ?', [rtrim($categorySlug, 's') . '%'])->first();
 
         $query = CareerProfile::query()->where('is_public', true);

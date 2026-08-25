@@ -274,7 +274,7 @@ class FeedbackService
             $data[] = [
                 'id'          => $reply->id,
                 'sender_id'   => $reply->user_id,
-                'sender_name' => in_array($reply->user->role, ['admin', 'super_admin'])
+                'sender_name' => in_array($reply->user->role, ['admin', 'super_admin', 'staff'])
                     ? 'Freebyz Support'
                     : $reply->user->name,
                 'sender_role' => $reply->user->role,
