@@ -125,7 +125,7 @@ class CampaignService
                     'total_amount'         => round($totalAmount, 5),
                     'currency'             => $currency->code,
                     'original_currency'    => $campaign->currency,
-                    'public_link'          => 'https://dashboard.freebyz.com/tasks/' . $campaign->job_id,
+                    'public_link'          => 'https://freebyz.com/tasks/' . $campaign->job_id,
                     'status'               => $this->mapCampaignStatus($campaign),
                     'amount_ratio'         => $campaign->currency . $spentAmount . ' / ' . $campaign->currency . $campaignAmount,
                     'stat'                 => $statsMap[$campaign->id] ?? ['Pending' => 0, 'Denied' => 0, 'Approved' => 0],
@@ -1214,7 +1214,7 @@ class CampaignService
                 'updated_at' => $job->updated_at,
                 'has_dispute' => (bool) $job->is_dispute,
                 'dispute_resolved' => (bool) $job->is_dispute_resolved,
-                'public_link' => "https://dashboard.freebyz.com/tasks/" . $campaign->job_id,
+                'public_link' => "https://freebyz.com/tasks/" . $campaign->job_id,
 
             ];
 

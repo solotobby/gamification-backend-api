@@ -629,6 +629,7 @@ class JobListingService
             'applications_count'  => $job->applications_count,
             'status'             => $this->getJobStatus($job),
             'decision_reason'    => $job->decision_reason,
+            'public_link'               => "https://freebyz.com/jobs/" . $job->slug,
             'has_purchased'          => $hasPurchased,
             'posted_by'           => $job->postedBy ? [
                 'id'   => $job->postedBy->id,
@@ -656,6 +657,7 @@ class JobListingService
             'company_name'            => $hasPurchased ? $job->company_name : '🔒 Company Hidden',
             'company_logo'            => $job->company_logo,
             'has_purchased'           => $hasPurchased,
+            'public_link'               => "https://freebyz.com/jobs/" . $job->slug,
             // 'can_perform_task'        => $check === true,
             // 'can_perform_task_reason' => $check === true ? '' : $check,
             'created_at'              => $job->created_at,

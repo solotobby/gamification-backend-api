@@ -120,7 +120,7 @@ class JobService
                     'campaign_approval_time' => $value->approval_time,
                     'campaign_description' => $value->description,
                     'expected_image_url' => $value->expected_result_image,
-                    'public_link' => "https://dashbaord.freebyz.com/tasks/" . $value->job_id,
+                    'public_link' => "https://freebyz.com/tasks/" . $value->job_id,
                     'can_perform_task' => $check === true,
                     'can_perform_task_reason' => $check === true ? '' : $check,
                     'created_at' => $value->created_at,
@@ -225,7 +225,7 @@ class JobService
                     'campaign_approval_time' => $value->approval_time,
                     'campaign_description' => $value->description,
                     'expected_image_url' => $value->expected_result_image,
-                    'public_link' => "https://dashbaord.freebyz.com/tasks/" . $value->job_id,
+                    'public_link' => "https://freebyz.com/tasks/" . $value->job_id,
                     'created_at' => $value->created_at,
                     'updated_at' => $value->updated_at,
                 ];
@@ -360,7 +360,7 @@ class JobService
                     'can_dispute' =>  $job->canCreateDispute(),
                     'has_dispute' => $job->is_dispute ? true : false,
                     'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
-                    'public_link' => "https://dashboard.freebyz.com/tasks/" . $campaignDetails->job_id,
+                    'public_link' => "https://freebyz.com/tasks/" . $campaignDetails->job_id,
                 ];
             }
 
@@ -439,7 +439,7 @@ class JobService
                 'can_dispute' =>  $job->canCreateDispute(),
                 'has_dispute' => $job->is_dispute ? true : false,
                 'is_dispute_resolved' => $job->is_dispute_resolved ? true : false,
-                'public_link' => "https://dashboard.freebyz.com/tasks/" . $campaignDetails->job_id,
+                'public_link' => "https://freebyz.com/tasks/" . $campaignDetails->job_id,
             ];
             // }
 
@@ -813,7 +813,7 @@ class JobService
                 'can_perform_task' => $check === true,
                 'can_perform_task_reason' => $check === true ? '' : $check,
                 'created_at' => $job->created_at,
-                'public_link' => "https://dashboard.freebyz.com/tasks/" . $job->job_id,
+                'public_link' => "https://freebyz.com/tasks/" . $job->job_id,
 
             ];
             return response()->json([
@@ -885,7 +885,7 @@ class JobService
                 // 'can_perform_task' => $check === true,
                 // 'can_perform_task_reason' => $check === true ? '' : $check,
                 'created_at' => $job->created_at,
-                'public_link' => "https://dashboard.freebyz.com/tasks/" . $job->job_id,
+                'public_link' => "https://freebyz.com/tasks/" . $job->job_id,
 
             ];
             return response()->json([
