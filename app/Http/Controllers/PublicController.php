@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\BlogService;
 use App\Services\JobListingService;
 use App\Services\JobService;
 use App\Services\BannerService;
@@ -24,6 +25,7 @@ class PublicController extends Controller
     protected $hireWorkerService;
     protected $careerProfileService;
     protected $campaignService;
+    protected $blogService;
 
 
     public function __construct(
@@ -33,7 +35,8 @@ class PublicController extends Controller
         BannerService $bannerService,
         HireWorkerService $hireWorkerService,
         CareerProfileService $careerProfileService,
-        CampaignService $campaignService
+        CampaignService $campaignService,
+        BlogService $blogService
     ) {
         $this->jobService = $jobService;
         $this->jobListingService = $jobListingService;
@@ -42,6 +45,7 @@ class PublicController extends Controller
         $this->hireWorkerService = $hireWorkerService;
         $this->careerProfileService = $careerProfileService;
         $this->campaignService = $campaignService;
+        $this->blogService = $blogService;
     }
 
 
@@ -91,6 +95,8 @@ class PublicController extends Controller
         return $this->careerProfileService->getCareerProfiles($request, publicOnly: true);
     }
 
+public function blogs(Request $request) { return $this->blogService->getPublicBlogs($request); }
+public function blogDetails(Request $request, $slug) { return $this->blogService->getPublicBlogBySlug($slug, $request); }
 
     public function sendNotification(Request $request)
     {
