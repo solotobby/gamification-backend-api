@@ -27,6 +27,7 @@ class CareerProfile extends Model
         'price_min',
         'price_max',
         'price_currency',
+        'views_count'
     ];
 
     protected $casts = [

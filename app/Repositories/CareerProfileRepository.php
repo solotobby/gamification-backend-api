@@ -6,8 +6,8 @@ use App\Models\CareerProfile;
 use App\Models\Certification;
 use App\Models\Education;
 use App\Models\Experience;
-use App\Models\SocialProfile;
 use App\Models\Skill;
+use App\Models\SocialProfile;
 use App\Models\University;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -48,7 +48,8 @@ class CareerProfileRepository
             'created_at' => now(),
             'updated_at' => now(),
         ], $types);
-        if ($rows) DB::table('career_availabilities')->insert($rows);
+        if ($rows)
+            DB::table('career_availabilities')->insert($rows);
     }
 
     public function syncSkills($userId, array $skillIds): void
@@ -60,7 +61,8 @@ class CareerProfileRepository
             'created_at' => now(),
             'updated_at' => now(),
         ], array_unique($skillIds));
-        if ($rows) DB::table('career_skills')->insert($rows);
+        if ($rows)
+            DB::table('career_skills')->insert($rows);
     }
 
     // ── Experience ──────────────────────────────────────────────
@@ -118,20 +120,21 @@ class CareerProfileRepository
             ->with(['user:id,name,email', 'skills:id,name'])
             ->when($publicOnly, fn($q) => $q->where('is_public', true))
             ->when($filters['skill'] ?? null, fn($q, $skillId) =>
-            $q->whereHas('skills', fn($sq) => $sq->where('skills.id', $skillId)))
+                $q->whereHas('skills', fn($sq) => $sq->where('skills.id', $skillId)))
             ->when($filters['availability'] ?? null, fn($q, $avail) =>
-            $q->whereHas('availabilities', fn($aq) => $aq->where('type', $avail)))
+                $q->whereHas('availabilities', fn($aq) => $aq->where('type', $avail)))
             ->when($filters['location'] ?? null, fn($q, $loc) =>
-            $q->where(fn($lq) => $lq->where('city', 'like', "%{$loc}%")->orWhere('country', 'like', "%{$loc}%")))
+                $q->where(fn($lq) => $lq->where('city', 'like', "%{$loc}%")->orWhere('country', 'like', "%{$loc}%")))
             ->when($filters['professional_level'] ?? null, fn($q, $lvl) =>
-            $q->where('professional_level', $lvl))
+                $q->where('professional_level', $lvl))
             ->when($filters['price_min'] ?? null, fn($q, $min) =>
-            $q->where('price_max', '>=', $min))
+                $q->where('price_max', '>=', $min))
             ->when($filters['price_max'] ?? null, fn($q, $max) =>
-            $q->where('price_min', '<=', $max))
+                $q->where('price_min', '<=', $max))
             ->when($filters['search'] ?? null, fn($q, $search) =>
-            $q->where(fn($sq) => $sq->where('headline', 'like', "%{$search}%")
-                ->orWhere('professional_title', 'like', "%{$search}%")))
+                $q->where(fn($sq) => $sq
+                    ->where('headline', 'like', "%{$search}%")
+                    ->orWhere('professional_title', 'like', "%{$search}%")))
             ->latest();
 
         return $query->paginate($filters['per_page'] ?? 15, ['*'], 'page', $page);
@@ -163,7 +166,6 @@ class CareerProfileRepository
         Certification::where('id', $id)->where('user_id', $userId)->delete();
     }
 
-
     public function updateFile($userId, string $field, string $path): CareerProfile
     {
         $profile = $this->getOrCreate($userId);
@@ -180,7 +182,8 @@ class CareerProfileRepository
             'created_at' => now(),
             'updated_at' => now(),
         ]), $profiles);
-        if ($rows) SocialProfile::insert($rows);
+        if ($rows)
+            SocialProfile::insert($rows);
     }
 
     public function getSkillsList()
@@ -199,12 +202,13 @@ class CareerProfileRepository
 
         return [
             'profile_views' => (clone $rows)->where('action', 'view')->count(),
-            'cv_downloads'  => (clone $rows)->where('action', 'cv_download')->count(),
-            'shares'        => (clone $rows)->where('action', 'share')->count(),
-            'countries'     => (clone $rows)->whereNotNull('country')->distinct()->pluck('country'),
+            'cv_downloads' => (clone $rows)->where('action', 'cv_download')->count(),
+            'shares' => (clone $rows)->where('action', 'share')->count(),
+            'countries' => (clone $rows)->whereNotNull('country')->distinct()->pluck('country'),
             'views_last_30_days' => (clone $rows)->where('action', 'view')->where('created_at', '>=', now()->subDays(30))->count(),
         ];
     }
+
     public function findPublicBySlug(string $slug): ?CareerProfile
     {
         return CareerProfile::with([
@@ -264,10 +268,14 @@ class CareerProfileRepository
     {
         DB::table('profile_views')->insert([
             'career_profile_id' => $careerProfileId,
-            'viewer_user_id'    => auth()->id(),
-            'action'             => $action,
-            'created_at'         => now(),
-            'updated_at'         => now(),
+            'viewer_user_id' => auth()->id(),
+            'action' => $action,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
+
+        if ($action === 'view') {
+            CareerProfile::where('id', $careerProfileId)->increment('views_count');
+        }
     }
 }

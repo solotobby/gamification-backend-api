@@ -6,8 +6,8 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class SpacesService
 {
@@ -27,7 +27,8 @@ class SpacesService
         bool $watermark = false
     ): ?string {
         try {
-            $image = $this->imageManager
+            $image = $this
+                ->imageManager
                 ->read($file)
                 ->scaleDown(width: 1200);
 
@@ -76,7 +77,8 @@ class SpacesService
         }
 
         try {
-            $image = $this->imageManager
+            $image = $this
+                ->imageManager
                 ->read($data)
                 ->scaleDown(width: 1200);
 
@@ -89,7 +91,7 @@ class SpacesService
 
             $filename = $folder . '/' . Str::uuid() . '.webp';
 
-           $load = Storage::disk($this->disk)->put(
+            $load = Storage::disk($this->disk)->put(
                 $filename,
                 $encoded,
                 'public'
@@ -104,20 +106,21 @@ class SpacesService
         }
     }
 
-    public function uploadFile(
-        UploadedFile $file,
-        string $folder = 'Freebyz'
-    ): ?string {
+    public function uploadFile(UploadedFile $file, string $folder = 'Freebyz'): ?string
+    {
         try {
-            // $path = Storage::disk($this->disk)
-            //     ->putFile($folder, $file, 'public');
+            $extension = $file->getClientOriginalExtension() ?: 'pdf';
+            $filename = $folder . '/' . Str::uuid() . '.' . $extension;
 
-            // return $path
-            //     ? $this->cdnUrl . '/' . $path
-            //     : null;
+            Storage::disk($this->disk)->put(
+                $filename,
+                file_get_contents($file->getRealPath()),
+                'public'
+            );
+
+            return $this->cdnUrl . '/' . $filename;
         } catch (\Throwable $e) {
             Log::error('Spaces file upload failed: ' . $e->getMessage());
-
             return null;
         }
     }
@@ -155,10 +158,11 @@ class SpacesService
      * Watermark implementation for Intervention Image v3.
      * Uncomment and implement when needed.
      */
+
     /*
-    protected function applyWatermark($image)
-    {
-        return $image;
-    }
-    */
+     * protected function applyWatermark($image)
+     * {
+     *     return $image;
+     * }
+     */
 }
