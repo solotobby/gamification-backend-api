@@ -6,11 +6,11 @@ use App\Services\BankService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 
-
 class WalletController extends Controller
 {
     protected $walletService;
     protected $bankService;
+
     public function __construct(
         WalletService $walletService,
         BankService $bankService
@@ -35,14 +35,14 @@ class WalletController extends Controller
         return $this->walletService->getTransactions($request);
     }
 
-    public function getBankLists()
+    public function getBankLists(Request $request)
     {
-        return $this->bankService->getBankList();
+        return $this->bankService->getBankList($request);
     }
 
-    public function getUserBankDetails()
+    public function getUserBankDetails(Request $request)
     {
-        return $this->bankService->getUserBankDetails();
+        return $this->bankService->getUserBankDetails($request);
     }
 
     public function getAccountName(Request $request)
@@ -54,4 +54,24 @@ class WalletController extends Controller
     {
         return $this->bankService->saveUserAccountDetails($request);
     }
+
+    // public function getBankLists()
+    // {
+    //     return $this->bankService->getBankList();
+    // }
+
+    // public function getUserBankDetails()
+    // {
+    //     return $this->bankService->getUserBankDetails();
+    // }
+
+    // public function getAccountName(Request $request)
+    // {
+    //     return $this->bankService->getAccountDetails($request);
+    // }
+
+    // public function createBankDetails(Request $request)
+    // {
+    //     return $this->bankService->saveUserAccountDetails($request);
+    // }
 }

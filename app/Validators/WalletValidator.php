@@ -20,7 +20,6 @@ class WalletValidator
         }
     }
 
-
     public static function processWithdrawalValidation($request)
     {
         $validationRules = [
@@ -51,27 +50,53 @@ class WalletValidator
     public static function getAccountNameValidator($request)
     {
         $validationRules = [
-            'account_number' => 'required|numeric',
-            'bank_code' => 'required|string'
+            'account_number' => 'required|string',
+            'bank_code' => 'required|string',
+            'currency' => 'nullable|in:NGN,GHS,ZAR,KES',
         ];
         $validator = Validator::make($request->all(), $validationRules);
-
-        if ($validator->fails()) {
+        if ($validator->fails())
             throw new ValidationException($validator);
-        }
     }
 
     public static function createBankDetailsValidator($request)
     {
         $validationRules = [
-            'account_number' => 'required|numeric',
+            'account_number' => 'required|string',
             'bank_code' => 'required|string',
             'account_name' => 'required|string',
+            'bank_name' => 'nullable|string',
+            'currency' => 'nullable|in:NGN,GHS,ZAR,KES',
         ];
         $validator = Validator::make($request->all(), $validationRules);
-
-        if ($validator->fails()) {
+        if ($validator->fails())
             throw new ValidationException($validator);
-        }
     }
+
+    // public static function getAccountNameValidator($request)
+    // {
+    //     $validationRules = [
+    //         'account_number' => 'required|numeric',
+    //         'bank_code' => 'required|string'
+    //     ];
+    //     $validator = Validator::make($request->all(), $validationRules);
+
+    //     if ($validator->fails()) {
+    //         throw new ValidationException($validator);
+    //     }
+    // }
+
+    // public static function createBankDetailsValidator($request)
+    // {
+    //     $validationRules = [
+    //         'account_number' => 'required|numeric',
+    //         'bank_code' => 'required|string',
+    //         'account_name' => 'required|string',
+    //     ];
+    //     $validator = Validator::make($request->all(), $validationRules);
+
+    //     if ($validator->fails()) {
+    //         throw new ValidationException($validator);
+    //     }
+    // }
 }

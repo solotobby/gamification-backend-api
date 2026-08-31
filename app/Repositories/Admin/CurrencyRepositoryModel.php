@@ -2,13 +2,13 @@
 
 namespace App\Repositories\Admin;
 
-use App\Models\Currency;
 use App\Models\ConversionRate;
+use App\Models\Currency;
 use Illuminate\Support\Facades\Cache;
 
 class CurrencyRepositoryModel
 {
-    private const CACHE_TTL = 3600;
+    private const CACHE_TTL = 360;
 
     public function getCurrenciesList()
     {
@@ -16,7 +16,7 @@ class CurrencyRepositoryModel
             'currencies.all',
             self::CACHE_TTL,
             fn() =>
-            Currency::orderByDesc('created_at')->get()
+                Currency::orderByDesc('created_at')->get()
         );
     }
 
@@ -26,13 +26,25 @@ class CurrencyRepositoryModel
             'currencies.active',
             self::CACHE_TTL,
             fn() =>
-            Currency::where('is_active', true)->orderByDesc('created_at')->get()
+                Currency::where('is_active', true)->orderByDesc('created_at')->get()
         );
 
         $user = auth()->user();
 
-        if ($user && $user->country === 'Nigeria') {
-            return $currencies->where('code', 'NGN')->values();
+        if ($user) {
+            $country = strtolower($user->country ?? '');
+
+            $code = match (true) {
+                str_contains($country, 'nigeria') => 'NGN',
+                str_contains($country, 'ghana') => 'GHS',
+                str_contains($country, 'south africa') => 'ZAR',
+                str_contains($country, 'kenya') => 'KES',
+                default => null,
+            };
+
+            if ($code) {
+                return $currencies->where('code', $code)->values();
+            }
         }
 
         return $currencies;
@@ -44,7 +56,7 @@ class CurrencyRepositoryModel
             "currencies.id.{$id}",
             self::CACHE_TTL,
             fn() =>
-            Currency::find($id)
+                Currency::find($id)
         );
     }
 
@@ -55,7 +67,7 @@ class CurrencyRepositoryModel
             "currencies.code.{$code}",
             self::CACHE_TTL,
             fn() =>
-            Currency::where('code', $code)->where('is_active', true)->first()
+                Currency::where('code', $code)->where('is_active', true)->first()
         );
     }
 
@@ -66,7 +78,7 @@ class CurrencyRepositoryModel
             $key,
             self::CACHE_TTL,
             fn() =>
-            ConversionRate::where('from', $from)->where('to', $to)->first()
+                ConversionRate::where('from', $from)->where('to', $to)->first()
         );
     }
 
@@ -87,10 +99,13 @@ class CurrencyRepositoryModel
         Cache::forget('currencies.all');
         Cache::forget('currencies.active');
 
-        if ($id) Cache::forget("currencies.id.{$id}");
-        if ($code) Cache::forget("currencies.code." . strtoupper($code));
+        if ($id)
+            Cache::forget("currencies.id.{$id}");
+        if ($code)
+            Cache::forget('currencies.code.' . strtoupper($code));
     }
 }
+
 // class CurrencyRepositoryModel
 // {
 

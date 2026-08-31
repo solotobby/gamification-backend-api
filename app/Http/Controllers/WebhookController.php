@@ -13,27 +13,28 @@ use App\Models\Webhook;
 use App\Repositories\Admin\CurrencyRepositoryModel;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
+use App\Services\Providers\InterswitchServiceProvider;
+use App\Services\NotificationService;
+use App\Services\Providers\FlutterwaveServiceProvider;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Throwable;
-use App\Services\NotificationService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Services\Providers\InterswitchServiceProvider;
+use Throwable;
 
 class WebhookController extends Controller
 {
     public function __construct(
-        protected WalletRepositoryModel   $walletModel,
-        protected AuthRepositoryModel     $authModel,
+        protected WalletRepositoryModel $walletModel,
+        protected AuthRepositoryModel $authModel,
         protected CurrencyRepositoryModel $currencyModel,
-        protected WalletService           $walletService,
+        protected WalletService $walletService,
         protected NotificationService $notification,
         protected InterswitchServiceProvider $interswitch,
-
+        protected FlutterwaveServiceProvider $flutterwave
     ) {}
 
     // ---------------------------------------------------------------
@@ -57,10 +58,10 @@ class WebhookController extends Controller
 
         $data = $response['data'];
 
-        $amount       = $data['amount'] / 100;
-        $reference    = $data['reference'];
-        $currency     = $data['currency'] ?? 'NGN';
-        $channel      = $data['channel'] ?? 'paystack';
+        $amount = $data['amount'] / 100;
+        $reference = $data['reference'];
+        $currency = $data['currency'] ?? 'NGN';
+        $channel = $data['channel'] ?? 'paystack';
         $customerCode = $data['customer']['customer_code'] ?? null;
 
         DB::beginTransaction();
@@ -80,7 +81,7 @@ class WebhookController extends Controller
                     DB::rollBack();
                     // return response()->json(['status' => 'user not found'], 200);
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Payment processing failed',
                     ], 402);
                 }
@@ -88,7 +89,7 @@ class WebhookController extends Controller
                 $this->walletModel->creditWallet($user, $currency, $amount);
 
                 $existingTransaction->update([
-                    'status'  => 'successful',
+                    'status' => 'successful',
                     'balance' => $this->walletModel->getWalletBalance($user->id),
                 ]);
 
@@ -105,7 +106,7 @@ class WebhookController extends Controller
                 if (!$virtualAccount) {
                     DB::rollBack();
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'virtual account not found',
                     ], 402);
                     // return response()->json(['status' => 'virtual account not found'], 200);
@@ -121,18 +122,18 @@ class WebhookController extends Controller
                 $this->walletModel->creditWallet($user, $currency, $amount);
 
                 PaymentTransaction::create([
-                    'user_id'     => $user->id,
+                    'user_id' => $user->id,
                     'campaign_id' => 1,
-                    'reference'   => $reference,
-                    'amount'      => $amount,
-                    'balance'     => $this->walletModel->getWalletBalance($user->id),
-                    'status'      => 'successful',
-                    'currency'    => $currency,
-                    'channel'     => $channel,
-                    'type'        => 'transfer_topup',
+                    'reference' => $reference,
+                    'amount' => $amount,
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                    'status' => 'successful',
+                    'currency' => $currency,
+                    'channel' => $channel,
+                    'type' => 'transfer_topup',
                     'description' => 'Wallet topup via Paystack',
-                    'tx_type'     => 'Credit',
-                    'user_type'   => 'regular',
+                    'tx_type' => 'Credit',
+                    'user_type' => 'regular',
                 ]);
 
                 // $this->attemptAutoUpgrade($user, $currency, $amount);
@@ -148,7 +149,7 @@ class WebhookController extends Controller
             );
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Payment successful',
             ], 200);
             // return response()->json(['status' => 'success'], 200);
@@ -157,7 +158,7 @@ class WebhookController extends Controller
             Log::error('Paystack callback error: ' . $e->getMessage());
 
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Payment processing failed',
             ], 402);
             // return response()->json(['status' => 'error'], 500);
@@ -166,7 +167,6 @@ class WebhookController extends Controller
 
     public function handlePaystackWebhook(Request $request)
     {
-
         // $payload = json_decode($request->getContent(), true);
         // $event = $request->input('event');
         // $data  = $request->input('data');
@@ -180,41 +180,41 @@ class WebhookController extends Controller
 
         // Verify signature
         $signature = $request->header('x-paystack-signature');
-        $computed  = hash_hmac('sha512', $request->getContent(), config('services.paystack.secretKey'));
+        $computed = hash_hmac('sha512', $request->getContent(), config('services.paystack.secretKey'));
 
         if ($signature !== $computed) {
             Log::info('Signature verification', [
                 'signature' => $signature,
-                'computed'  => $computed
+                'computed' => $computed
             ]);
             Log::warning('Invalid Paystack webhook signature');
             // return response()->json([
             //     'status' => 'invalid signature'
             // ], 200);
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Payment processing failed',
             ], 402);
         }
 
         $event = $request->input('event');
-        $data  = $request->input('data');
+        $data = $request->input('data');
 
         if ($event !== 'charge.success') {
             // return response()->json([
             //     'status' => 'ignored'
             // ], 200);
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Payment processing failed',
             ], 402);
         }
 
-        $amount        = $data['amount'] / 100; // kobo to naira
-        $reference     = $data['reference'];
-        $currency      = $data['currency'] ?? 'NGN';
-        $channel       = $data['channel'] ?? 'paystack';
-        $customerCode  = $data['customer']['customer_code'] ?? null;
+        $amount = $data['amount'] / 100;  // kobo to naira
+        $reference = $data['reference'];
+        $currency = $data['currency'] ?? 'NGN';
+        $channel = $data['channel'] ?? 'paystack';
+        $customerCode = $data['customer']['customer_code'] ?? null;
 
         DB::beginTransaction();
         try {
@@ -226,7 +226,7 @@ class WebhookController extends Controller
                     DB::rollBack();
                     // return response()->json(['status' => 'already processed'], 200);
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Payment already processed',
                     ], 402);
                 }
@@ -236,14 +236,14 @@ class WebhookController extends Controller
                     DB::rollBack();
                     // return response()->json(['status' => 'user not found'], 200);
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Payment processing failed',
                     ], 402);
                 }
 
                 $this->walletModel->creditWallet($user, $currency, $amount);
                 $existingTransaction->update([
-                    'status'  => 'successful',
+                    'status' => 'successful',
                     'balance' => $this->walletModel->getWalletBalance($user->id),
                 ]);
 
@@ -254,7 +254,7 @@ class WebhookController extends Controller
                 if (!$customerCode) {
                     DB::rollBack();
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'no customer code',
                     ], 402);
                     // return response()->json(['status' => 'no customer code'], 200);
@@ -266,7 +266,7 @@ class WebhookController extends Controller
                     Log::warning('Paystack: No virtual account for customer', ['code' => $customerCode]);
                     // return response()->json(['status' => 'virtual account not found'], 200);
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'virtual account not found',
                     ], 402);
                 }
@@ -276,7 +276,7 @@ class WebhookController extends Controller
                     DB::rollBack();
                     // return response()->json(['status' => 'user not found'], 200);
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Payment processing failed',
                     ], 402);
                 }
@@ -284,18 +284,18 @@ class WebhookController extends Controller
                 $this->walletModel->creditWallet($user, $currency, $amount);
 
                 PaymentTransaction::create([
-                    'user_id'     => $user->id,
+                    'user_id' => $user->id,
                     'campaign_id' => 1,
-                    'reference'   => $reference,
-                    'amount'      => $amount,
-                    'balance'     => $this->walletModel->getWalletBalance($user->id),
-                    'status'      => 'successful',
-                    'currency'    => $currency,
-                    'channel'     => 'paystack',
-                    'type'        => 'transfer_topup',
+                    'reference' => $reference,
+                    'amount' => $amount,
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                    'status' => 'successful',
+                    'currency' => $currency,
+                    'channel' => 'paystack',
+                    'type' => 'transfer_topup',
                     'description' => 'Virtual Account Transfer from ' . $user->name,
-                    'tx_type'     => 'Credit',
-                    'user_type'   => 'regular',
+                    'tx_type' => 'Credit',
+                    'user_type' => 'regular',
                 ]);
 
                 // Auto-upgrade if unverified
@@ -324,7 +324,7 @@ class WebhookController extends Controller
             // );
             // return response()->json(['status' => 'success'], 200);
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Payment successful',
             ], 200);
         } catch (Throwable $e) {
@@ -332,7 +332,7 @@ class WebhookController extends Controller
             Log::error('Paystack webhook error: ' . $e->getMessage());
             // return response()->json(['status' => 'error'], 500);
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Payment processing error',
             ], 500);
         }
@@ -345,10 +345,9 @@ class WebhookController extends Controller
     {
         ini_set('serialize_precision', '-1');
 
-
-        $rawBody   = $request->getContent();
+        $rawBody = $request->getContent();
         $signature = $request->header('x-korapay-signature');
-        $secret    = config('services.korapay.secret_key');
+        $secret = config('services.korapay.secret_key');
 
         $payload = json_decode($rawBody, true);
 
@@ -377,19 +376,19 @@ class WebhookController extends Controller
         }
 
         $payload = json_decode($rawBody, true);
-        $event   = $payload['event'] ?? null;
-        $data    = $payload['data'] ?? [];
+        $event = $payload['event'] ?? null;
+        $data = $payload['data'] ?? [];
 
         $webhook = Webhook::create([
             'provider' => 'korapay',
-            'event'    => $event,
-            'payload'  => $payload,
-            'status'   => 'pending',
+            'event' => $event,
+            'payload' => $payload,
+            'status' => 'pending',
         ]);
 
         DB::beginTransaction();
         try {
-            $event   = $request->input('event');
+            $event = $request->input('event');
             $payload = $data ?? [];
 
             switch ($event) {
@@ -409,8 +408,8 @@ class WebhookController extends Controller
                     }
 
                     $transaction = PaymentTransaction::where('reference', $reference)->first();
-                    $amount      = $payload['amount'] ?? 0;
-                    $currency    = $payload['currency'] ?? 'NGN';
+                    $amount = $payload['amount'] ?? 0;
+                    $currency = $payload['currency'] ?? 'NGN';
 
                     if (!$transaction) {
                         // Virtual account pay-in — look up user from virtual account details
@@ -429,18 +428,18 @@ class WebhookController extends Controller
                         }
 
                         $transaction = PaymentTransaction::create([
-                            'user_id'     => $userId,
+                            'user_id' => $userId,
                             'campaign_id' => '1',
-                            'reference'   => $reference,
-                            'amount'      => $amount,
-                            'balance'     => $this->walletModel->getWalletBalance($userId),
-                            'status'      => 'pending',
-                            'currency'    => $currency,
-                            'channel'     => 'kora',
-                            'type'        => 'transfer_topup',
+                            'reference' => $reference,
+                            'amount' => $amount,
+                            'balance' => $this->walletModel->getWalletBalance($userId),
+                            'status' => 'pending',
+                            'currency' => $currency,
+                            'channel' => 'kora',
+                            'type' => 'transfer_topup',
                             'description' => 'Virtual Account Transfer',
-                            'tx_type'     => 'Credit',
-                            'user_type'   => 'regular',
+                            'tx_type' => 'Credit',
+                            'user_type' => 'regular',
                         ]);
                     }
 
@@ -453,7 +452,7 @@ class WebhookController extends Controller
                         // return response()->json(['
                         // status' => 'already processed'], 200);
                         return response()->json([
-                            'status'  => false,
+                            'status' => false,
                             'message' => 'Payment already processed',
                         ], 402);
                     }
@@ -473,7 +472,7 @@ class WebhookController extends Controller
 
                     $this->walletModel->creditWallet($user, $currency, $amount);
                     $transaction->update([
-                        'status'  => 'successful',
+                        'status' => 'successful',
                         'balance' => $this->walletModel->getWalletBalance($user->id),
                     ]);
 
@@ -494,7 +493,6 @@ class WebhookController extends Controller
                         // data: ['amount' => $amount, 'currency' => $currency, 'reference' => $reference],
                     );
 
-
                     $subject = 'Wallet Credited';
                     $content = 'Congratulations, your wallet has been credited with ' . $currency . ' ' . $amount;
                     Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
@@ -502,7 +500,7 @@ class WebhookController extends Controller
                     break;
 
                 case 'transfer.success':
-                    $reference   = $payload['reference'] ?? null;
+                    $reference = $payload['reference'] ?? null;
                     $transaction = PaymentTransaction::where('reference', $reference)->first();
 
                     if ($transaction) {
@@ -514,7 +512,7 @@ class WebhookController extends Controller
                     break;
 
                 case 'transfer.failed':
-                    $reference   = $payload['reference'] ?? null;
+                    $reference = $payload['reference'] ?? null;
                     $transaction = PaymentTransaction::where('reference', $reference)->first();
 
                     if ($transaction) {
@@ -533,7 +531,6 @@ class WebhookController extends Controller
                                 title: 'Transfer Failed',
                                 body: "Your transfer of {$transaction->currency} {$transaction->amount} failed. Your wallet has been refunded.",
                                 type: 'wallet',
-
                             );
                         }
                     }
@@ -551,7 +548,7 @@ class WebhookController extends Controller
             // return response()->json(['status' => 'success'], 200);
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Payment successful',
             ], 200);
         } catch (Throwable $e) {
@@ -569,7 +566,7 @@ class WebhookController extends Controller
         if (!$reference) {
             // return response()->json(['status' => 'no reference'], 400);
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'No Reference',
             ], 402);
         }
@@ -580,21 +577,21 @@ class WebhookController extends Controller
 
         Log::info('KoraPay Callback Verify', [
             'reference' => $reference,
-            'response'  => $response->json()
+            'response' => $response->json()
         ]);
 
         if (!$response->successful() || ($response['data']['status'] ?? null) !== 'success') {
             // return response()->json(['status' => 'failed'], 400);
 
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Payment processing failed',
             ], 402);
         }
 
         $data = $response['data'];
 
-        $amount   = $data['amount'] ?? 0;
+        $amount = $data['amount'] ?? 0;
         $currency = $data['currency'] ?? 'NGN';
 
         DB::beginTransaction();
@@ -606,7 +603,7 @@ class WebhookController extends Controller
             if ($transaction && $transaction->status === 'successful') {
                 DB::rollBack();
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Payment already processed',
                 ], 402);
                 // return response()->json(['status' => 'already processed'], 200);
@@ -619,7 +616,7 @@ class WebhookController extends Controller
                     DB::rollBack();
                     // return response()->json(['status' => 'user not found'], 200);
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Payment processing failed',
                     ], 402);
                 }
@@ -627,7 +624,7 @@ class WebhookController extends Controller
                 $this->walletModel->creditWallet($user, $currency, $amount);
 
                 $transaction->update([
-                    'status'  => 'successful',
+                    'status' => 'successful',
                     'balance' => $this->walletModel->getWalletBalance($user->id),
                 ]);
 
@@ -640,7 +637,7 @@ class WebhookController extends Controller
                     DB::rollBack();
                     // return response()->json(['status' => 'user not found'], 200);
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Payment processing failed',
                     ], 402);
                 }
@@ -650,18 +647,18 @@ class WebhookController extends Controller
                 $this->walletModel->creditWallet($user, $currency, $amount);
 
                 PaymentTransaction::create([
-                    'user_id'     => $user->id,
+                    'user_id' => $user->id,
                     'campaign_id' => 1,
-                    'reference'   => $reference,
-                    'amount'      => $amount,
-                    'balance'     => $this->walletModel->getWalletBalance($user->id),
-                    'status'      => 'successful',
-                    'currency'    => $currency,
-                    'channel'     => 'kora',
-                    'type'        => 'transfer_topup',
+                    'reference' => $reference,
+                    'amount' => $amount,
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                    'status' => 'successful',
+                    'currency' => $currency,
+                    'channel' => 'kora',
+                    'type' => 'transfer_topup',
                     'description' => 'Wallet topup via KoraPay',
-                    'tx_type'     => 'Credit',
-                    'user_type'   => 'regular',
+                    'tx_type' => 'Credit',
+                    'user_type' => 'regular',
                 ]);
 
                 // $this->attemptAutoUpgrade($user, $currency, $amount);
@@ -678,7 +675,7 @@ class WebhookController extends Controller
 
             // return response()->json(['status' => 'success'], 200);
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Payment successful',
             ], 200);
         } catch (\Throwable $e) {
@@ -695,7 +692,7 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleStripe(Request $request)
     {
-        $payload   = $request->getContent();
+        $payload = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
 
         try {
@@ -721,8 +718,8 @@ class WebhookController extends Controller
 
         DB::beginTransaction();
         try {
-            $reference   = $session->client_reference_id;
-            $amountPaid  = $session->amount_total / 100; // cents to dollars
+            $reference = $session->client_reference_id;
+            $amountPaid = $session->amount_total / 100;  // cents to dollars
 
             $transaction = PaymentTransaction::where('reference', $reference)->first();
 
@@ -739,7 +736,7 @@ class WebhookController extends Controller
 
             $this->walletModel->creditWallet($user, $transaction->currency, $amountPaid);
             $transaction->update([
-                'status'  => 'successful',
+                'status' => 'successful',
                 'balance' => $this->walletModel->getWalletBalance($user->id),
             ]);
 
@@ -757,7 +754,7 @@ class WebhookController extends Controller
 
             // return response()->json(['status' => 'success'], 200);
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Payment successful',
             ], 200);
         } catch (Throwable $e) {
@@ -772,7 +769,7 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleInterswitchWebhook(Request $request)
     {
-        $rawBody   = $request->getContent();
+        $rawBody = $request->getContent();
         $signature = $request->header('X-Interswitch-Signature');
 
         // Per docs: HmacSHA512 of raw JSON body, hex-encoded
@@ -787,16 +784,16 @@ class WebhookController extends Controller
         // }
 
         $payload = json_decode($rawBody, true);
-        $event   = $payload['event']     ?? null;
-        $uuid    = $payload['uuid']      ?? null; // use uuid for duplicate check per docs
-        $data    = $payload['data']      ?? [];
+        $event = $payload['event'] ?? null;
+        $uuid = $payload['uuid'] ?? null;  // use uuid for duplicate check per docs
+        $data = $payload['data'] ?? [];
 
         // Log every webhook
         $webhook = Webhook::create([
             'provider' => 'interswitch',
-            'event'    => $event,
-            'payload'  => $payload,
-            'status'   => 'pending',
+            'event' => $event,
+            'payload' => $payload,
+            'status' => 'pending',
         ]);
 
         // Per docs: respond 200 immediately, then process
@@ -821,11 +818,11 @@ class WebhookController extends Controller
             return response('', 200);
         }
 
-        $reference     = $data['merchantReference'] ?? $uuid;
-        $amount        = isset($data['amount']) ? $data['amount'] / 100 : 0; // kobo → naira
-        $accountNumber = $data['retrievalReferenceNumber'] ?? null; // virtual account number paid into
-        $currencyCode  = $data['currencyCode'] ?? '566';
-        $currency      = $currencyCode === '566' ? 'NGN' : 'NGN'; // extend for multi-currency
+        $reference = $data['merchantReference'] ?? $uuid;
+        $amount = isset($data['amount']) ? $data['amount'] / 100 : 0;  // kobo → naira
+        $accountNumber = $data['retrievalReferenceNumber'] ?? null;  // virtual account number paid into
+        $currencyCode = $data['currencyCode'] ?? '566';
+        $currency = $currencyCode === '566' ? 'NGN' : 'NGN';  // extend for multi-currency
 
         DB::beginTransaction();
         try {
@@ -853,18 +850,18 @@ class WebhookController extends Controller
                 $this->walletModel->creditWallet($user, $currency, $amount);
 
                 PaymentTransaction::create([
-                    'user_id'     => $user->id,
+                    'user_id' => $user->id,
                     'campaign_id' => 1,
-                    'reference'   => $reference,
-                    'amount'      => $amount,
-                    'balance'     => $this->walletModel->getWalletBalance($user->id),
-                    'status'      => 'successful',
-                    'currency'    => $currency,
-                    'channel'     => 'interswitch',
-                    'type'        => 'transfer_topup',
+                    'reference' => $reference,
+                    'amount' => $amount,
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                    'status' => 'successful',
+                    'currency' => $currency,
+                    'channel' => 'interswitch',
+                    'type' => 'transfer_topup',
                     'description' => 'Virtual Account Transfer from ' . ($data['merchantCustomerName'] ?? 'Unknown'),
-                    'tx_type'     => 'Credit',
-                    'user_type'   => 'regular',
+                    'tx_type' => 'Credit',
+                    'user_type' => 'regular',
                 ]);
 
                 // $this->attemptAutoUpgrade($user, $currency, $amount);
@@ -884,7 +881,7 @@ class WebhookController extends Controller
 
                 $this->walletModel->creditWallet($user, $currency, $amount);
                 $transaction->update([
-                    'status'  => 'successful',
+                    'status' => 'successful',
                     'balance' => $this->walletModel->getWalletBalance($user->id),
                 ]);
 
@@ -909,13 +906,12 @@ class WebhookController extends Controller
                 ''
             ));
 
-            return response('', 200); // no body per docs
-
+            return response('', 200);  // no body per docs
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Interswitch webhook error: ' . $e->getMessage());
             $webhook->update(['status' => 'failed', 'message' => $e->getMessage()]);
-            return response('', 200); // still 200 so Interswitch doesn't retry endlessly
+            return response('', 200);  // still 200 so Interswitch doesn't retry endlessly
         }
     }
 
@@ -925,7 +921,7 @@ class WebhookController extends Controller
     public function handleInterswitchCallback(Request $request)
     {
         $reference = $request->query('txnref') ?? $request->query('reference');
-        $amount    = $request->query('amount') ?? 0;
+        $amount = $request->query('amount') ?? 0;
 
         if (!$reference) {
             return response()->json([
@@ -938,7 +934,7 @@ class WebhookController extends Controller
 
         Log::info('Interswitch callback verify', [
             'reference' => $reference,
-            'response'  => $verified,
+            'response' => $verified,
         ]);
 
         if (
@@ -966,11 +962,9 @@ class WebhookController extends Controller
         DB::beginTransaction();
 
         try {
-
             $transaction = PaymentTransaction::where('reference', $reference)->first();
 
             if (!$transaction) {
-
                 // Fallback to Virtual Account
                 $accountNumber = $verified['RetrievalReferenceNumber']
                     ?? $verified['retrievalReferenceNumber']
@@ -1010,21 +1004,20 @@ class WebhookController extends Controller
                 }
 
                 $transaction = PaymentTransaction::create([
-                    'user_id'     => $user->id,
+                    'user_id' => $user->id,
                     'campaign_id' => 1,
-                    'reference'   => $reference,
-                    'amount'      => $amount,
-                    'balance'     => 0,
-                    'status'      => 'pending',
-                    'currency'    => $currency,
-                    'channel'     => 'interswitch',
-                    'type'        => 'transfer_topup',
+                    'reference' => $reference,
+                    'amount' => $amount,
+                    'balance' => 0,
+                    'status' => 'pending',
+                    'currency' => $currency,
+                    'channel' => 'interswitch',
+                    'type' => 'transfer_topup',
                     'description' => 'Virtual Account Transfer',
-                    'tx_type'     => 'Credit',
-                    'user_type'   => 'regular',
+                    'tx_type' => 'Credit',
+                    'user_type' => 'regular',
                 ]);
             } else {
-
                 if ($transaction->status === 'successful') {
                     DB::rollBack();
 
@@ -1049,7 +1042,7 @@ class WebhookController extends Controller
             $this->walletModel->creditWallet($user, $currency, $amount);
 
             $transaction->update([
-                'status'  => 'successful',
+                'status' => 'successful',
                 'balance' => $this->walletModel->getWalletBalance($user->id),
             ]);
 
@@ -1076,12 +1069,11 @@ class WebhookController extends Controller
                 'message' => 'Payment successful',
             ], 200);
         } catch (Throwable $e) {
-
             DB::rollBack();
 
             Log::error('Interswitch callback error', [
                 'reference' => $reference,
-                'error'     => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -1095,7 +1087,7 @@ class WebhookController extends Controller
     {
         // Interswitch redirects with txnref param
         $reference = $request->query('txnref') ?? $request->query('reference');
-        $amount    = $request->query('amount') ?? 0;
+        $amount = $request->query('amount') ?? 0;
         if (!$reference) {
             return response()->json(['status' => false, 'message' => 'No reference'], 400);
         }
@@ -1109,7 +1101,7 @@ class WebhookController extends Controller
             return response()->json(['status' => false, 'message' => 'Payment verification failed'], 402);
         }
 
-        $amount   = isset($verified['amount']) ? $verified['amount'] / 100 : 0;
+        $amount = isset($verified['amount']) ? $verified['amount'] / 100 : 0;
         $currency = ($verified['currencyCode'] ?? '566') === '566' ? 'NGN' : 'NGN';
 
         DB::beginTransaction();
@@ -1134,7 +1126,7 @@ class WebhookController extends Controller
 
             $this->walletModel->creditWallet($user, $currency, $amount);
             $transaction->update([
-                'status'  => 'successful',
+                'status' => 'successful',
                 'balance' => $this->walletModel->getWalletBalance($user->id),
             ]);
 
@@ -1169,9 +1161,9 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function zeptoWebhook(Request $request)
     {
-        $data      = $request->json()->all();
+        $data = $request->json()->all();
         $eventName = $data['event_name'][0] ?? null;
-        $message   = $data['event_message'][0] ?? null;
+        $message = $data['event_message'][0] ?? null;
 
         if (!$eventName || !$message) {
             return response()->json(['error' => 'Missing event data'], 400);
@@ -1183,7 +1175,7 @@ class WebhookController extends Controller
         }
 
         $messageId = explode('@', $emailReference)[0];
-        $log       = MassEmailLog::where('message_id', $messageId)->first();
+        $log = MassEmailLog::where('message_id', $messageId)->first();
 
         if (!$log) {
             return response()->json(['error' => 'Log not found'], 404);
@@ -1194,7 +1186,6 @@ class WebhookController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-
     public function zeptoWebhookBounces(Request $request)
     {
         $data = $request->json()->all();
@@ -1204,7 +1195,7 @@ class WebhookController extends Controller
         $message = $data['event_message'][0] ?? [];
 
         // Only process bounce events
-        if (! in_array($eventName, ['hardbounce', 'softbounce'], true)) {
+        if (!in_array($eventName, ['hardbounce', 'softbounce'], true)) {
             return response()->json(['status' => 'ignored']);
         }
 
@@ -1213,7 +1204,7 @@ class WebhookController extends Controller
         foreach ($details as $detail) {
             $email = $detail['bounced_recipient'] ?? null;
 
-            if (! $email) {
+            if (!$email) {
                 continue;
             }
 
@@ -1226,7 +1217,6 @@ class WebhookController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-
     // ---------------------------------------------------------------
     // PRIVATE HELPERS
     // ---------------------------------------------------------------
@@ -1237,12 +1227,14 @@ class WebhookController extends Controller
      */
     private function attemptAutoUpgrade(User $user, string $currency, float $creditedAmount): void
     {
-        if ($user->is_verified) return;
+        if ($user->is_verified)
+            return;
 
         $mappedCurrency = $this->walletModel->mapCurrency($currency);
         $currencyParams = $this->currencyModel->getCurrencyByCode($mappedCurrency);
 
-        if (!$currencyParams) return;
+        if (!$currencyParams)
+            return;
 
         $upgradeAmount = $currencyParams->upgrade_fee;
         $walletBalance = $this->walletModel->getWalletBalance($user->id);
@@ -1250,25 +1242,27 @@ class WebhookController extends Controller
         // Qualify if this credit alone is enough, or cumulative balance now qualifies
         $qualifies = $creditedAmount >= $upgradeAmount || $walletBalance >= $upgradeAmount;
 
-        if (!$qualifies) return;
+        if (!$qualifies)
+            return;
 
         // Debit upgrade fee from wallet
         $debited = $this->walletModel->debitWallet($user, $mappedCurrency, $upgradeAmount);
-        if (!$debited) return;
+        if (!$debited)
+            return;
 
         PaymentTransaction::create([
-            'user_id'     => $user->id,
+            'user_id' => $user->id,
             'campaign_id' => 1,
-            'reference'   => Str::upper(Str::random(16)),
-            'amount'      => $upgradeAmount,
-            'balance'     => $this->walletModel->getWalletBalance($user->id),
-            'status'      => 'successful',
-            'currency'    => $mappedCurrency,
-            'channel'     => 'wallet',
-            'type'         => 'upgrade_payment',
+            'reference' => Str::upper(Str::random(16)),
+            'amount' => $upgradeAmount,
+            'balance' => $this->walletModel->getWalletBalance($user->id),
+            'status' => 'successful',
+            'currency' => $mappedCurrency,
+            'channel' => 'wallet',
+            'type' => 'upgrade_payment',
             'description' => 'Upgrade Payment',
-            'tx_type'     => 'Debit',
-            'user_type'   => 'regular',
+            'tx_type' => 'Debit',
+            'user_type' => 'regular',
         ]);
 
         // Mark verified + process referral bonus
@@ -1289,10 +1283,10 @@ class WebhookController extends Controller
      */
     private function getUserFromVirtualAccount(array $payload): ?int
     {
-        $virtualDetails  = $payload['virtual_bank_account_details']['virtual_bank_account'] ?? [];
+        $virtualDetails = $payload['virtual_bank_account_details']['virtual_bank_account'] ?? [];
         $accountReference = $virtualDetails['account_reference'] ?? null;
-        $accountNumber    = $virtualDetails['account_number'] ?? null;
-        $accountName      = $virtualDetails['account_name'] ?? null;
+        $accountNumber = $virtualDetails['account_number'] ?? null;
+        $accountName = $virtualDetails['account_name'] ?? null;
 
         if (!$accountReference && !$accountNumber) {
             Log::warning('KoraPay: virtual account data missing from payload', ['payload' => $payload]);
@@ -1314,7 +1308,7 @@ class WebhookController extends Controller
         if (!$virtualAccount) {
             Log::warning('KoraPay: No matching virtual account found', [
                 'account_reference' => $accountReference,
-                'account_number'    => $accountNumber,
+                'account_number' => $accountNumber,
             ]);
             return null;
         }
@@ -1325,14 +1319,14 @@ class WebhookController extends Controller
     private function handleEmailEvent(string $eventName, MassEmailLog $log, array $message): void
     {
         $campaign = $log->campaign;
-        $details  = $message['event_data'][0]['details'][0] ?? [];
+        $details = $message['event_data'][0]['details'][0] ?? [];
 
         switch ($eventName) {
             case 'softbounce':
             case 'hardbounce':
                 $log->update([
-                    'status'        => 'bounced',
-                    'bounced_at'    => now(),
+                    'status' => 'bounced',
+                    'bounced_at' => now(),
                     'error_message' => $details['diagnostic_message'] ?? 'Email bounced',
                 ]);
                 $campaign->increment('bounced');
@@ -1348,6 +1342,153 @@ class WebhookController extends Controller
             case 'email_link_click':
                 $campaign->increment('clicks');
                 break;
+        }
+    }
+
+    public function handleFlutterwaveWebhook(Request $request)
+    {
+        $signature = $request->header('verif-hash');
+        $expected = config('services.flutterwave.webhook_hash');
+
+        if (!$signature || $signature !== $expected) {
+            Log::warning('Invalid Flutterwave webhook signature');
+            return response()->json(['status' => false, 'message' => 'Invalid signature'], 401);
+        }
+
+        $payload = $request->all();
+        $event = $payload['event'] ?? null;
+        $data = $payload['data'] ?? [];
+
+        $webhook = Webhook::create(['provider' => 'flutterwave', 'event' => $event, 'payload' => $payload, 'status' => 'pending']);
+
+        if ($event !== 'charge.completed' || ($data['status'] ?? null) !== 'successful') {
+            $webhook->update(['status' => 'ignored', 'message' => 'Non-successful or unhandled event: ' . $event]);
+            return response()->json(['status' => 'ignored'], 200);
+        }
+
+        $reference = $data['tx_ref'] ?? null;
+        $amount = $data['amount'] ?? 0;
+        $currency = $data['currency'] ?? 'NGN';
+        $accountNumber = $data['meta']['account_number'] ?? $data['account_number'] ?? null;
+
+        DB::beginTransaction();
+        try {
+            $transaction = $reference ? PaymentTransaction::where('reference', $reference)->first() : null;
+
+            if (!$transaction && $accountNumber) {
+                // Virtual account (GHS) pay-in — no prior pending transaction
+                $virtualAccount = VirtualAccount::where('account_number', $accountNumber)->where('channel', 'flutterwave')->first();
+
+                if (!$virtualAccount) {
+                    $webhook->update(['status' => 'failed', 'message' => 'Virtual account not found: ' . $accountNumber]);
+                    DB::rollBack();
+                    return response()->json(['status' => 'ignored'], 200);
+                }
+
+                $user = User::find($virtualAccount->user_id);
+                if (!$user) {
+                    $webhook->update(['status' => 'failed', 'message' => 'User not found']);
+                    DB::rollBack();
+                    return response()->json(['status' => 'ignored'], 200);
+                }
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+
+                PaymentTransaction::create([
+                    'user_id' => $user->id,
+                    'campaign_id' => 1,
+                    'reference' => $reference ?? ('FLW-' . time()),
+                    'amount' => $amount,
+                    'balance' => $this->walletModel->getWalletBalance($user->id),
+                    'status' => 'successful',
+                    'currency' => $currency,
+                    'channel' => 'flutterwave',
+                    'type' => 'transfer_topup',
+                    'description' => 'Virtual Account Transfer via Flutterwave',
+                    'tx_type' => 'Credit',
+                    'user_type' => 'regular',
+                ]);
+            } elseif ($transaction) {
+                if ($transaction->status === 'successful') {
+                    $webhook->update(['status' => 'ignored', 'message' => 'Already processed']);
+                    DB::rollBack();
+                    return response()->json(['status' => 'ignored'], 200);
+                }
+
+                $user = User::find($transaction->user_id);
+                if (!$user) {
+                    $webhook->update(['status' => 'failed', 'message' => 'User not found']);
+                    DB::rollBack();
+                    return response()->json(['status' => 'ignored'], 200);
+                }
+
+                $this->walletModel->creditWallet($user, $currency, $amount);
+                $transaction->update(['status' => 'successful', 'balance' => $this->walletModel->getWalletBalance($user->id)]);
+            } else {
+                $webhook->update(['status' => 'failed', 'message' => 'No matching transaction or virtual account']);
+                DB::rollBack();
+                return response()->json(['status' => 'ignored'], 200);
+            }
+
+            DB::commit();
+            $webhook->update(['status' => 'processed', 'message' => 'Payment successful']);
+
+            $this->notification->createNotification(user: $user, title: 'Wallet Credited', body: "{$currency} {$amount} has been added to your wallet.", type: 'wallet');
+            Mail::to($user->email)->send(new GeneralMail($user, "Congratulations, your wallet has been credited with {$currency} {$amount}", 'Wallet Credited', ''));
+
+            return response()->json(['status' => 'success'], 200);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Flutterwave webhook error: ' . $e->getMessage());
+            $webhook->update(['status' => 'failed', 'message' => $e->getMessage()]);
+            return response()->json(['status' => 'error'], 500);
+        }
+    }
+
+    public function handleFlutterwaveCallback(Request $request)
+    {
+        $reference = $request->query('tx_ref');
+
+        if (!$reference) {
+            return response()->json(['status' => false, 'message' => 'No reference supplied'], 400);
+        }
+
+        $verified = $this->flutterwave->verifyPayment($reference);
+
+        if (!$verified || ($verified['status'] ?? null) !== 'successful') {
+            return response()->json(['status' => false, 'message' => 'Payment verification failed'], 402);
+        }
+
+        $amount = $verified['amount'] ?? 0;
+        $currency = $verified['currency'] ?? 'NGN';
+
+        DB::beginTransaction();
+        try {
+            $transaction = PaymentTransaction::where('reference', $reference)->first();
+
+            if (!$transaction || $transaction->status === 'successful') {
+                DB::rollBack();
+                return response()->json(['status' => true, 'message' => 'Already processed or not found'], 200);
+            }
+
+            $user = User::find($transaction->user_id);
+            if (!$user) {
+                DB::rollBack();
+                return response()->json(['status' => false, 'message' => 'User not found'], 404);
+            }
+
+            $this->walletModel->creditWallet($user, $currency, $amount);
+            $transaction->update(['status' => 'successful', 'balance' => $this->walletModel->getWalletBalance($user->id)]);
+
+            DB::commit();
+
+            $this->notification->createNotification(user: $user, title: 'Wallet Credited', body: "{$currency} {$amount} has been added to your wallet.", type: 'wallet');
+
+            return response()->json(['status' => true, 'message' => 'Payment successful'], 200);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Flutterwave callback error: ' . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Processing error'], 500);
         }
     }
 }

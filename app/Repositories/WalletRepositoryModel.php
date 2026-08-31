@@ -15,18 +15,18 @@ class WalletRepositoryModel
     public function mapCurrency(string $currency): string
     {
         return match (strtolower($currency)) {
-            'naira', 'ngn'  => 'NGN',
+            'naira', 'ngn' => 'NGN',
             'dollar', 'usd' => 'USD',
-            default         => strtoupper($currency),
+            default => strtoupper($currency),
         };
     }
 
     private function getBalanceFromWallet(Wallet $wallet): float
     {
         return match ($this->mapCurrency($wallet->base_currency)) {
-            'NGN'   => $wallet->balance,
-            'USD'   => $wallet->usd_balance,
-            default => $wallet->bonus,
+            'NGN' => (float) $wallet->balance,
+            'USD' => (float) $wallet->usd_balance,
+            default => (float) $wallet->bonus,
         };
     }
 
@@ -40,8 +40,10 @@ class WalletRepositoryModel
     public function createWallet($user, string $currency): Wallet
     {
         return Wallet::create([
-            'user_id'       => $user->id,
-            'balance'       => '0.00',
+            'user_id' => $user->id,
+            'balance' => '0.00',
+            'bonus' => '0.00',
+            'usd_balance' => '0.00',
             'base_currency' => strtoupper($currency),
         ]);
     }
@@ -51,23 +53,25 @@ class WalletRepositoryModel
         $wallet = $this->getWallet($user->id) ?? $this->createWallet($user, $currency ?? 'NGN');
 
         return [
-            'id'            => $wallet->id,
-            'user_id'       => $wallet->user_id,
-            'balance'       => $this->getBalanceFromWallet($wallet),
-            'user_type'     => $wallet->user_type,
+            'id' => $wallet->id,
+            'user_id' => $wallet->user_id,
+            'balance' => $this->getBalanceFromWallet($wallet),
+            'user_type' => $wallet->user_type,
             'base_currency' => $wallet->base_currency,
-            'created_at'    => $wallet->created_at,
-            'updated_at'    => $wallet->updated_at,
+            'created_at' => $wallet->created_at,
+            'updated_at' => $wallet->updated_at,
         ];
     }
 
     public function updateWalletBaseCurrency($user, int $currencyId): bool
     {
         $currency = Cache::remember("currency.id.{$currencyId}", 3600, fn() => Currency::find($currencyId));
-        if (!$currency) return false;
+        if (!$currency)
+            return false;
 
         $wallet = $this->getWallet($user->id);
-        if (!$wallet) return false;
+        if (!$wallet)
+            return false;
 
         $wallet->base_currency = $currency->code;
         $wallet->save();
@@ -85,33 +89,80 @@ class WalletRepositoryModel
     public function checkWalletBalance($user, string $currency, float $amount): bool
     {
         $wallet = $this->getWallet($user->id);
-        if (!$wallet) return false;
+        if (!$wallet)
+            return false;
 
         return match ($this->mapCurrency($currency)) {
-            'NGN'   => $wallet->balance >= $amount,
-            'USD'   => $wallet->usd_balance >= $amount,
+            'NGN' => $wallet->balance >= $amount,
+            'USD' => $wallet->usd_balance >= $amount,
             default => $wallet->bonus >= $amount,
         };
     }
 
     // ─── Debit / Credit ──────────────────────────────────────────────────────────
 
+    // public function debitWallet($user, string $currency, float $amount): bool
+    // {
+    //     $wallet = $this->getWallet($user->id);
+    //     if (!$wallet) return false;
+
+    //     switch ($this->mapCurrency($currency)) {
+    //         case 'NGN':
+    //             if ($wallet->balance < $amount) return false;
+    //             $wallet->balance -= $amount;
+    //             break;
+    //         case 'USD':
+    //             if ($wallet->usd_balance < $amount) return false;
+    //             $wallet->usd_balance -= $amount;
+    //             break;
+    //         default:
+    //             return false;
+    //     }
+
+    //     return (bool) $wallet->save();
+    // }
+
+    // public function creditWallet($user, string $currency, float $amount): bool
+    // {
+    //     $wallet = $this->getWallet($user->id);
+    //     if (!$wallet) return false;
+
+    //     switch ($this->mapCurrency($currency)) {
+    //         case 'NGN':
+    //             $wallet->balance += $amount;
+    //             break;
+    //         case 'USD':
+    //             $wallet->usd_balance += $amount;
+    //             break;
+    //         default:
+    //             return false;
+    //     }
+
+    //     return (bool) $wallet->save();
+    // }
+
     public function debitWallet($user, string $currency, float $amount): bool
     {
         $wallet = $this->getWallet($user->id);
-        if (!$wallet) return false;
+        if (!$wallet)
+            return false;
 
         switch ($this->mapCurrency($currency)) {
             case 'NGN':
-                if ($wallet->balance < $amount) return false;
+                if ($wallet->balance < $amount)
+                    return false;
                 $wallet->balance -= $amount;
                 break;
             case 'USD':
-                if ($wallet->usd_balance < $amount) return false;
+                if ($wallet->usd_balance < $amount)
+                    return false;
                 $wallet->usd_balance -= $amount;
                 break;
             default:
-                return false;
+                if ($wallet->bonus < $amount)
+                    return false;
+                $wallet->bonus -= $amount;
+                break;
         }
 
         return (bool) $wallet->save();
@@ -120,7 +171,8 @@ class WalletRepositoryModel
     public function creditWallet($user, string $currency, float $amount): bool
     {
         $wallet = $this->getWallet($user->id);
-        if (!$wallet) return false;
+        if (!$wallet)
+            return false;
 
         switch ($this->mapCurrency($currency)) {
             case 'NGN':
@@ -130,7 +182,8 @@ class WalletRepositoryModel
                 $wallet->usd_balance += $amount;
                 break;
             default:
-                return false;
+                $wallet->bonus += $amount;
+                break;
         }
 
         return (bool) $wallet->save();
@@ -139,7 +192,8 @@ class WalletRepositoryModel
     public function creditAdminWallet(int $userId, float $amount): void
     {
         $wallet = $this->getWallet($userId);
-        if (!$wallet) return;
+        if (!$wallet)
+            return;
 
         $wallet->balance += $amount;
         $wallet->save();
@@ -150,8 +204,7 @@ class WalletRepositoryModel
     public function checkReferralCommission(string $currency): mixed
     {
         return Cache::remember("currency.commission.{$currency}", 3600, fn() =>
-            Currency::where('code', $currency)->value('referral_commission')
-        );
+            Currency::where('code', $currency)->value('referral_commission'));
     }
 
     public function getUserTransactions($user, $page = null, $type = null, $search = null)
@@ -166,7 +219,8 @@ class WalletRepositoryModel
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('reference', 'LIKE', "%{$search}%")
+                $q
+                    ->where('reference', 'LIKE', "%{$search}%")
                     ->orWhere('description', 'LIKE', "%{$search}%")
                     ->orWhere('amount', 'LIKE', "%{$search}%");
             });
@@ -187,27 +241,27 @@ class WalletRepositoryModel
         $referral = null,
     ) {
         if ($referral) {
-            $transactionType        = 'referer_bonus';
+            $transactionType = 'referer_bonus';
             $transactionDescription = 'Referrer Bonus from ' . $description;
         } else {
-            $isFirst                = !PaymentTransaction::where('user_id', $user->id)->exists();
-            $transactionType        = $isFirst ? 'upgrade_payment' : $type;
+            $isFirst = !PaymentTransaction::where('user_id', $user->id)->exists();
+            $transactionType = $isFirst ? 'upgrade_payment' : $type;
             $transactionDescription = $isFirst ? 'Upgrade Payment' : $description;
         }
 
         return PaymentTransaction::create([
-            'user_id'     => $user->id,
+            'user_id' => $user->id,
             'campaign_id' => $campId,
-            'reference'   => $ref,
-            'amount'      => $amount,
-            'status'      => 'successful',
-            'currency'    => $baseCurrency,
-            'balance'     => $this->getWalletBalance($user->id),
-            'channel'     => 'freebyz',
-            'type'        => $transactionType,
+            'reference' => $ref,
+            'amount' => $amount,
+            'status' => 'successful',
+            'currency' => $baseCurrency,
+            'balance' => $this->getWalletBalance($user->id),
+            'channel' => 'freebyz',
+            'type' => $transactionType,
             'description' => $transactionDescription,
-            'tx_type'     => $txType,
-            'user_type'   => 'regular',
+            'tx_type' => $txType,
+            'user_type' => 'regular',
         ]);
     }
 
@@ -274,7 +328,6 @@ class WalletRepositoryModel
 //         return true;
 //     }
 
-
 //     public function checkWalletBalance($user, $currency, $amount)
 //     {
 //         $wallet = Wallet::where(
@@ -303,7 +356,6 @@ class WalletRepositoryModel
 //                 return $wallet->bonus >= $amount;
 //         }
 //     }
-
 
 //     public function checkReferralCommission($mapCurrency)
 //     {
@@ -473,7 +525,6 @@ class WalletRepositoryModel
 
 //         return $transaction;
 //     }
-
 
 //     public function createAdminTransaction($data)
 //     {

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\NotificationEvent;
 use App\Models\VirtualAccount;
 use App\Repositories\BankRepositoryModel;
+use App\Services\Providers\FlutterwaveServiceProvider;
 use App\Services\Providers\PaystackServiceProvider;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -16,18 +17,36 @@ class VirtualAccountService
         protected PaystackServiceProvider $paystack,
         protected BankRepositoryModel $bankRepo,
         protected NotificationService $notification,
-        protected InterswitchServiceProvider $interswitch
+        protected InterswitchServiceProvider $interswitch,
+        protected FlutterwaveServiceProvider $flutterwave
     ) {}
 
+
+    public function generateVirtualAccountNew()
+    {
+        $user = auth()->user();
+        $currency = $user->wallet->base_currency ?? 'NGN';
+
+        if ($currency === 'NGN') {
+            return $this->generateInterswitchVirtualAccount();
+        } elseif ($currency === 'GHS') {
+            return $this->generateFlutterwaveVirtualAccount($user, 'GHS');
+        } else {
+            return response()->json([
+                'status'  => false,
+                'message' => "Virtual accounts are not available for {$currency} users.",
+            ], 422);
+        }
+    }
     public function generateVirtualAccount()
     {
         try {
             $user = auth()->user();
 
-            if ($user->wallet->base_currency !== 'NGN') {
+            if ($user->wallet->base_currency !== 'NGN' && $user->wallet->base_currency !== 'GHS') {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Virtual accounts are only available for NGN users.',
+                    'message' => 'Virtual accounts are only available for NGN and GHS users.',
                 ], 422);
             }
 
@@ -145,6 +164,8 @@ class VirtualAccountService
                 'account_name'        => $result['accountName']   ?? $user->name,
                 'account_number'      => $result['accountNumber'] ?? null,
                 'status'              => true,
+                'currency'            => $user->wallet->base_currency ?? 'NGN',
+
             ]);
 
             $this->notification->createNotification(
@@ -168,4 +189,56 @@ class VirtualAccountService
             ], 500);
         }
     }
+
+    public function generateFlutterwaveVirtualAccount($user, string $currency = 'GHS')
+{
+    try {
+        if (!in_array($currency, FlutterwaveServiceProvider::VIRTUAL_ACCOUNT_CURRENCIES)) {
+            return response()->json(['status' => false, 'message' => "Static virtual accounts are not available for {$currency}."], 422);
+        }
+
+        $existing = $this->bankRepo->getVirtualBank($user->id, 'flutterwave');
+        if ($existing) {
+            return response()->json(['status' => true, 'message' => 'Virtual account already exists.', 'data' => $existing]);
+        }
+
+        $result = $this->flutterwave->createVirtualAccount([
+            'email'     => $user->email,
+            'currency'  => $currency,
+            'tx_ref'    => 'VA-' . $user->id . '-' . time(),
+            'firstname' => explode(' ', $user->name)[0] ?? $user->name,
+            'lastname'  => explode(' ', $user->name)[1] ?? 'User',
+            'narration' => 'Freebyz Wallet Funding',
+
+        ]);
+
+        if (!$result) {
+            return response()->json(['status' => false, 'message' => 'Could not generate virtual account.'], 500);
+        }
+
+        $virtual = VirtualAccount::create([
+            'user_id'             => $user->id,
+            'channel'             => 'flutterwave',
+            'customer_id'         => $result['order_ref'] ?? $result['id'] ?? null,
+            'customer_intgration' => $result['flw_ref'] ?? null,
+            'bank_name'           => $result['bank_name'] ?? 'Flutterwave',
+            'account_name'        => $result['account_name'] ?? $user->name,
+            'account_number'      => $result['account_number'] ?? null,
+            'status'              => true,
+            'currency'            => $currency,
+        ]);
+
+        $this->notification->createNotification(
+            $user,
+            'Virtual Account Created',
+            "Your {$virtual->currency} virtual account {$virtual->account_number} ({$virtual->bank_name}) is ready.",
+            'wallet'
+        );
+
+        return response()->json(['status' => true, 'message' => 'Virtual account created successfully.', 'data' => $virtual]);
+    } catch (Throwable $e) {
+        Log::error('Flutterwave VA error: ' . $e->getMessage());
+        return response()->json(['status' => false, 'message' => 'Error creating virtual account.', 'error' => $e->getMessage()], 500);
+    }
+}
 }

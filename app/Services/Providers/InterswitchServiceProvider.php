@@ -2,8 +2,8 @@
 
 namespace App\Services\Providers;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -19,12 +19,12 @@ class InterswitchServiceProvider
 
     public function __construct()
     {
-        $this->clientId     = config('services.interswitch.client_id');
+        $this->clientId = config('services.interswitch.client_id');
         $this->clientSecret = config('services.interswitch.client_secret');
-        $this->baseUrl      = config('services.interswitch.base_url');       // https://qa.interswitchng.com
-        $this->passportUrl  = config('services.interswitch.passport_url');   // https://sandbox.interswitchng.com
+        $this->baseUrl = config('services.interswitch.base_url');  // https://qa.interswitchng.com
+        $this->passportUrl = config('services.interswitch.passport_url');  // https://sandbox.interswitchng.com
         $this->merchantCode = config('services.interswitch.merchant_code');
-        $this->payableCode  = config('services.interswitch.payable_code');
+        $this->payableCode = config('services.interswitch.payable_code');
         $this->providerCode = config('services.interswitch.provider_code', 'WEMA');
     }
 
@@ -37,12 +37,12 @@ class InterswitchServiceProvider
 
             $res = Http::withHeaders([
                 'Authorization' => 'Basic ' . $credentials,
-                'Content-Type'  => 'application/x-www-form-urlencoded',
+                'Content-Type' => 'application/x-www-form-urlencoded',
             ])
-            ->asForm()
-            ->post("{$this->passportUrl}/passport/oauth/token", [
-                'grant_type' => 'client_credentials',
-            ]);
+                ->asForm()
+                ->post("{$this->passportUrl}/passport/oauth/token", [
+                    'grant_type' => 'client_credentials',
+                ]);
 
             Log::info('Interswitch Auth Response: ' . $res->body());
 
@@ -56,8 +56,8 @@ class InterswitchServiceProvider
     {
         return [
             'Authorization' => 'Bearer ' . $this->getAccessToken(),
-            'Content-Type'  => 'application/json',
-            'Accept'        => 'application/json',
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
         ];
     }
 
@@ -80,14 +80,14 @@ class InterswitchServiceProvider
         // $signature = base64_encode(sha1($signatureString, true));
 
         return [
-            'Authorization'   => 'Bearer ' . $this->getAccessToken(),
-        // 'Authorization'   => 'InterswitchAuth ' . base64_encode($this->clientId),
+            'Authorization' => 'Bearer ' . $this->getAccessToken(),
+            // 'Authorization'   => 'InterswitchAuth ' . base64_encode($this->clientId),
             // 'Timestamp'       => $timestamp,
             // 'Nonce'           => $nonce,
             // 'Signature'       => $signature,
             // 'SignatureMethod'  => 'SHA1',
-            'Content-Type'    => 'application/json',
-            'Accept'          => 'application/json',
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
         ];
     }
 
@@ -98,8 +98,8 @@ class InterswitchServiceProvider
         $url = "{$this->baseUrl}/paymentgateway/api/v1/payable/virtualaccount";
 
         $payload = [
-            'accountName'  => 'Freebyz Technologies/' . $accountName,
-            'merchantCode' => (string)$this->merchantCode,
+            'accountName' => 'Freebyz Technologies/' . $accountName,
+            'merchantCode' => (string) $this->merchantCode,
         ];
 
         $provider = $provider ?? $this->providerCode;
@@ -126,14 +126,14 @@ class InterswitchServiceProvider
 
         $res = Http::withHeaders($this->oauthHeaders())
             ->post($url, [
-                'merchantCode'         => $this->merchantCode,
-                'payableCode'          => $this->payableCode,
+                'merchantCode' => $this->merchantCode,
+                'payableCode' => $this->payableCode,
                 'transactionReference' => $data['reference'],
-                'amount'               => (string) ((int) ($data['amount'] * 100)),
-                'currencyCode'         => $this->currencyCode($data['currency']),
-                'customerEmail'        => $data['email'],
-                'redirectUrl'          => $data['callback_url'],
-                'siteRedirectUrl'      => $data['callback_url'],
+                'amount' => (string) ((int) ($data['amount'] * 100)),
+                'currencyCode' => $this->currencyCode($data['currency']),
+                'customerEmail' => $data['email'],
+                'redirectUrl' => $data['callback_url'],
+                'siteRedirectUrl' => $data['callback_url'],
             ]);
 
         Log::info('Interswitch Initialize Payment Response: ' . $res->body());
@@ -150,6 +150,35 @@ class InterswitchServiceProvider
         $res = Http::withHeaders($this->oauthHeaders())->get($url);
 
         Log::info('Interswitch Verify Payment Response: ' . $res->body());
+
+        return $res->successful() ? $res->json() : null;
+    }
+
+    // ── Bank List & Name Enquiry (NGN) ─────────────────────────────────────
+    // NOTE: these live on Interswitch's Transfer Service / generic-wallet API
+    // line, not the paymentgateway/collections endpoints used above. Confirm
+    // the exact base path against your Interswitch merchant dashboard/account
+    // manager before going live — the path below reflects Interswitch's public
+    // docs but may differ per merchant provisioning tier.
+
+    public function getBanks(): ?array
+    {
+        $url = "{$this->baseUrl}/generic-wallet/api/v1/admin/account/banks";
+
+        $res = Http::withHeaders($this->oauthHeaders())->get($url);
+
+        Log::info('Interswitch Get Banks Response: ' . $res->body());
+
+        return $res->successful() ? $res->json('data') ?? $res->json() : null;
+    }
+
+    public function resolveAccount(string $accountNumber, string $sortCode): ?array
+    {
+        $url = "{$this->baseUrl}/api/v1/inquiry/bank-code/{$sortCode}/account/{$accountNumber}";
+
+        $res = Http::withHeaders($this->oauthHeaders())->get($url);
+
+        Log::info('Interswitch Name Enquiry Response: ' . $res->body());
 
         return $res->successful() ? $res->json() : null;
     }

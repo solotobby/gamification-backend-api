@@ -19,5 +19,7 @@ class VerifyCsrfToken extends Middleware
         'webhooks/zeptomail',
         'webhooks/interswitch',
         'webhooks/interswitch/callback',
+        'webhooks/flutterwave',
+        'webhooks/flutterwave/callback',
     ];
 }

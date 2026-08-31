@@ -2,29 +2,28 @@
 
 namespace App\Services;
 
-
-use App\Validators\AuthValidator;
+use App\Exceptions\BadRequestException;
 use App\Mail\GeneralMail;
 use App\Mail\Welcome;
-use Illuminate\Support\Facades\Mail;
-use App\Exceptions\BadRequestException;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\BankRepositoryModel;
+use App\Repositories\LogRepositoryModel;
 use App\Repositories\ReferralRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
-use Throwable;
-use Exception;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use App\Repositories\LogRepositoryModel;
-use Illuminate\Support\Facades\Auth;
+use App\Services\Providers\TurnstileService;
+use App\Validators\AuthValidator;
 use Google\Client;
-use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Kreait\Firebase\Contract\Auth as FirebaseAuth;
 use Kreait\Firebase\Exception\Auth\FailedToVerifyToken;
-use App\Services\Providers\TurnstileService;
+use Exception;
+use Throwable;
 
 class AuthService
 {
@@ -46,9 +45,8 @@ class AuthService
         LogRepositoryModel $log,
         WalletRepositoryModel $walletModel,
         BankRepositoryModel $bank,
-        FirebaseAuth  $firebaseAuth,
+        FirebaseAuth $firebaseAuth,
         TurnstileService $turnstileService
-
     ) {
         $this->validator = $validator;
         $this->auth = $auth;
@@ -65,7 +63,6 @@ class AuthService
     {
         $this->validator->validateRegistration($request);
         try {
-
             // if (isset($request['cf-turnstile-response']) && !$this->turnstileService->verify(
             //     $request['cf-turnstile-response'],
             //     $request->ip()
@@ -101,12 +98,10 @@ class AuthService
                 'data' => $data
             ], 201);
         } catch (Throwable $e) {
-            // Log::error($e->getMessage());
+            Log::error($e->getMessage());
             throw new BadRequestException('Error processing request');
         }
     }
-
-
 
     public function googleAuth($request)
     {
@@ -121,17 +116,17 @@ class AuthService
 
             if (!$payload) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Invalid Google token'
                 ], 401);
             }
 
             $email = $payload['email'] ?? null;
-            $name  = $payload['name']  ?? null;
+            $name = $payload['name'] ?? null;
 
             if (!$email) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Could not retrieve email from Google token'
                 ], 401);
             }
@@ -142,7 +137,7 @@ class AuthService
 
             if (!$user) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => 'Invalid Credentials'
                 ], 403);
             }
@@ -154,7 +149,6 @@ class AuthService
                 ], 403);
             }
 
-
             $deviceSource = $request->header('X-Device-Source');
 
             if ($deviceSource === 'app') {
@@ -164,10 +158,10 @@ class AuthService
             $this->ensureUserHasRole($user);
             $this->ensureUserHasReferralCode($user);
 
-            $data['user']            = $this->auth->findUserWithRole($user->email);
-            $data['wallet']          = $this->walletModel->walletDetails($user);
-            $data['token']           = $user->createToken('freebyz')->accessToken;
-            $data['dashboard']       = $this->auth->dashboardStat($user->id);
+            $data['user'] = $this->auth->findUserWithRole($user->email);
+            $data['wallet'] = $this->walletModel->walletDetails($user);
+            $data['token'] = $user->createToken('freebyz')->accessToken;
+            $data['dashboard'] = $this->auth->dashboardStat($user->id);
             $data['virtual_account'] = ($user->wallet->base_currency ?? 'NGN') === 'NGN'
                 ? $this->bank->getVirtualBank($user->id)
                 : null;
@@ -177,16 +171,16 @@ class AuthService
             DB::commit();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Google authentication successful',
-                'data'    => $data,
+                'data' => $data,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             return response()->json([
-                'status'  => false,
+                'status' => false,
                 'message' => 'Google authentication failed',
-                'error'   => $e->getMessage()
+                'error' => $e->getMessage()
             ], 500);
         }
     }
@@ -202,7 +196,7 @@ class AuthService
             $verifiedToken = $this->firebaseAuth->verifyIdToken($request->id_token);
 
             $email = $verifiedToken->claims()->get('email');
-            $name  = $verifiedToken->claims()->get('name');
+            $name = $verifiedToken->claims()->get('name');
 
             if (!$email) {
                 return response()->json([
@@ -238,10 +232,10 @@ class AuthService
             //     $this->auth->updateUser($user->id, ['fcm_token' => $request->fcm_token]);
             // }
 
-            $data['user']            = $this->auth->findUserWithRole($user->email);
-            $data['wallet']          = $this->walletModel->walletDetails($user);
-            $data['token']           = $user->createToken('freebyz')->accessToken;
-            $data['dashboard']       = $this->auth->dashboardStat($user->id);
+            $data['user'] = $this->auth->findUserWithRole($user->email);
+            $data['wallet'] = $this->walletModel->walletDetails($user);
+            $data['token'] = $user->createToken('freebyz')->accessToken;
+            $data['dashboard'] = $this->auth->dashboardStat($user->id);
             $data['virtual_account'] = ($user->wallet->base_currency ?? 'NGN') === 'NGN'
                 ? $this->bank->getVirtualBank($user->id)
                 : null;
@@ -251,9 +245,9 @@ class AuthService
             DB::commit();
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Google authentication successful',
-                'data'    => $data,
+                'data' => $data,
             ]);
         } catch (FailedToVerifyToken $e) {
             DB::rollBack();
@@ -287,7 +281,6 @@ class AuthService
             // Find user by email
             $user = $this->auth->findUser($request->email);
 
-
             if (!$user || !$user->role || $user->role != 'regular') {
                 return response()->json([
                     'status' => false,
@@ -295,7 +288,7 @@ class AuthService
                 ], 403);
             }
 
-              if ($user->is_blacklisted) {
+            if ($user->is_blacklisted) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'
@@ -308,7 +301,6 @@ class AuthService
                 app(StreakService::class)->grantBonusIfEligible($user);
             }
             DB::beginTransaction();
-
 
             // Ensure user has a role
             $this->ensureUserHasRole($user);
@@ -326,8 +318,13 @@ class AuthService
             $data['wallet'] = $this->walletModel->walletDetails($user);
             $data['token'] = $user->createToken('freebyz')->accessToken;
             $data['dashboard'] = $this->auth->dashboardStat($user->id);
-            $data['virtual_account'] =
-                ($user->wallet->base_currency ?? 'NGN') === 'NGN'
+            // $data['virtual_account'] =
+            //     ($user->wallet->base_currency ?? 'NGN') === 'NGN'
+            //         ? $this->bank->getVirtualBank($user->id)
+            //         : null;
+            $baseCurrency = $user->wallet->base_currency ?? 'NGN';
+
+            $data['virtual_account'] = in_array($baseCurrency, ['NGN', 'GHS'], true)
                 ? $this->bank->getVirtualBank($user->id)
                 : null;
             //    Log Activities
@@ -350,7 +347,6 @@ class AuthService
         }
     }
 
-
     public function logout($request)
     {
         $request->user()->token()->revoke();
@@ -359,7 +355,6 @@ class AuthService
             'message' => 'User is logged out successfully'
         ], 200);
     }
-
 
     protected function ensureUserHasRole($user)
     {
@@ -377,7 +372,6 @@ class AuthService
 
     public function resendEmailOTP($request)
     {
-
         try {
             $user = auth()->user();
             // $user = $this->auth->findUser($user->email);
@@ -403,7 +397,6 @@ class AuthService
 
     public function validateOTP($request)
     {
-
         try {
             $user = auth()->user();
             // Find the OTP
@@ -459,7 +452,6 @@ class AuthService
             // Find user by email
             $validateEmail = $this->auth->findUser($request->email);
 
-
             // Create URL token and store it in the password_resets table
             $token = $this->auth->createOTPToken($validateEmail->email);
 
@@ -483,7 +475,6 @@ class AuthService
 
     public function verifyToken($request)
     {
-
         $this->validator->verifyToken($request);
         try {
             // Verify Token
@@ -499,7 +490,6 @@ class AuthService
             $this->auth->deleteToken($request->token);
 
             $newToken = $this->auth->createToken($request->email);
-
 
             return response()->json([
                 'status' => true,
@@ -520,7 +510,6 @@ class AuthService
 
     public function resetPassword($request)
     {
-
         $this->validator->validateResetPassword($request);
         try {
             // Verify Token
@@ -550,6 +539,7 @@ class AuthService
             ], 500);
         }
     }
+
     protected function createUser($payload)
     {
         // Create user
@@ -557,8 +547,18 @@ class AuthService
 
         // return $user;
         // Set wallet and currency
+        // $curLocation = $payload->country;
+        // $currency = $curLocation === 'Nigeria' ? 'NGN' : 'USD';
+
         $curLocation = $payload->country;
-        $currency = $curLocation === 'Nigeria' ? 'NGN' : 'USD';
+
+        $currency = match (true) {
+            str_contains(strtolower($curLocation ?? ''), 'nigeria') => 'NGN',
+            str_contains(strtolower($curLocation ?? ''), 'ghana') => 'GHS',
+            str_contains(strtolower($curLocation ?? ''), 'south africa') => 'ZAR',
+            str_contains(strtolower($curLocation ?? ''), 'kenya') => 'KES',
+            default => 'USD',
+        };
 
         // Create wallet
         $wallet = $this->wallet->walletDetails($user, $currency);
@@ -567,11 +567,9 @@ class AuthService
         $profile = [];
         $profile = $this->auth->setProfile($user, $payload->country_code);
 
-
         // Process referral if applicable
         $ref_id = $payload['ref_id'] ?? null;
         if ($ref_id) {
-
             $referrer = $this->refer->getReferrerDetails($ref_id);
             if ($referrer) {
                 // add the referral commission amount
@@ -585,7 +583,6 @@ class AuthService
         // Activity logging for non-local environments
         $this->log->activityLogForRegistration($user);
 
-
         // Generate OTP
         $otp = $this->auth->generateOTP($user);
 
@@ -596,14 +593,12 @@ class AuthService
         $content = 'Your Email Verification Code is ' . $otp;
         Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
 
-
         return [
             'user' => $user,
             'wallet' => $wallet,
             'profile' => $profile,
         ];
     }
-
 
     public function emailVerification(Request $request)
     {
@@ -612,7 +607,6 @@ class AuthService
         ]);
 
         try {
-
             $token = rand(100000, 999999);
 
             DB::table('password_resets')->insert(['email' => $request->email, 'token' => $token, 'created_at' => now()]);
@@ -645,7 +639,6 @@ class AuthService
         try {
             $checkValidity = DB::table('password_resets')->where(['token' => $request->code])->first();
             if ($checkValidity) {
-
                 return response()->json([
                     'status' => true,
                     'message' => 'Email verified, redirect to registration page'
@@ -695,7 +688,7 @@ class AuthService
         );
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Username set successfully.'
         ]);
     }
@@ -703,7 +696,7 @@ class AuthService
     public function phoneVerification(Request $request)
     {
         $request->validate([
-            'phone' => ['required', 'numeric', 'digits:11'], //'unique:users'
+            'phone' => ['required', 'numeric', 'digits:11'],  // 'unique:users'
         ]);
 
         try {
@@ -713,7 +706,6 @@ class AuthService
             //  if($response['status'] == 200){
             //     OTP::create(['user_id' => auth()->user()->id, 'pinId' => $response['pinId'], 'otp' => '11111', 'phone_number' => $response['to'], 'is_verified' => false]);
             // }
-
         } catch (Exception $exception) {
             return response()->json([
                 'status' => false,

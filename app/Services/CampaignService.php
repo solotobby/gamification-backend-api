@@ -606,15 +606,26 @@ class CampaignService
             ];
         } elseif ($currency === 'USD') {
             $paymentProcessors = [
-                // 'Stripe' => 'stripe',
                 'Crypto (USDT_TRC20)' => 'crypto',
+                'Flutterwave (Card)' => 'flutterwave',
+                // 'Stripe' => 'stripe',
                 // 'Interswitch' => 'interswitch',
+            ];
+        }
+        elseif ($currency === 'GHS') {
+            $paymentProcessors = [
+                // 'Stripe' => 'stripe',
+                // 'Crypto (USDT_TRC20)' => 'crypto',
+                // 'Interswitch' => 'interswitch',
+                'Virtual Account' => 'virtual_account',
+                'Flutterwave (Card)' => 'flutterwave',
             ];
         } else {
             $paymentProcessors = [
                 // 'Paystack' => 'paystack',
                 // 'Interswitch' => 'interswitch',
                 // 'Crypto (USDT_TRC20)' => 'crypto',
+                'Flutterwave' => 'flutterwave',
             ];
         }
 
@@ -629,12 +640,14 @@ class CampaignService
             ];
         } elseif ($currency === 'USD') {
             $verifyProcessors = [
-                // 'Stripe' => 'stripe',
                 'Crypto (USDT_TRC20)' => 'crypto',
+                'Flutterwave (Card)' => 'flutterwave',
+                // 'Stripe' => 'stripe',
                 // 'Interswitch' => 'interswitch',
             ];
         } else {
             $verifyProcessors = [
+                'Flutterwave (Card)' => 'flutterwave',
                 // 'Paystack' => 'paystack',
                 // 'Interswitch' => 'interswitch',
                 // 'Crypto (USDT_TRC20)' => 'crypto',

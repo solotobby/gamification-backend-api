@@ -7,34 +7,31 @@ use App\Models\VirtualAccount;
 
 class BankRepositoryModel
 {
-    public function getUserBank($userId)
+    public function saveBankDetails(array $data, $user): BankInformation
     {
-       return BankInformation::where(
-            'user_id',
-            $userId
-        )->latest()->first();
+        return BankInformation::updateOrCreate(
+            ['user_id' => $user->id, 'currency' => $data['currency']],
+            $data
+        );
     }
 
-    public function getVirtualBank($userId)
+    public function getUserBank($userId, ?string $currency = null)
     {
-       return VirtualAccount::where(
-            'user_id',
-            $userId
-        )->where('status', true)->latest()->first();
+        return BankInformation::where('user_id', $userId)
+            ->when($currency, fn($q) => $q->where('currency', $currency))
+            ->when(!$currency, fn($q) => $q) // no filter → all currencies
+            ->get();
     }
 
-    public function saveBankDetails($data, $user)
+    public function getUserBankByCurrency($userId, string $currency): ?BankInformation
     {
-        $bank = new BankInformation;
-        $bank->user_id = $user->id;
-        $bank->name = $data['name'];
-        $bank->bank_name = $data['bank_name'];
-        $bank->account_number = $data['account_number'];
-        $bank->bank_code = $data['bank_code'];
-        $bank->recipient_code = $data['recipient_code'];
-        $bank->currency = $data['currency'];
-        $bank->save();
+        return BankInformation::where('user_id', $userId)->where('currency', $currency)->first();
+    }
 
-        return $bank;
+    public function getVirtualBank($userId, ?string $channel = null)
+    {
+        return VirtualAccount::where('user_id', $userId)
+            ->when($channel, fn($q) => $q->where('channel', $channel))
+            ->first();
     }
 }
