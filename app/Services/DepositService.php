@@ -37,7 +37,6 @@ class DepositService
         protected NotificationService $notification,
         protected FlutterwaveServiceProvider $flutterwave,
         protected BankRepositoryModel $bankRepo
-
     ) {}
 
     /**
@@ -495,6 +494,45 @@ class DepositService
             ],
         ]);
     }
+
+    // private function handleFlutterwave($user, float $amount, string $ref, string $currency, string $device)
+    // {
+    //     if (!in_array($currency, ['GHS', 'USD', 'ZAR', 'KES'])) {
+    //         return response()->json(['status' => false, 'message' => "Flutterwave does not support {$currency} accounts."], 422);
+    //     }
+
+    //     $redirectUrl = $device === 'web'
+    //         ? 'https://dashboard.freebyz.com/wallet'
+    //         : route('webhook.flutterwave.callback');
+
+    //     $result = $this->flutterwave->initializePayment([
+    //         'reference' => $ref,
+    //         'amount' => $amount,
+    //         'currency' => $currency,
+    //         'email' => $user->email,
+    //         'name' => $user->name,
+    //         'callback_url' => $redirectUrl,
+    //     ]);
+
+    //     if (!$result) {
+    //         return response()->json(['status' => false, 'message' => 'Failed to initialize Flutterwave payment.'], 500);
+    //     }
+
+    //     $this->createPendingTransaction($user, $amount, $ref, $currency, 'flutterwave');
+
+    //     return response()->json([
+    //         'status' => true,
+    //         'message' => 'Redirect user to payment link.',
+    //         'data' => [
+    //             'method' => 'flutterwave',
+    //             'link' => $result['link'] ?? null,
+    //             'reference' => $ref,
+    //             'manual_verification' => false,
+    //         ],
+    //     ]);
+    // }
+
+    // DepositService::handleFlutterwave()
 
     private function handleFlutterwave($user, float $amount, string $ref, string $currency, string $device)
     {

@@ -20,8 +20,8 @@ class FlutterwaveServiceProvider
      */
     public const MOBILE_MONEY_NETWORKS = [
         'GH' => [
-            ['code' => 'MTN',        'name' => 'MTN Mobile Money'],
-            ['code' => 'VODAFONE',   'name' => 'Vodafone Cash'],
+            ['code' => 'MTN', 'name' => 'MTN Mobile Money'],
+            ['code' => 'VODAFONE', 'name' => 'Vodafone Cash'],
             ['code' => 'AIRTELTIGO', 'name' => 'AirtelTigo Money'],
         ],
         'KE' => [
@@ -39,7 +39,7 @@ class FlutterwaveServiceProvider
     {
         return [
             'Authorization' => 'Bearer ' . $this->secretKey,
-            'Content-Type'  => 'application/json',
+            'Content-Type' => 'application/json',
         ];
     }
 
@@ -51,14 +51,14 @@ class FlutterwaveServiceProvider
         }
 
         $payload = array_filter([
-            'email'        => $data['email'],
-            'currency'     => 'GHS',
-            'amount'       => $data['amount'] ?? 1,
-            'tx_ref'       => $data['tx_ref'],
+            'email' => $data['email'],
+            'currency' => 'GHS',
+            'amount' => $data['amount'] ?? 1,
+            'tx_ref' => $data['tx_ref'],
             'is_permanent' => true,
-            'firstname'    => $data['firstname'] ?? null,
-            'lastname'     => $data['lastname'] ?? null,
-            'narration'    => $data['narration'] ?? 'Wallet Funding Account',
+            'firstname' => $data['firstname'] ?? null,
+            'lastname' => $data['lastname'] ?? null,
+            'narration' => $data['narration'] ?? 'Wallet Funding Account',
         ]);
 
         $res = Http::withHeaders($this->headers())
@@ -69,17 +69,46 @@ class FlutterwaveServiceProvider
         return $res->successful() ? $res->json('data') : null;
     }
 
+    // public function initializePayment(array $data): ?array
+    // {
+    //     $payload = [
+    //         'tx_ref'         => $data['reference'],
+    //         'amount'         => $data['amount'],
+    //         'currency'       => $data['currency'],
+    //         'redirect_url'   => $data['callback_url'],
+    //         'customer'       => [
+    //             'email' => $data['email'],
+    //             'name'  => $data['name'] ?? null,
+    //         ],
+    //         'customizations' => ['title' => 'Freebyz Wallet Top Up'],
+    //     ];
+
+    //     $res = Http::withHeaders($this->headers())
+    //         ->post("{$this->baseUrl}/payments", $payload);
+
+    //     Log::info('Flutterwave Initialize Payment Response: ' . $res->body());
+
+    //     return $res->successful() ? $res->json('data') : null;
+    // }
+
+    // FlutterwaveServiceProvider::initializePayment()
     public function initializePayment(array $data): ?array
     {
         $payload = [
-            'tx_ref'         => $data['reference'],
-            'amount'         => $data['amount'],
-            'currency'       => $data['currency'],
-            'redirect_url'   => $data['callback_url'],
-            'customer'       => [
+            'tx_ref' => $data['reference'],
+            'amount' => $data['amount'],
+            'currency' => $data['currency'],
+            'redirect_url' => $data['callback_url'],
+            'customer' => [
                 'email' => $data['email'],
-                'name'  => $data['name'] ?? null,
+                'name' => $data['name'] ?? null,
             ],
+            // Apple Pay and Google Pay confirmed supported per Flutterwave's
+            // payment-channels docs. Flutterwave auto-excludes any option not
+            // valid for the given currency/region, so listing them here is
+            // safe even for currencies where they don't apply — no per-currency
+            // branching needed.
+            'payment_options' => 'card, applepay, googlepay, banktransfer, ussd, mobilemoneyghana, mpesa',
             'customizations' => ['title' => 'Freebyz Wallet Top Up'],
         ];
 
@@ -118,7 +147,7 @@ class FlutterwaveServiceProvider
         $res = Http::withHeaders($this->headers())
             ->post("{$this->baseUrl}/accounts/resolve", [
                 'account_number' => $accountNumber,
-                'account_bank'   => $bankCode,
+                'account_bank' => $bankCode,
             ]);
 
         Log::info('Flutterwave Resolve Account Response: ' . $res->body());
