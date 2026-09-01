@@ -51,6 +51,7 @@ class PaymentTransaction extends Model
             'NGN' => (float) $wallet->balance,
             'USD' => (float) $wallet->usd_balance,
             default => (float) $wallet->base_currency_balance,
+            // default => (float) $wallet->bonus,
         };
 
         $newBalance = $walletBalance + (float) $this->amount;

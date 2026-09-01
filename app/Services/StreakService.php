@@ -17,49 +17,6 @@ use Illuminate\Support\Facades\Log;
 class StreakService
 {
     // Called on login/register via app
-    // public function grantBonusIfEligible(User $user)
-    // {
-    //     if ($user->auth_device === 'web') {
-    //         $user->update(['auth_device' => 'app']);
-
-    //         $baseCurrency = $user->wallet->base_currency;
-    //         $mapCurrency = app(WalletRepositoryModel::class)->mapCurrency($baseCurrency);
-
-    //         // Fetch currency details
-    //         $currency = app(CurrencyRepositoryModel::class)->getCurrencyByCode($mapCurrency);
-
-    //         // Validate retrieved data
-    //         if (!$currency) {
-    //             return response()->json([
-    //                 'status' => false,
-    //                 'message' => 'Currency not found.'
-    //             ], 404);
-    //         }
-
-    //         $amount = 50000;
-    //         $curr = 'NGN';
-    //         if ($currency->code !== $curr) {
-
-    //             $rate = app(CampaignService::class)->currencyConversion($curr, $currency->code);
-    //             $amount *= $rate;
-    //             $curr = $currency->code;
-    //         }
-    //         // Grant bonus if not already granted
-    //         if (!Bonus::where('user_id', $user->id)->exists()) {
-    //             Bonus::create([
-    //                 'user_id'  => $user->id,
-    //                 'amount'   => $amount,
-    //                 'currency' => $curr,
-    //             ]);
-
-    //             // Also reflect on wallet bonus column
-    //             $user->wallet()->update([
-    //                 'bonus' => $amount
-    //             ]);
-    //         }
-    //     }
-    // }
-
     public function grantBonusIfEligible(User $user)
     {
         if ($user->auth_device !== 'web') {
@@ -136,9 +93,14 @@ class StreakService
                     'currency' => $curr,
                 ]);
 
-                // ✅ SAFE increment (not overwrite)
-                $wallet->bonus = $amount;
-                $wallet->save();
+                // FIX: this was `$wallet->bonus = $amount;` — a straight
+                // overwrite despite the old comment claiming it was safe.
+                // Now that GHS/ZAR/KES balances live in
+                // base_currency_balance (not bonus), `bonus` is purely the
+                // streak-bonus pool — but it must still ADD to it, never
+                // replace it, or a second bonus grant would wipe out the
+                // first one.
+                $wallet->increment('bonus', $amount);
             });
         } catch (\Throwable $e) {
             Log::error('Bonus grant failed: ' . $e->getMessage());
@@ -233,10 +195,24 @@ class StreakService
         $progress = $this->getStreakProgress($user);
         if (!$progress['any_met']) return false;
 
-        // Debit bonus wallet, credit main wallet
         $wallet = $user->wallet;
+
+        // FIX: this used to always credit into `balance` (NGN) regardless
+        // of the user's actual wallet currency. A USD/GHS/ZAR/KES user
+        // redeeming a streak bonus was having it silently land in the
+        // wrong currency bucket. Now it routes to the same column
+        // WalletRepositoryModel::getBalanceFromWallet() actually reads
+        // for that user's currency.
+        $mapCurrency = app(WalletRepositoryModel::class)->mapCurrency($wallet->base_currency);
+
+        $targetColumn = match ($mapCurrency) {
+            'NGN'   => 'balance',
+            'USD'   => 'usd_balance',
+            default => 'base_currency_balance',
+        };
+
         $wallet->decrement('bonus', $bonus->amount);
-        $wallet->increment('balance', $bonus->amount);
+        $wallet->increment($targetColumn, $bonus->amount);
 
         $bonus->update([
             'is_unlocked' => true,
