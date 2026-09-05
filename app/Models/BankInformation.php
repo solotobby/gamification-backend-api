@@ -22,6 +22,13 @@ class BankInformation extends Model
         'currency'
     ];
 
+    protected $appends = ['account_name'];
+
+    public function getAccountNameAttribute()
+    {
+        return $this->attributes['name'] ?? null;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');

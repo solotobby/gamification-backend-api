@@ -270,18 +270,27 @@ class BankService
     public function getUserBankDetails($request)
     {
         $user = auth()->user();
-        $currency = $request->query('currency');
+        $currency = $request->query('currency') ?: $this->getUserCurrency($user);
 
+        // Fetch bank details for the requested/wallet currency
         $bank = $this->bank->getUserBank($user->id, $currency);
+
+        // Fallback to any saved bank details for user if currency-specific is not found
+        if ($bank->isEmpty()) {
+            $bank = $this->bank->getUserBank($user->id);
+        }
 
         if ($bank->isEmpty()) {
             return response()->json(['status' => false, 'message' => 'Bank details not found'], 404);
         }
 
+        $primaryBank = $bank->first();
+
         return response()->json([
-            'status' => true,
-            'message' => 'Bank details retrieved successfully',
-            'data' => $currency ? $bank->first() : $bank,
+            'status'   => true,
+            'message'  => 'Bank details retrieved successfully',
+            'data'     => $primaryBank,
+            'accounts' => $bank,
         ]);
     }
 }
