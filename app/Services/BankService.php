@@ -7,17 +7,33 @@ use App\Repositories\BankRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
 use App\Services\Providers\FlutterwaveServiceProvider;
 use App\Services\Providers\InterswitchServiceProvider;
+use App\Services\Providers\KoraPayServiceProvider;
 use App\Services\Providers\PaystackServiceProvider;
 use App\Validators\WalletValidator;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 class BankService
 {
-    protected array $countryMap = ['NGN' => 'NG', 'GHS' => 'GH', 'ZAR' => 'ZA', 'KES' => 'KE', 'UGX' => 'UG'];
+    protected array $countryMap = [
+        'NGN' => 'NG',
+        'GHS' => 'GH',
+        'ZAR' => 'ZA',
+        'KES' => 'KE',
+        'UGX' => 'UG',
+        'TZS' => 'TZ',
+        'EGP' => 'EG',
+        'XAF' => 'CM',
+        'XOF' => 'CI',
+        'USD' => 'US',
+        'GBP' => 'GB',
+        'EUR' => 'EU',
+    ];
 
     public function __construct(
         protected WalletRepositoryModel $walletModel,
         protected AuthRepositoryModel $authModel,
+        protected KoraPayServiceProvider $korapay,
         protected PaystackServiceProvider $paystack,
         protected InterswitchServiceProvider $interswitch,
         protected FlutterwaveServiceProvider $flutterwave,
@@ -40,7 +56,7 @@ class BankService
     {
         $user = auth()->user();
         $currency = $this->getUserCurrency($user);
-        $method = strtolower($request->query('method', 'mobile_money'));
+        $method = strtolower($request->query('method', 'bank'));
 
         try {
             if (!isset($this->countryMap[$currency])) {
@@ -57,35 +73,56 @@ class BankService
                     ], 422);
                 }
 
-                $networks = $this->flutterwave->getMobileMoneyNetworks($countryCode);
+                // Try Korapay MMO first
+                $mmoList = $this->korapay->getMobileMoneyOperators($countryCode);
+
+                if (empty($mmoList)) {
+                    // Fallback to Flutterwave mobile money networks
+                    $networks = $this->flutterwave->getMobileMoneyNetworks($countryCode);
+                    $mmoList = array_map(fn($n) => [
+                        'id'        => $n['code'],
+                        'name'      => $n['name'],
+                        'bank_code' => $n['code'],
+                        'currency'  => $currency,
+                    ], $networks);
+                } else {
+                    $mmoList = array_map(fn($n) => [
+                        'id'        => $n['code'] ?? $n['id'],
+                        'name'      => $n['name'],
+                        'bank_code' => $n['code'] ?? $n['bank_code'],
+                        'currency'  => $currency,
+                    ], $mmoList);
+                }
 
                 return response()->json([
                     'status' => true,
                     'message' => 'Mobile money networks retrieved successfully',
-                    'data' => array_map(fn($n) => [
-                        'id' => $n['code'],
-                        'name' => $n['name'],
-                        'bank_code' => $n['code'],
-                        'currency' => $currency,
-                    ], $networks),
+                    'data' => $mmoList,
                 ]);
             }
 
-            $bankList = $this->flutterwave->getBanks($countryCode);
+            // Bank list - Korapay is prioritized for all supported currencies
+            $bankList = $this->korapay->getBanks($countryCode, $currency);
+
+            // Fallback to Flutterwave if Korapay bank list is empty or failed
+            if (empty($bankList)) {
+                $bankList = $this->flutterwave->getBanks($countryCode);
+            }
 
             if (!$bankList) {
                 return response()->json(['status' => false, 'message' => 'Failed to fetch bank list'], 500);
             }
 
-            $data = array_map(fn($bank) => [
-                'id' => $bank['id'],
-                'name' => $bank['name'],
-                'bank_code' => $bank['code'],
-                'currency' => $currency,
+            $data = array_map(fn($b) => [
+                'id'        => $b['code'] ?? $b['id'] ?? '',
+                'name'      => $b['name'] ?? '',
+                'bank_code' => (string) ($b['code'] ?? $b['bank_code'] ?? $b['id'] ?? ''),
+                'currency'  => $currency,
             ], $bankList);
 
             return response()->json(['status' => true, 'message' => 'Bank list retrieved successfully', 'data' => $data]);
         } catch (Exception $e) {
+            Log::error('BankService getBankList error: ' . $e->getMessage());
             return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error processing request'], 500);
         }
     }
@@ -122,9 +159,15 @@ class BankService
                 ]);
             }
 
-            $resolved = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
+            // Resolve bank account using Korapay first
+            $resolved = $this->korapay->resolveAccount($request->account_number, $request->bank_code, $currency, $countryCode);
 
-            if (!$resolved) {
+            // Fallback to Flutterwave if Korapay resolution fails
+            if (!$resolved || empty($resolved['account_name'])) {
+                $resolved = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
+            }
+
+            if (!$resolved || empty($resolved['account_name'])) {
                 return response()->json(['status' => false, 'message' => 'Account Name not found'], 401);
             }
 
@@ -135,9 +178,11 @@ class BankService
                     'account_number' => $request->account_number,
                     'account_name' => $resolved['account_name'] ?? null,
                     'bank_code' => $request->bank_code,
+                    'bank_name' => $resolved['bank_name'] ?? null,
                 ],
             ]);
         } catch (Exception $e) {
+            Log::error('BankService getAccountDetails error: ' . $e->getMessage());
             return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error processing request'], 500);
         }
     }
@@ -183,16 +228,25 @@ class BankService
                     'currency' => $currency,
                 ];
             } else {
-                $verified = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
+                // Verify account using Korapay first
+                $verified = $this->korapay->resolveAccount($request->account_number, $request->bank_code, $currency, $countryCode);
 
-                if (!$verified) {
+                // Fallback to Flutterwave if Korapay resolution is unavailable
+                if (!$verified || empty($verified['account_name'])) {
+                    $verified = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
+                }
+
+                if (!$verified && !$request->filled('account_name')) {
                     return response()->json(['status' => false, 'message' => 'Unable to verify account details. Please try again.'], 401);
                 }
 
+                $accountName = $verified['account_name'] ?? $request->account_name;
+                $bankName = $verified['bank_name'] ?? $request->bank_name;
+
                 $data = [
                     'user_id' => $user->id,
-                    'name' => $verified['account_name'] ?? $request->account_name,
-                    'bank_name' => $request->bank_name,
+                    'name' => $accountName,
+                    'bank_name' => $bankName,
                     'account_number' => $request->account_number,
                     'bank_code' => $request->bank_code,
                     'recipient_code' => null,
@@ -208,6 +262,7 @@ class BankService
                 'data' => $response,
             ]);
         } catch (\Exception $e) {
+            Log::error('BankService saveUserAccountDetails error: ' . $e->getMessage());
             return response()->json(['status' => false, 'message' => 'Error processing request.', 'error' => $e->getMessage()], 500);
         }
     }

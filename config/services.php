@@ -34,7 +34,8 @@ return [
         'callbackUrl' => env('PAYSTACK_CALLBACK_URL'),
     ],
     'korapay' => [
-        'secret_key' => env('KORA_SEC'),
+        'secret_key' => env('KORA_SEC', env('KORAPAY_SECRET_KEY')),
+        'public_key' => env('KORA_PUB_KEY', env('KORAPAY_PUBLIC_KEY')),
     ],
     'stripe' => [
         'secret' => env('STRIPE_SECRET'),

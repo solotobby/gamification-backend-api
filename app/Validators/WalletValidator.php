@@ -52,7 +52,7 @@ class WalletValidator
         $validationRules = [
             'account_number' => 'required|string',
             'bank_code' => 'required|string',
-            'currency' => 'nullable|in:NGN,GHS,ZAR,KES',
+            'currency' => 'nullable|string|max:10',
         ];
         $validator = Validator::make($request->all(), $validationRules);
         if ($validator->fails())
@@ -66,7 +66,7 @@ class WalletValidator
             'bank_code' => 'required|string',
             'account_name' => 'required|string',
             'bank_name' => 'nullable|string',
-            'currency' => 'nullable|in:NGN,GHS,ZAR,KES',
+            'currency' => 'nullable|string|max:10',
         ];
         $validator = Validator::make($request->all(), $validationRules);
         if ($validator->fails())
