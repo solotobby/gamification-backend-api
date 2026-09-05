@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\BankRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
-use App\Services\Providers\PaystackServiceProvider;
-use App\Services\Providers\InterswitchServiceProvider;
 use App\Services\Providers\FlutterwaveServiceProvider;
+use App\Services\Providers\InterswitchServiceProvider;
+use App\Services\Providers\PaystackServiceProvider;
 use App\Validators\WalletValidator;
 use Exception;
 
@@ -38,23 +38,35 @@ class BankService
 
     public function getBankList($request)
     {
-        $user     = auth()->user();
+        $user = auth()->user();
         $currency = $this->getUserCurrency($user);
-        $method   = strtolower($request->query('method', 'mobile_money')); // still frontend-chosen — bank vs mobile_money is a real user choice
+        $method = strtolower($request->query('method', 'mobile_money'));
 
         try {
             if ($currency === 'NGN') {
-                $bankList = $this->paystack->bankList();
+                // $bankList = $this->paystack->bankList();
+
+                // if (!$bankList) {
+                //     return response()->json(['status' => false, 'message' => 'Failed to fetch bank list'], 500);
+                // }
+
+                // $data = array_map(fn($bank) => [
+                //     'id'        => $bank['id'] ?? null,
+                //     'name'      => $bank['name'] ?? null,
+                //     'bank_code' => $bank['code'] ?? null,
+                //     'currency'  => 'NGN',
+                // ], $bankList);
+                $bankList = $this->flutterwave->getBanks('NGN');
 
                 if (!$bankList) {
                     return response()->json(['status' => false, 'message' => 'Failed to fetch bank list'], 500);
                 }
 
                 $data = array_map(fn($bank) => [
-                    'id'        => $bank['id'] ?? null,
-                    'name'      => $bank['name'] ?? null,
-                    'bank_code' => $bank['code'] ?? null,
-                    'currency'  => 'NGN',
+                    'id' => $bank['id'],
+                    'name' => $bank['name'],
+                    'bank_code' => $bank['code'],
+                    'currency' => $currency,
                 ], $bankList);
 
                 return response()->json(['status' => true, 'message' => 'Bank list retrieved successfully', 'data' => $data]);
@@ -69,7 +81,7 @@ class BankService
             if ($method === 'mobile_money') {
                 if ($countryCode === 'ZA') {
                     return response()->json([
-                        'status'  => false,
+                        'status' => false,
                         'message' => 'Mobile money is not supported for South Africa (ZAR). Use a bank account instead.',
                     ], 422);
                 }
@@ -77,13 +89,13 @@ class BankService
                 $networks = $this->flutterwave->getMobileMoneyNetworks($countryCode);
 
                 return response()->json([
-                    'status'  => true,
+                    'status' => true,
                     'message' => 'Mobile money networks retrieved successfully',
-                    'data'    => array_map(fn($n) => [
-                        'id'        => $n['code'],
-                        'name'      => $n['name'],
+                    'data' => array_map(fn($n) => [
+                        'id' => $n['code'],
+                        'name' => $n['name'],
                         'bank_code' => $n['code'],
-                        'currency'  => $currency,
+                        'currency' => $currency,
                     ], $networks),
                 ]);
             }
@@ -95,10 +107,10 @@ class BankService
             }
 
             $data = array_map(fn($bank) => [
-                'id'        => $bank['id'],
-                'name'      => $bank['name'],
+                'id' => $bank['id'],
+                'name' => $bank['name'],
                 'bank_code' => $bank['code'],
-                'currency'  => $currency,
+                'currency' => $currency,
             ], $bankList);
 
             return response()->json(['status' => true, 'message' => 'Bank list retrieved successfully', 'data' => $data]);
@@ -111,27 +123,43 @@ class BankService
     {
         $this->validator->getAccountNameValidator($request);
 
-        $user     = auth()->user();
+        $user = auth()->user();
         $currency = $this->getUserCurrency($user);
-        $method   = strtolower($request->method ?? 'bank');
+        $method = strtolower($request->method ?? 'bank');
 
         try {
             if ($currency === 'NGN') {
-                $response = $this->paystack->resolveAccountName($request->account_number, $request->bank_code);
+                // $response = $this->paystack->resolveAccountName($request->account_number, $request->bank_code);
 
-                if (!$response || !($response['status'] ?? true)) {
-                    return response()->json(['status' => false, 'message' => 'Account Name not found'], 401);
-                }
+                // if (!$response || !($response['status'] ?? true)) {
+                //     return response()->json(['status' => false, 'message' => 'Account Name not found'], 401);
+                // }
 
-                return response()->json([
-                    'status'  => true,
-                    'message' => 'Account Name Found',
-                    'data'    => [
-                        'account_number' => $request->account_number,
-                        'account_name'   => $response['data']['account_name'] ?? $response['name'] ?? null,
-                        'bank_code'      => $request->bank_code,
-                    ],
-                ]);
+                // return response()->json([
+                //     'status' => true,
+                //     'message' => 'Account Name Found',
+                //     'data' => [
+                //         'account_number' => $request->account_number,
+                //         'account_name' => $response['data']['account_name'] ?? $response['name'] ?? null,
+                //         'bank_code' => $request->bank_code,
+                //     ],
+                // ]);
+                 $resolved = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
+
+            if (!$resolved) {
+                return response()->json(['status' => false, 'message' => 'Account Name not found'], 401);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Account Name Found',
+                'data' => [
+                    'account_number' => $request->account_number,
+                    'account_name' => $resolved['account_name'] ?? null,
+                    'bank_code' => $request->bank_code,
+                ],
+            ]);
+            
             }
 
             if (!isset($this->countryMap[$currency])) {
@@ -144,13 +172,13 @@ class BankService
                 }
 
                 return response()->json([
-                    'status'  => true,
+                    'status' => true,
                     'message' => 'Mobile money number accepted (cannot be independently verified).',
-                    'data'    => [
+                    'data' => [
                         'account_number' => $request->account_number,
-                        'account_name'   => null,
-                        'bank_code'      => $request->bank_code,
-                        'verified'       => false,
+                        'account_name' => null,
+                        'bank_code' => $request->bank_code,
+                        'verified' => false,
                     ],
                 ]);
             }
@@ -162,12 +190,12 @@ class BankService
             }
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'Account Name Found',
-                'data'    => [
+                'data' => [
                     'account_number' => $request->account_number,
-                    'account_name'   => $resolved['account_name'] ?? null,
-                    'bank_code'      => $request->bank_code,
+                    'account_name' => $resolved['account_name'] ?? null,
+                    'bank_code' => $request->bank_code,
                 ],
             ]);
         } catch (Exception $e) {
@@ -180,13 +208,13 @@ class BankService
         $this->validator->createBankDetailsValidator($request);
 
         try {
-            $user     = $user ?? auth()->user();
+            $user = $user ?? auth()->user();
             $currency = $this->getUserCurrency($user);
-            $method   = strtolower($request->method ?? 'bank');
+            $method = strtolower($request->method ?? 'bank');
 
             if (!$allowUpdate && $this->bank->getUserBankByCurrency($user->id, $currency)) {
                 return response()->json([
-                    'status'  => false,
+                    'status' => false,
                     'message' => "You already have {$currency} account details saved. Contact support to update them.",
                 ], 401);
             }
@@ -202,13 +230,13 @@ class BankService
                 $recipientCode = $this->paystack->recipientCode($accountName, $request->account_number, $request->bank_code);
 
                 $data = [
-                    'user_id'        => $user->id,
-                    'name'           => $accountName,
-                    'bank_name'      => $request->bank_name,
+                    'user_id' => $user->id,
+                    'name' => $accountName,
+                    'bank_name' => $request->bank_name,
                     'account_number' => $request->account_number,
-                    'bank_code'      => $request->bank_code,
+                    'bank_code' => $request->bank_code,
                     'recipient_code' => $recipientCode['data']['recipient_code'] ?? null,
-                    'currency'       => 'NGN',
+                    'currency' => 'NGN',
                 ];
             } else {
                 if (!isset($this->countryMap[$currency])) {
@@ -225,13 +253,13 @@ class BankService
                     }
 
                     $data = [
-                        'user_id'        => $user->id,
-                        'name'           => $request->account_name,
-                        'bank_name'      => $request->bank_name ?? null,
+                        'user_id' => $user->id,
+                        'name' => $request->account_name,
+                        'bank_name' => $request->bank_name ?? null,
                         'account_number' => $request->account_number,
-                        'bank_code'      => $request->bank_code,
+                        'bank_code' => $request->bank_code,
                         'recipient_code' => null,
-                        'currency'       => $currency,
+                        'currency' => $currency,
                     ];
                 } else {
                     $verified = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
@@ -241,13 +269,13 @@ class BankService
                     }
 
                     $data = [
-                        'user_id'        => $user->id,
-                        'name'           => $verified['account_name'] ?? $request->account_name,
-                        'bank_name'      => $request->bank_name,
+                        'user_id' => $user->id,
+                        'name' => $verified['account_name'] ?? $request->account_name,
+                        'bank_name' => $request->bank_name,
                         'account_number' => $request->account_number,
-                        'bank_code'      => $request->bank_code,
+                        'bank_code' => $request->bank_code,
                         'recipient_code' => null,
-                        'currency'       => $currency,
+                        'currency' => $currency,
                     ];
                 }
             }
@@ -255,9 +283,9 @@ class BankService
             $response = $this->bank->saveBankDetails($data, $user);
 
             return response()->json([
-                'status'  => true,
+                'status' => true,
                 'message' => 'User Account Details Saved Successfully',
-                'data'    => $response,
+                'data' => $response,
             ]);
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => 'Error processing request.', 'error' => $e->getMessage()], 500);
@@ -266,7 +294,7 @@ class BankService
 
     public function getUserBankDetails($request)
     {
-        $user     = auth()->user();
+        $user = auth()->user();
         $currency = $request->query('currency');
 
         $bank = $this->bank->getUserBank($user->id, $currency);
@@ -276,9 +304,9 @@ class BankService
         }
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Bank details retrieved successfully',
-            'data'    => $currency ? $bank->first() : $bank,
+            'data' => $currency ? $bank->first() : $bank,
         ]);
     }
 }
