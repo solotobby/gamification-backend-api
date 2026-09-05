@@ -11,6 +11,10 @@ use App\Repositories\WithdrawalRepositoryModel;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
+use App\Services\VirtualAccountService;
+use App\Services\BankService;
+use App\Models\User;
+
 class AdminWalletService
 {
     protected $withdrawalModel;
@@ -18,18 +22,43 @@ class AdminWalletService
     protected $validator;
     protected $logModel;
     protected $walletModel;
+
     public function __construct(
         WalletRepositoryModel $walletModel,
         WithdrawalRepositoryModel $withdrawalModel,
         WalletValidator $validator,
         BankRepositoryModel $bankModel,
         LogRepositoryModel $logModel,
+        protected VirtualAccountService $virtualAccountService,
+        protected BankService $bankService,
     ) {
         $this->validator = $validator;
         $this->walletModel = $walletModel;
         $this->withdrawalModel = $withdrawalModel;
         $this->bankModel = $bankModel;
         $this->logModel = $logModel;
+    }
+
+    public function generateVirtualAccountForUser($request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+        return $this->virtualAccountService->generateVirtualAccountNew($user);
+    }
+
+    public function saveBankDetailsForUser($request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'bank_code' => 'required|string',
+            'account_number' => 'required|string',
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+        return $this->bankService->saveUserAccountDetails($request, $user, true);
     }
 
 

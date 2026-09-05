@@ -12,5 +12,7 @@ Route::middleware([
 )->group(function () {
         Route::get('/withdrawal-requests', [WalletController::class, 'withdrawalLists']);
         Route::post('/approve-withdrawal', [WalletController::class, 'approveWithdrawal']);
+        Route::post('/generate-virtual-account', [WalletController::class, 'generateVirtualAccount']);
+        Route::post('/update-bank-details', [WalletController::class, 'updateBankDetails']);
     }
 );

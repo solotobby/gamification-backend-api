@@ -24,4 +24,14 @@ class WalletController extends Controller
     {
         return $this->wallet->getWithdrawalByStatus($request);
     }
+
+    public function generateVirtualAccount(Request $request)
+    {
+        return $this->wallet->generateVirtualAccountForUser($request);
+    }
+
+    public function updateBankDetails(Request $request)
+    {
+        return $this->wallet->saveBankDetailsForUser($request);
+    }
 }

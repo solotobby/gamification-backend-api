@@ -536,7 +536,7 @@ class DepositService
 
     private function handleFlutterwave($user, float $amount, string $ref, string $currency, string $device)
     {
-        if (!in_array($currency, ['GHS', 'USD', 'ZAR', 'KES'])) {
+        if (!in_array($currency, ['GHS', 'USD', 'ZAR', 'KES', 'UGX'])) {
             return response()->json(['status' => false, 'message' => "Flutterwave does not support {$currency} accounts."], 422);
         }
 

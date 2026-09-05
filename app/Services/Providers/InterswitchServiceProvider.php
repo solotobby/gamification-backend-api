@@ -102,20 +102,27 @@ class InterswitchServiceProvider
             'merchantCode' => (string) $this->merchantCode,
         ];
 
+        if ($this->payableCode) {
+            $payload['payableCode'] = (string) $this->payableCode;
+        }
+
         $provider = $provider ?? $this->providerCode;
         if ($provider) {
             $payload['provider'] = $provider;
         }
 
-        // Log::info('Interswitch Create Virtual Account URL: ' . $url);
+        try {
+            $res = Http::withHeaders($this->oauthHeaders())
+                ->timeout(20)
+                ->post($url, $payload);
 
-        // $res = Http::withHeaders($this->legacyHeaders('POST', $url))
-        $res = Http::withHeaders($this->oauthHeaders())
-            ->post($url, $payload);
+            Log::info('Interswitch Create Virtual Account Response: ' . $res->body());
 
-        // Log::info('Interswitch Create Virtual Account Response: ' . $res);
-
-        return $res->successful() ? $res->json() : null;
+            return $res->successful() ? $res->json() : null;
+        } catch (\Throwable $e) {
+            Log::error('Interswitch Create Virtual Account Error: ' . $e->getMessage());
+            return null;
+        }
     }
 
     // ── Payment Initiation (multi-currency) ───────────────────────────────
@@ -193,6 +200,7 @@ class InterswitchServiceProvider
             'GHS' => '936',
             'KES' => '404',
             'ZAR' => '710',
+            'UGX' => '800',
             default => '566',
         };
     }

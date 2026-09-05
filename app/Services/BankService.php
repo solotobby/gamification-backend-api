@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\BankRepositoryModel;
 use App\Repositories\WalletRepositoryModel;
+use App\Services\Providers\PaystackServiceProvider;
 use App\Services\Providers\InterswitchServiceProvider;
 use App\Services\Providers\FlutterwaveServiceProvider;
 use App\Validators\WalletValidator;
@@ -12,11 +13,12 @@ use Exception;
 
 class BankService
 {
-    protected array $countryMap = ['GHS' => 'GH', 'ZAR' => 'ZA', 'KES' => 'KE'];
+    protected array $countryMap = ['GHS' => 'GH', 'ZAR' => 'ZA', 'KES' => 'KE', 'UGX' => 'UG'];
 
     public function __construct(
         protected WalletRepositoryModel $walletModel,
         protected AuthRepositoryModel $authModel,
+        protected PaystackServiceProvider $paystack,
         protected InterswitchServiceProvider $interswitch,
         protected FlutterwaveServiceProvider $flutterwave,
         protected WalletValidator $validator,
@@ -42,16 +44,16 @@ class BankService
 
         try {
             if ($currency === 'NGN') {
-                $bankList = $this->interswitch->getBanks();
+                $bankList = $this->paystack->bankList();
 
                 if (!$bankList) {
                     return response()->json(['status' => false, 'message' => 'Failed to fetch bank list'], 500);
                 }
 
                 $data = array_map(fn($bank) => [
-                    'id'        => $bank['id'] ?? $bank['bankCode'] ?? null,
-                    'name'      => $bank['name'] ?? $bank['bankName'] ?? null,
-                    'bank_code' => $bank['code'] ?? $bank['bankCode'] ?? null,
+                    'id'        => $bank['id'] ?? null,
+                    'name'      => $bank['name'] ?? null,
+                    'bank_code' => $bank['code'] ?? null,
                     'currency'  => 'NGN',
                 ], $bankList);
 
@@ -115,7 +117,7 @@ class BankService
 
         try {
             if ($currency === 'NGN') {
-                $response = $this->interswitch->resolveAccount($request->account_number, $request->bank_code);
+                $response = $this->paystack->resolveAccountName($request->account_number, $request->bank_code);
 
                 if (!$response || !($response['status'] ?? true)) {
                     return response()->json(['status' => false, 'message' => 'Account Name not found'], 401);
@@ -126,7 +128,7 @@ class BankService
                     'message' => 'Account Name Found',
                     'data'    => [
                         'account_number' => $request->account_number,
-                        'account_name'   => $response['name'] ?? $response['accountName'] ?? null,
+                        'account_name'   => $response['data']['account_name'] ?? $response['name'] ?? null,
                         'bank_code'      => $request->bank_code,
                     ],
                 ]);
@@ -173,16 +175,16 @@ class BankService
         }
     }
 
-    public function saveUserAccountDetails($request)
+    public function saveUserAccountDetails($request, $user = null, $allowUpdate = false)
     {
         $this->validator->createBankDetailsValidator($request);
 
         try {
-            $user     = auth()->user();
+            $user     = $user ?? auth()->user();
             $currency = $this->getUserCurrency($user);
             $method   = strtolower($request->method ?? 'bank');
 
-            if ($this->bank->getUserBankByCurrency($user->id, $currency)) {
+            if (!$allowUpdate && $this->bank->getUserBankByCurrency($user->id, $currency)) {
                 return response()->json([
                     'status'  => false,
                     'message' => "You already have {$currency} account details saved. Contact support to update them.",
@@ -190,19 +192,22 @@ class BankService
             }
 
             if ($currency === 'NGN') {
-                $verified = $this->interswitch->resolveAccount($request->account_number, $request->bank_code);
+                $verified = $this->paystack->resolveAccountName($request->account_number, $request->bank_code);
 
-                if (!$verified) {
+                if (!$verified || !($verified['status'] ?? false)) {
                     return response()->json(['status' => false, 'message' => 'Unable to verify account details. Please try again.'], 401);
                 }
 
+                $accountName = $verified['data']['account_name'] ?? $request->account_name;
+                $recipientCode = $this->paystack->recipientCode($accountName, $request->account_number, $request->bank_code);
+
                 $data = [
                     'user_id'        => $user->id,
-                    'name'           => $verified['name'] ?? $verified['accountName'] ?? $request->account_name,
+                    'name'           => $accountName,
                     'bank_name'      => $request->bank_name,
                     'account_number' => $request->account_number,
                     'bank_code'      => $request->bank_code,
-                    'recipient_code' => null,
+                    'recipient_code' => $recipientCode['data']['recipient_code'] ?? null,
                     'currency'       => 'NGN',
                 ];
             } else {

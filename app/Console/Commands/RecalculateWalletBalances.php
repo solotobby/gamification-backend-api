@@ -8,15 +8,17 @@ use Illuminate\Support\Facades\DB;
 class RecalculateWalletBalances extends Command
 {
     protected $signature = 'wallet:recalculate-balances
-                            {--chunk=5000 : Number of users to process per batch}
+                            {--chunk=5000 : Number of wallets to process per batch}
                             {--report : Show a mismatch report after recalculating}
-                            {--tolerance=0.01 : Difference threshold to flag as a mismatch in the report}';
+                            {--tolerance=0.01 : Difference threshold to flag as a mismatch in the report}
+                            {--user= : Recalculate a single user_id only, ignoring --chunk}';
 
-    protected $description = 'Recompute each user\'s balance from their payment_transactions history into wallets.temp_balance, for verification against the live balance — does NOT touch the live balance/usd_balance/bonus columns.';
+    protected $description = 'Recompute each user\'s balance from their own payment_transactions history, matched strictly against their wallet\'s own base_currency, into wallets.temp_balance for verification against the live balance — does NOT touch balance/usd_balance/base_currency_balance.';
 
-    // Mirrors WalletRepositoryModel::mapCurrency() exactly — must stay in
-    // sync if that method ever changes, since this has to normalize the
-    // same "naira"/"NGN" and "dollar"/"USD" variants it does.
+    // Mirrors WalletRepositoryModel::mapCurrency() exactly — keep in sync
+    // if that method ever changes, since this normalizes the same
+    // "naira"/"NGN" and "dollar"/"USD" legacy variants it does, for both
+    // the wallet's base_currency and the transaction's currency.
     protected string $currencyMapSql = "
         CASE
             WHEN LOWER(currency_col) IN ('naira', 'ngn') THEN 'NGN'
@@ -27,6 +29,11 @@ class RecalculateWalletBalances extends Command
 
     public function handle(): int
     {
+        if ($userId = $this->option('user')) {
+            $this->recalculateSingleUser((int) $userId);
+            return self::SUCCESS;
+        }
+
         $chunkSize = (int) $this->option('chunk');
         $minId = DB::table('wallets')->min('id');
         $maxId = DB::table('wallets')->max('id');
@@ -58,17 +65,19 @@ class RecalculateWalletBalances extends Command
     }
 
     /**
-     * One UPDATE...JOIN per batch. tx_type is compared case-insensitively
-     * (LOWER()) since 'Credit'/'credit' and 'Debit'/'debit' both exist in
-     * this table historically — see conversation notes on this. Currency
-     * matching normalizes both the wallet's base_currency and the
-     * transaction's currency through the same mapping WalletRepositoryModel
-     * uses, so 'naira'/'NGN' and 'dollar'/'USD' legacy values reconcile
-     * correctly against each other.
+     * Batch path — one UPDATE...JOIN per chunk. The join to payment_transactions
+     * is strictly scoped per wallet: each wallet's total only sums
+     * transactions whose currency, once normalized through the same
+     * mapping as the wallet's own base_currency, matches THAT wallet's
+     * base_currency — never another user's, and never a different
+     * currency than the one the wallet is actually denominated in.
+     *
+     * tx_type is compared case-insensitively (LOWER()) since 'Credit'/
+     * 'credit' and 'Debit'/'debit' both exist historically in this table.
      */
     protected function recalculateBatch(int $startId, int $endId): void
     {
-        $wCurrency = str_replace('currency_col', 'w.base_currency', $this->currencyMapSql);
+        $wCurrency  = str_replace('currency_col', 'w.base_currency', $this->currencyMapSql);
         $ptCurrency = str_replace('currency_col', 'pt.currency', $this->currencyMapSql);
 
         DB::statement("
@@ -98,11 +107,53 @@ class RecalculateWalletBalances extends Command
     }
 
     /**
+     * Single-user path — plain Eloquent/query builder, no raw SQL needed
+     * for one row. Useful for spot-checking a specific user (e.g. from a
+     * support ticket) without waiting on a full batch run.
+     */
+    protected function recalculateSingleUser(int $userId): void
+    {
+        $wallet = DB::table('wallets')->where('user_id', $userId)->first();
+
+        if (!$wallet) {
+            $this->error("No wallet found for user #{$userId}.");
+            return;
+        }
+
+        $mappedWalletCurrency = $this->mapCurrency($wallet->base_currency);
+
+        $computed = DB::table('payment_transactions')
+            ->where('user_id', $userId)
+            ->where('status', 'successful')
+            ->get()
+            ->filter(fn($tx) => $this->mapCurrency($tx->currency) === $mappedWalletCurrency)
+            ->sum(fn($tx) => strtolower($tx->tx_type) === 'credit' ? (float) $tx->amount
+                : (strtolower($tx->tx_type) === 'debit' ? -(float) $tx->amount : 0));
+
+        DB::table('wallets')->where('user_id', $userId)->update([
+            'temp_balance' => $computed,
+            'temp_balance_calculated_at' => now(),
+        ]);
+
+        $liveBalance = match ($mappedWalletCurrency) {
+            'NGN'   => (float) $wallet->balance,
+            'USD'   => (float) $wallet->usd_balance,
+            default => (float) $wallet->base_currency_balance,
+        };
+
+        $this->info("User #{$userId} ({$mappedWalletCurrency}):");
+        $this->line("  Live balance:      " . number_format($liveBalance, 2));
+        $this->line("  Computed (temp):   " . number_format($computed, 2));
+        $this->line("  Difference:        " . number_format(abs($liveBalance - $computed), 2));
+    }
+
+    /**
      * Compares temp_balance against whichever live column
-     * getBalanceFromWallet() actually reads for that wallet's currency
-     * today (balance for NGN, usd_balance for USD, bonus for everything
-     * else) — matching the live debit/credit code path, not the unused
-     * base_currency_balance column.
+     * WalletRepositoryModel::getBalanceFromWallet() actually reads for
+     * that wallet's currency today: balance for NGN, usd_balance for USD,
+     * base_currency_balance for everything else (GHS/ZAR/KES/etc.) — NOT
+     * `bonus`, which is now the streak-bonus pool only, per the earlier
+     * migration off bonus.
      */
     protected function showMismatchReport(float $tolerance): void
     {
@@ -110,7 +161,7 @@ class RecalculateWalletBalances extends Command
             CASE
                 WHEN LOWER(base_currency) IN ('naira', 'ngn') THEN balance
                 WHEN LOWER(base_currency) IN ('dollar', 'usd') THEN usd_balance
-                ELSE bonus
+                ELSE base_currency_balance
             END
         ";
 
@@ -154,5 +205,19 @@ class RecalculateWalletBalances extends Command
                 $this->line('(showing top 50 by size of discrepancy)');
             }
         }
+    }
+
+    /**
+     * PHP-side mirror of the currency-mapping SQL, used only by the
+     * single-user path (plain query builder, no raw SQL string needed
+     * for one row).
+     */
+    protected function mapCurrency(string $currency): string
+    {
+        return match (strtolower($currency)) {
+            'naira', 'ngn' => 'NGN',
+            'dollar', 'usd' => 'USD',
+            default => strtoupper($currency),
+        };
     }
 }

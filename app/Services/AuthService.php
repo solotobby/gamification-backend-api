@@ -557,6 +557,7 @@ class AuthService
             str_contains(strtolower($curLocation ?? ''), 'ghana') => 'GHS',
             str_contains(strtolower($curLocation ?? ''), 'south africa') => 'ZAR',
             str_contains(strtolower($curLocation ?? ''), 'kenya') => 'KES',
+            str_contains(strtolower($curLocation ?? ''), 'uganda') => 'UGX',
             default => 'USD',
         };
 

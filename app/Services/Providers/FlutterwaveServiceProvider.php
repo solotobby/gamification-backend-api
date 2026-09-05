@@ -28,6 +28,10 @@ class FlutterwaveServiceProvider
             ['code' => 'MPESA', 'name' => 'M-Pesa'],
             ['code' => 'AIRTEL', 'name' => 'Airtel Money'],
         ],
+        'UG' => [
+            ['code' => 'MTN', 'name' => 'MTN Mobile Money'],
+            ['code' => 'AIRTEL', 'name' => 'Airtel Money'],
+        ],
     ];
 
     public function __construct()
@@ -108,7 +112,7 @@ class FlutterwaveServiceProvider
             // valid for the given currency/region, so listing them here is
             // safe even for currencies where they don't apply — no per-currency
             // branching needed.
-            'payment_options' => 'card, applepay, googlepay, banktransfer, ussd, mobilemoneyghana, mpesa',
+            'payment_options' => 'card, applepay, googlepay, banktransfer, ussd, mobilemoneyghana, mobilemoneyuganda, mpesa',
             'customizations' => ['title' => 'Freebyz Wallet Top Up'],
         ];
 

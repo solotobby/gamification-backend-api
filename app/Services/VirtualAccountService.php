@@ -22,13 +22,13 @@ class VirtualAccountService
     ) {}
 
 
-    public function generateVirtualAccountNew()
+    public function generateVirtualAccountNew($user = null)
     {
-        $user = auth()->user();
+        $user = $user ?? auth()->user();
         $currency = $user->wallet->base_currency ?? 'NGN';
 
         if ($currency === 'NGN') {
-            return $this->generateInterswitchVirtualAccount();
+            return $this->generateInterswitchVirtualAccount($user);
         } elseif ($currency === 'GHS') {
             return $this->generateFlutterwaveVirtualAccount($user, 'GHS');
         } else {
@@ -117,10 +117,10 @@ class VirtualAccountService
         }
     }
 
-    public function generateInterswitchVirtualAccount()
+    public function generateInterswitchVirtualAccount($user = null)
     {
         try {
-            $user = auth()->user();
+            $user = $user ?? auth()->user();
 
             if ($user->wallet->base_currency !== 'NGN') {
                 return response()->json([

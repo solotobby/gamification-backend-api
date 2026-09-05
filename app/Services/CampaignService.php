@@ -14,6 +14,7 @@ use App\Mail\ApproveCampaign;
 use App\Mail\CreateCampaign;
 use App\Models\Campaign;
 use App\Models\CampaignWorker;
+use App\Models\PaymentTransaction;
 use App\Models\Rating;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\HireWorkerRepository;
@@ -1170,47 +1171,89 @@ class CampaignService
                     'message' => 'Campaign not found.',
                 ], 404);
             }
-            // Retrieve job details
-            $job = $this->jobModel->getJobByIdAndCampaignId($jobId, $campaign->id);
-            if (!$job) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Job not found.',
-                ], 404);
-            }
 
-            // Prevent duplicate actions on already processed jobs
-            if (in_array($job->status, ['Approved', 'Denied'])) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'This job has already been ' . strtolower($job->status) . '. Action cannot be performed.',
-                ], 400);
-            }
-
-            // Retrieve worker details
-            $worker = $this->authModel->findUserById($job->user_id);
-            $currency = $worker->wallet->base_currency;
-
-            // Perform action
-            if ($action === 'deny') {
-                $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Denied');
-
-                $subject = 'Task Denied - You have 12 hours to dispute';
-                $status = 'Denied';
-
-                Mail::to($worker->email)->send(new ApproveCampaign($job, $subject, $status));
-
-                // $this->decreasePendingCountAfterDenial($campaign->id);
-            } elseif ($action === 'approve') {
-                $job = $this->jobModel->updateJobStatus($reason, $jobId, 'Approved');
-                $this->increaseCompletedCountAfterApproval($campaign->id);
-                $this->walletModel->creditWallet($worker, $currency, $job->amount);
-            } else {
+            if (!in_array($action, ['approve', 'deny'])) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Invalid action. Only "approve" or "deny" are allowed.',
                 ], 400);
             }
+
+            $result = DB::transaction(function () use ($jobId, $campaign, $action, $reason) {
+                // Lock the job row to prevent concurrent double processing
+                $job = CampaignWorker::where('id', $jobId)
+                    ->where('campaign_id', $campaign->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$job) {
+                    return ['error' => 'Job not found.', 'code' => 404];
+                }
+
+                // Prevent duplicate actions on already processed jobs
+                if (in_array($job->status, ['Approved', 'Denied'])) {
+                    return [
+                        'error' => 'This job has already been ' . strtolower($job->status) . '. Action cannot be performed.',
+                        'code' => 400
+                    ];
+                }
+
+                $worker = $this->authModel->findUserById($job->user_id);
+                $currency = $worker->wallet->base_currency;
+
+                if ($action === 'deny') {
+                    $job->status = 'Denied';
+                    $job->reason = $reason;
+                    $job->slot_released = false;
+                    $job->denied_at = now();
+                    $job->save();
+
+                    $subject = 'Task Denied - You have 12 hours to dispute';
+                    $status = 'Denied';
+
+                    Mail::to($worker->email)->send(new ApproveCampaign($job, $subject, $status));
+                } elseif ($action === 'approve') {
+                    $job->status = 'Approved';
+                    $job->reason = $reason;
+                    $job->slot_released = true;
+                    $job->denied_at = null;
+                    $job->save();
+
+                    $this->increaseCompletedCountAfterApproval($campaign->id);
+                    $this->walletModel->creditWallet($worker, $currency, $job->amount);
+
+                    // Create transaction log with exact current balance
+                    $ref = 'JOB_' . time() . '_' . $job->id;
+                    $currentBalance = $this->walletModel->getWalletBalance($worker->id);
+
+                    PaymentTransaction::create([
+                        'user_id' => $worker->id,
+                        'campaign_id' => $campaign->id,
+                        'reference' => $ref,
+                        'amount' => $job->amount,
+                        'balance' => $currentBalance,
+                        'status' => 'successful',
+                        'currency' => $currency,
+                        'channel' => 'freebyz',
+                        'type' => 'campaign_payment',
+                        'description' => 'Campaign payment for ' . $campaign->post_title,
+                        'tx_type' => 'Credit',
+                        'user_type' => 'regular'
+                    ]);
+                }
+
+                return ['job' => $job, 'worker' => $worker];
+            });
+
+            if (isset($result['error'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $result['error'],
+                ], $result['code']);
+            }
+
+            $job = $result['job'];
+            $worker = $result['worker'];
 
             // Prepare response data
             $data = [
@@ -1230,7 +1273,6 @@ class CampaignService
                 'has_dispute' => (bool) $job->is_dispute,
                 'dispute_resolved' => (bool) $job->is_dispute_resolved,
                 'public_link' => "https://freebyz.com/tasks/" . $campaign->job_id,
-
             ];
 
             return response()->json([

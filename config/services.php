@@ -57,8 +57,8 @@ return [
         'webhook_secret' => env('INTERSWITCH_WEBHOOK_SECRET'),
         'merchant_code' => env('INTERSWITCH_MERCHANT_CODE'),
         'payable_code' => env('INTERSWITCH_PAYABLE_CODE'),
-        'provider_code' => env('INTERSWITCH_PROVIDER_CODE'),
-        'base_url' => env('INTERSWITCH_BASE_URL', 'https://qa.interswitchng.com'),
+        'provider_code' => env('INTERSWITCH_PROVIDER_CODE', 'WEMA'),
+        'base_url' => env('INTERSWITCH_BASE_URL', 'https://api.interswitchng.com'),
         'passport_url' => env('INTERSWITCH_PASSPORT_URL', 'https://passport.interswitchng.com'),
     ],
     'turnstile' => [
