@@ -142,8 +142,17 @@ class FlutterwaveServiceProvider
             ->get("{$this->baseUrl}/banks/{$countryCode}");
 
         Log::info('Flutterwave Get Banks Response: ' . $res->body());
+        if (!$res->successful()) {
+            return null;
+        }
 
-        return $res->successful() ? $res->json('data') : null;
+        $banks = $res->json('data') ?? [];
+
+        return collect($banks)
+            ->sortBy(fn($bank) => strtoupper(trim($bank['name'] ?? '')))
+            ->values()
+            ->all();
+        // return $res->successful() ? $res->json('data') : null;
     }
 
     public function resolveAccount(string $accountNumber, string $bankCode): ?array
