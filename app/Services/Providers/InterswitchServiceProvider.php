@@ -32,7 +32,7 @@ class InterswitchServiceProvider
 
     protected function getAccessToken(): ?string
     {
-        return Cache::remember('interswitch_access_token', 39000, function () {
+        return Cache::remember('interswitch_access_token', 3600, function () {
             $credentials = base64_encode("{$this->clientId}:{$this->clientSecret}");
 
             $res = Http::withHeaders([
@@ -174,7 +174,7 @@ class InterswitchServiceProvider
 
         $res = Http::withHeaders($this->oauthHeaders())->get($url);
 
-        Log::info('Interswitch Get Banks Response: ' . $res->body());
+        // Log::info('Interswitch Get Banks Response: ' . $res->body());
 
         return $res->successful() ? $res->json('data') ?? $res->json() : null;
     }
@@ -185,7 +185,7 @@ class InterswitchServiceProvider
 
         $res = Http::withHeaders($this->oauthHeaders())->get($url);
 
-        Log::info('Interswitch Name Enquiry Response: ' . $res->body());
+        // Log::info('Interswitch Name Enquiry Response: ' . $res->body());
 
         return $res->successful() ? $res->json() : null;
     }

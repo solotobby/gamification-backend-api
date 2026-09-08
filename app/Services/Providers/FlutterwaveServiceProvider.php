@@ -129,7 +129,7 @@ class FlutterwaveServiceProvider
         $res = Http::withHeaders($this->headers())
             ->get("{$this->baseUrl}/transactions/verify_by_reference", ['tx_ref' => $reference]);
 
-        Log::info('Flutterwave Verify Payment Response: ' . $res->body());
+        // Log::info('Flutterwave Verify Payment Response: ' . $res->body());
 
         return $res->successful() ? $res->json('data') : null;
     }
@@ -141,7 +141,7 @@ class FlutterwaveServiceProvider
         $res = Http::withHeaders($this->headers())
             ->get("{$this->baseUrl}/banks/{$countryCode}");
 
-        Log::info('Flutterwave Get Banks Response: ' . $res->body());
+        // Log::info('Flutterwave Get Banks Response: ' . $res->body());
         if (!$res->successful()) {
             return null;
         }
@@ -163,7 +163,7 @@ class FlutterwaveServiceProvider
                 'account_bank' => $bankCode,
             ]);
 
-        Log::info('Flutterwave Resolve Account Response: ' . $res->body());
+        // Log::info('Flutterwave Resolve Account Response: ' . $res->body());
 
         return $res->successful() ? $res->json('data') : null;
     }
@@ -179,7 +179,7 @@ class FlutterwaveServiceProvider
         $res = Http::withHeaders($this->headers())
             ->get("{$this->baseUrl}/banks/{$bankId}/branches");
 
-        Log::info('Flutterwave Get Branch Code Response: ' . $res->body());
+        // Log::info('Flutterwave Get Branch Code Response: ' . $res->body());
 
         return $res->successful() ? $res->json('data') : null;
     }
