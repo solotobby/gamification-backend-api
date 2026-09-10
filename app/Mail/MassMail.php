@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 use SplSubject;
 
-class MassMail extends Mailable
+class MassMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
