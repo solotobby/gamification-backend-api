@@ -66,7 +66,7 @@ class TestTeamsLogging extends Command
             'test_mode' => true,
             'triggered_by' => 'Artisan CLI Command',
             'sample_metadata' => [
-                'service' => 'Gamification API',
+                'service' => 'Freebyz API',
                 'version' => '1.0.0',
                 'action' => 'Verification Ping',
             ],
