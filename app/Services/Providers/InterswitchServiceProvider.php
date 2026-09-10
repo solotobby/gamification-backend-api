@@ -156,7 +156,7 @@ class InterswitchServiceProvider
 
         $res = Http::withHeaders($this->oauthHeaders())->get($url);
 
-        Log::info('Interswitch Verify Payment Response: ' . $res->body());
+        // Log::info('Interswitch Verify Payment Response: ' . $res->body());
 
         return $res->successful() ? $res->json() : null;
     }

@@ -102,7 +102,10 @@ class BannerRepositoryModel
 
     public function findBanner($bannerId)
     {
-        return Banner::where('banner_id', $bannerId)->where('status', true)->first();
+        return Banner::where(function ($query) use ($bannerId) {
+            $query->where('banner_id', $bannerId)
+                  ->orWhere('id', $bannerId);
+        })->first();
     }
 
     public function logBannerClicks($user, $bannerId)

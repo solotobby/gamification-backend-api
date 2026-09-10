@@ -387,8 +387,11 @@ class BannerService
             return response()->json([
                 'status' => true,
                 'message' => 'Banner click recorded successfully',
+                'link' => $ban->external_link,
+                'external_link' => $ban->external_link,
                 'data' => [
-                    'link' => $ban->external_link
+                    'link' => $ban->external_link,
+                    'external_link' => $ban->external_link,
                 ]
             ], 200);
         } catch (Exception $exception) {
@@ -421,7 +424,7 @@ class BannerService
             $ban->save();
 
             // Check if the banner has reached the maximum click count
-            if ($ban->click_count >= $ban->clicks) {
+            if ($ban->clicks > 0 && $ban->click_count >= $ban->clicks) {
                 $ban->live_state = 'Ended';
                 $ban->status = false;
                 $ban->banner_end_date = Carbon::now();
@@ -436,8 +439,11 @@ class BannerService
             return response()->json([
                 'status' => true,
                 'message' => 'Banner click recorded successfully',
+                'link' => $ban->external_link,
+                'external_link' => $ban->external_link,
                 'data' => [
-                    'link' => $ban->external_link
+                    'link' => $ban->external_link,
+                    'external_link' => $ban->external_link,
                 ]
             ], 200);
         } catch (Exception $exception) {

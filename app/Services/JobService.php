@@ -141,8 +141,7 @@ class JobService
                 $bannerData[] = [
                     'banner_id' => $bannerItem->banner_id,
                     'banner_url' => $bannerItem->banner_url,
-                    //  'external_link' => $bannerItem->external_link,
-                    // 'status' => $bannerItem->status ? true : false,
+                    'status' => $bannerItem->status ? true : false,
                     'clicks' => $bannerItem->click_count,
                     'created_at' => $bannerItem->created_at,
                     'updated_at' => $bannerItem->updated_at,
@@ -245,8 +244,7 @@ class JobService
                 $bannerData[] = [
                     'banner_id' => $bannerItem->banner_id,
                     'banner_url' => $bannerItem->banner_url,
-                    //  'external_link' => $bannerItem->external_link,
-                    // 'status' => $bannerItem->status ? true : false,
+                    'status' => $bannerItem->status ? true : false,
                     'clicks' => $bannerItem->click_count,
                     'created_at' => $bannerItem->created_at,
                     'updated_at' => $bannerItem->updated_at,
@@ -378,8 +376,7 @@ class JobService
                 $bannerData[] = [
                     'banner_id' => $bannerItem->banner_id,
                     'banner_url' => $bannerItem->banner_url,
-                    // 'external_link' => $bannerItem->external_link,
-                    //'status' => $bannerItem->status ? true : false,
+                    'status' => $bannerItem->status ? true : false,
                     'clicks' => $bannerItem->click_count,
                     'created_at' => $bannerItem->created_at,
                     'updated_at' => $bannerItem->updated_at,

@@ -18,7 +18,7 @@ Route::group(['namespace' => 'auth'], function () {
     Route::get('/public/jobs', [PublicController::class, 'publicJobs']);
     Route::get('/public/job-details/{slug}', [PublicController::class, 'jobDetails']);
 
-    Route::get('public/click-ad/{bannerId}', [PublicController::class, 'clickAdCount']);
+    Route::match(['get', 'post'], 'public/click-ad/{bannerId}', [PublicController::class, 'clickAdCount']);
 
     // / test apis
     Route::get('test/list', [GeneralController::class, 'apiTest']);
