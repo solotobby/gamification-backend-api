@@ -53,6 +53,26 @@ class TeamsLoggingTest extends TestCase
         $this->assertStringContainsString('iPhone', $device['summary']);
     }
 
+    public function test_context_extractor_extracts_forwarded_web_client_headers()
+    {
+        $request = Request::create('/api/campaign', 'POST', [], [], [], [
+            'REMOTE_ADDR' => '138.68.185.34', // Proxy/BFF server IP
+            'HTTP_USER_AGENT' => 'GuzzleHttp/7',
+            'HTTP_X_CLIENT_IP' => '102.89.43.12',
+            'HTTP_X_CLIENT_USER_AGENT' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'HTTP_X_PLATFORM' => 'Web',
+        ]);
+
+        $context = ContextExtractor::extract($request);
+        $device = $context['device'];
+
+        $this->assertEquals('102.89.43.12', $device['ip']);
+        $this->assertEquals('Web', $device['platform']);
+        $this->assertEquals('Windows', $device['os']);
+        $this->assertStringContainsString('Chrome', $device['browser']);
+        $this->assertStringContainsString('Chrome', $device['summary']);
+    }
+
     public function test_context_extractor_scrubs_sensitive_data()
     {
         $data = [

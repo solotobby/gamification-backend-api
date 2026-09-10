@@ -125,7 +125,10 @@ class ContextExtractor
             ];
         }
 
-        $userAgent = $request->userAgent() ?: 'Unknown User-Agent';
+        $userAgent = $request->header('X-Client-User-Agent')
+            ?: $request->header('X-User-Agent')
+            ?: $request->header('X-Original-User-Agent')
+            ?: ($request->userAgent() ?: 'Unknown User-Agent');
         $ip = self::extractClientIp($request);
         $parsed = self::parseUserAgent($userAgent);
 
@@ -226,12 +229,44 @@ class ContextExtractor
      */
     public static function extractClientIp(Request $request): string
     {
-        if ($cfIp = $request->header('CF-Connecting-IP')) {
-            return trim(explode(',', $cfIp)[0]);
+        // 1. Check custom forwarded client header (from BFF web frontend)
+        if ($clientIp = $request->header('X-Client-IP')) {
+            $ip = trim(explode(',', $clientIp)[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
         }
 
+        // 2. Check Cloudflare connecting IP
+        if ($cfIp = $request->header('CF-Connecting-IP')) {
+            $ip = trim(explode(',', $cfIp)[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+
+        // 3. Check True-Client-IP (Cloudflare Enterprise / Akamai)
+        if ($trueIp = $request->header('True-Client-IP')) {
+            $ip = trim(explode(',', $trueIp)[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+
+        // 4. Check X-Real-IP
+        if ($realIp = $request->header('X-Real-IP')) {
+            $ip = trim(explode(',', $realIp)[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+
+        // 5. Check X-Forwarded-For (first IP in chain is original client)
         if ($forwarded = $request->header('X-Forwarded-For')) {
-            return trim(explode(',', $forwarded)[0]);
+            $ip = trim(explode(',', $forwarded)[0]);
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
         }
 
         return $request->ip() ?: 'Unknown IP';
