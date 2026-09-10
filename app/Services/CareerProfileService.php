@@ -122,6 +122,8 @@ class CareerProfileService
 
     public function addExperience($request)
     {
+        $this->normalizeRequestDates($request, ['start_date', 'end_date']);
+
         $validated = $request->validate([
             'employer' => 'required|string|max:150',
             'position' => 'required|string|max:150',
@@ -147,6 +149,8 @@ class CareerProfileService
 
     public function updateExperience($request, $id)
     {
+        $this->normalizeRequestDates($request, ['start_date', 'end_date']);
+
         $validated = $request->validate([
             'employer' => 'sometimes|string|max:150',
             'position' => 'sometimes|string|max:150',
@@ -227,6 +231,8 @@ class CareerProfileService
 
     public function addCertification($request)
     {
+        $this->normalizeRequestDates($request, ['issue_date', 'expiry_date']);
+
         $validated = $request->validate([
             'name' => 'required|string|max:200',
             'issuer' => 'required|string|max:150',
@@ -246,6 +252,34 @@ class CareerProfileService
         ]);
 
         return response()->json(['status' => true, 'message' => 'Certification added.', 'data' => $cert], 201);
+    }
+
+    /**
+     * Normalize date inputs from various client formats (e.g. DD-MM-YYYY, DD/MM/YYYY) to YYYY-MM-DD for MySQL.
+     */
+    protected function normalizeRequestDates($request, array $fields): void
+    {
+        $input = $request->all();
+        $modified = false;
+
+        foreach ($fields as $field) {
+            if ($request->has($field) && !empty($request->input($field))) {
+                $raw = trim((string) $request->input($field));
+                if (str_contains($raw, '/')) {
+                    $raw = str_replace('/', '-', $raw);
+                }
+                try {
+                    $input[$field] = \Carbon\Carbon::parse($raw)->format('Y-m-d');
+                    $modified = true;
+                } catch (\Throwable $e) {
+                    // let standard validator handle invalid formats
+                }
+            }
+        }
+
+        if ($modified) {
+            $request->merge($input);
+        }
     }
 
     public function getCareerProfiles($request, bool $publicOnly = true)

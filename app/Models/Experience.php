@@ -22,4 +22,36 @@ class Experience extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function setStartDateAttribute($value)
+    {
+        $this->attributes['start_date'] = $this->parseFlexibleDate($value);
+    }
+
+    public function setEndDateAttribute($value)
+    {
+        $this->attributes['end_date'] = $this->parseFlexibleDate($value);
+    }
+
+    protected function parseFlexibleDate($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        $clean = trim((string) $value);
+        if (str_contains($clean, '/')) {
+            $clean = str_replace('/', '-', $clean);
+        }
+
+        try {
+            return \Carbon\Carbon::parse($clean)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return $value;
+        }
+    }
 }

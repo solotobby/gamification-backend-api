@@ -20,13 +20,13 @@
                     <b>Campaign Name:</b> {{ $campaign_name }} <br>
                     <b>Campaign Type:</b> {{ $type }} <br>
                     <b>Campaign Category:</b> {{ $category }} <br>
-                    @if(auth()->user()->wallet->base_currency == "Naira" || "NGN")
-                    <b>Amount per Job:</b> &#8358;{{ $amount }} <br>
-                    @else
-                    <b>Amount per Job:</b> ${{ $amount }} <br>
-                    @endif
-                    <b>Number of Worker:</b> {{ $number_of_staff }} <br>
-                    <b>Total Amount:</b> &#8358;{{ $total_amount }} <br>
+                    @php
+                        $isNaira = in_array(strtoupper($currency ?? 'NGN'), ['NAIRA', 'NGN']);
+                        $symbol = $isNaira ? '&#8358;' : '$';
+                    @endphp
+                    <b>Amount per Job:</b> {!! $symbol !!}{{ number_format((float) $amount, 2) }} <br>
+                    <b>Number of Workers:</b> {{ $number_of_staff }} <br>
+                    <b>Total Amount:</b> {!! $symbol !!}{{ number_format((float) $total_amount, 2) }} <br>
                 </p>
                 <p style="margin-bottom: 10px;">
                     Click the button below to create more Campaigns... <br><br>

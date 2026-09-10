@@ -29,15 +29,19 @@ class CreateCampaign extends Mailable implements ShouldQueue
      */
     public function build()
     {
+        $currency = $this->campaign->currency 
+            ?? (optional($this->campaign->user)->wallet ? $this->campaign->user->wallet->base_currency : 'NGN');
+
         return $this->markdown('emails.campaigns.post')->subject('Task Posted')->with([
             'campaign_name' => $this->campaign->post_title,
             'amount' => $this->campaign->campaign_amount,
             'number_of_staff' => $this->campaign->number_of_staff,
             'total_amount' => $this->campaign->total_amount,
             'job_id' => $this->campaign->job_id,
-            'type' => $this->campaign->campaignType->name,
-            'category' => $this->campaign->campaignCategory->name,
-            'poster' => $this->campaign->user->name
+            'type' => optional($this->campaign->campaignType)->name ?? 'Standard',
+            'category' => optional($this->campaign->campaignCategory)->name ?? 'General',
+            'poster' => optional($this->campaign->user)->name ?? 'Valued User',
+            'currency' => $currency,
         ]);
     }
 }
