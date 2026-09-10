@@ -67,4 +67,14 @@ class FirebaseNotificationService
             return false;
         }
     }
+
+    public function sendAsync(string $fcmToken, string $title, string $body, array $data = []): void
+    {
+        \App\Jobs\SendFirebaseNotificationJob::dispatch($fcmToken, $title, $body, $data);
+    }
+
+    public function sendToMultipleAsync(array $tokens, string $title, string $body, array $data = []): void
+    {
+        \App\Jobs\SendFirebaseMulticastNotificationJob::dispatch($tokens, $title, $body, $data);
+    }
 }

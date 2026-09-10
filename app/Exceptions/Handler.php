@@ -15,6 +15,24 @@ class Handler extends ExceptionHandler
         'password_confirmation',
     ];
 
+    /**
+     * A list of the exception types that are not reported.
+     *
+     * @var array<int, class-string<\Throwable>>
+     */
+    protected $dontReport = [
+        \League\OAuth2\Server\Exception\OAuthServerException::class,
+        \Laravel\Passport\Exceptions\OAuthServerException::class,
+        \Laravel\Passport\Exceptions\MissingScopeException::class,
+        \Illuminate\Auth\AuthenticationException::class,
+        \Illuminate\Auth\Access\AuthorizationException::class,
+        \Illuminate\Validation\ValidationException::class,
+        \App\Exceptions\NotFoundException::class,
+        \App\Exceptions\BadRequestException::class,
+        \App\Exceptions\UnauthorizedException::class,
+        \App\Exceptions\ForbiddenException::class,
+    ];
+
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
@@ -52,6 +70,22 @@ class Handler extends ExceptionHandler
 
     public function render($request, Throwable $exception)
     {
+        // Handle Passport / OAuth Authentication Failure
+        if ($exception instanceof \League\OAuth2\Server\Exception\OAuthServerException || $exception instanceof \Laravel\Passport\Exceptions\OAuthServerException) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated or session expired. Please log in again.'
+            ], 401);
+        }
+
+        // Handle Laravel AuthenticationException
+        if ($exception instanceof \Illuminate\Auth\AuthenticationException) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthenticated access. Please log in.'
+            ], 401);
+        }
+
         // Handle custom NotFoundException
         if ($exception instanceof NotFoundException) {
             return response()->json([
@@ -69,12 +103,12 @@ class Handler extends ExceptionHandler
         }
 
         // Handle custom UnauthorizedException (Unauthenticated)
-    if ($exception instanceof UnauthorizedException) {
-        return response()->json([
-            'status' => false, // Add status field
-            'message' => 'Unauthenticated access. Please log in.' // Custom message
-        ], 401);
-    }
+        if ($exception instanceof UnauthorizedException) {
+            return response()->json([
+                'status' => false, // Add status field
+                'message' => 'Unauthenticated access. Please log in.' // Custom message
+            ], 401);
+        }
 
         // Handle custom ForbiddenException
         if ($exception instanceof ForbiddenException) {

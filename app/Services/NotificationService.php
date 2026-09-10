@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Events\NotificationEvent;
+use App\Jobs\SendFirebaseMulticastNotificationJob;
+use App\Jobs\SendFirebaseNotificationJob;
 use App\Models\User;
 use App\Repositories\NotificationRepositoryModel;
 use App\Services\Providers\FirebaseNotificationService;
@@ -16,16 +18,18 @@ class NotificationService
     ) {}
 
 
-    public function createNotification($user, $title, $body, $type)
+    public function createNotification($user, $title, $body, $type, array $data = [])
     {
         try {
-            $this->notifRepo->createForUser($user->id, $title, $body, $type);
+            $userId = is_object($user) ? $user->id : (int) $user;
+            $this->notifRepo->createForUser($userId, $title, $body, $type, $data);
 
-            // $tokens = User::where('id', $user->id)->whereNotNull('fcm_token')->pluck('fcm_token');
-            $tokens = User::where('id', $user->id)->whereNotNull('fcm_token')->value('fcm_token');
+            $token = is_object($user) && !empty($user->fcm_token)
+                ? $user->fcm_token
+                : User::where('id', $userId)->whereNotNull('fcm_token')->value('fcm_token');
 
-            if ($tokens) {
-                $this->firebase->send($tokens, $title, $body);
+            if ($token) {
+                SendFirebaseNotificationJob::dispatch($token, $title, $body, array_merge(['type' => (string) $type], $data));
             }
 
             return true;
@@ -34,16 +38,13 @@ class NotificationService
         }
     }
 
-    public function createPublicNotification($userId, $title, $body, $type)
+    public function createPublicNotification($userId, $title, $body, $type, array $data = [])
     {
         try {
-            // $this->notifRepo->createForUser($user->id, $title, $body, $type);
+            $token = User::where('id', $userId)->whereNotNull('fcm_token')->value('fcm_token');
 
-            // $tokens = User::where('id', $user->id)->whereNotNull('fcm_token')->pluck('fcm_token');
-            $tokens = User::where('id', $userId)->whereNotNull('fcm_token')->value('fcm_token');
-
-            if ($tokens) {
-                $this->firebase->send($tokens, $title, $body);
+            if ($token) {
+                SendFirebaseNotificationJob::dispatch($token, $title, $body, array_merge(['type' => (string) $type], $data));
             }
 
             return true;
@@ -91,20 +92,24 @@ class NotificationService
         ]);
     }
 
-    // Admin: broadcast to all users via Firebase
-    public function broadcastToAll(string $title, string $body, string $type = 'general')
+    // Admin: broadcast to all users via Firebase in queued chunks
+    public function broadcastToAll(string $title, string $body, string $type = 'general', array $data = [])
     {
         try {
             $this->notifRepo->createBroadcast($title, $body, $type);
 
-            $tokens = User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
-            if ($tokens) {
-                $this->firebase->sendToMultiple($tokens, $title, $body);
-            }
+            User::whereNotNull('fcm_token')
+                ->where('fcm_token', '!=', '')
+                ->chunk(500, function ($users) use ($title, $body, $type, $data) {
+                    $tokens = $users->pluck('fcm_token')->filter()->values()->toArray();
+                    if (!empty($tokens)) {
+                        SendFirebaseMulticastNotificationJob::dispatch($tokens, $title, $body, array_merge(['type' => (string) $type], $data));
+                    }
+                });
 
             return response()->json([
                 'status' => true,
-                'message' => 'Broadcast sent.'
+                'message' => 'Broadcast queued successfully.'
             ]);
         } catch (Throwable $e) {
             return response()->json([

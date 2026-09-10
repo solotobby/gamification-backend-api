@@ -286,6 +286,11 @@ class TeamsLoggerService
             return false;
         }
 
+        if (config('teams.queue', false)) {
+            \App\Jobs\SendTeamsLogWebhookJob::dispatch($webhookUrl, $payload);
+            return true;
+        }
+
         try {
             $timeout = (int) config('teams.timeout', 3);
             $response = Http::timeout($timeout)
