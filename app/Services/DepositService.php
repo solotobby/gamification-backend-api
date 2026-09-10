@@ -105,6 +105,7 @@ class DepositService
 
             return match ($method) {
                 'korapay' => $this->handleKoraPay($user, $amount, $ref, $baseCurrency, $device),
+                'interswitch' => $this->handleInterswitch($user, $amount, $ref, $baseCurrency, $device),
                 'paystack' => $this->handlePaystack($user, $amount, $ref, $baseCurrency, $device),
                 'stripe' => $this->handleStripe($user, $amount, $ref, $baseCurrency),
                 'crypto' => $this->handleCrypto($user, $amount, $ref, $baseCurrency, 'USDT_TRC20'),

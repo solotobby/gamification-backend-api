@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'default' => env('LOG_CHANNEL', 'stack'),
+    'default' => str_contains(env('LOG_CHANNEL', 'stack'), ',') ? 'stack' : env('LOG_CHANNEL', 'stack'),
 
     /*
     |--------------------------------------------------------------------------
@@ -54,7 +54,9 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            'channels' => str_contains(env('LOG_CHANNEL', ''), ',')
+                ? array_values(array_filter(array_map('trim', explode(',', env('LOG_CHANNEL')))))
+                : (env('LOG_STACK') ? array_values(array_filter(array_map('trim', explode(',', env('LOG_STACK'))))) : ['single']),
             'ignore_exceptions' => false,
         ],
 

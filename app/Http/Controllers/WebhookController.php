@@ -864,31 +864,62 @@ class WebhookController extends Controller
             return response('', 200);
         }
 
-        $reference = $data['merchantReference'] ?? $uuid;
+        $reference = $data['merchantReference'] ?? $data['paymentReference'] ?? $uuid;
         $amount = isset($data['amount']) ? $data['amount'] / 100 : 0;  // kobo → naira
-        $accountNumber = $data['retrievalReferenceNumber'] ?? null;  // virtual account number paid into
+        $accountNumber = $data['accountNumber']
+            ?? $data['AccountNumber']
+            ?? $data['virtualAccountNumber']
+            ?? $data['VirtualAccountNumber']
+            ?? $data['customerAccountNumber']
+            ?? $data['retrievalReferenceNumber']
+            ?? null;
+        $payableCode = $data['payableCode'] ?? $data['PayableCode'] ?? null;
+        $customerEmail = $data['customerEmail'] ?? $data['email'] ?? null;
         $currencyCode = $data['currencyCode'] ?? '566';
         $currency = $currencyCode === '566' ? 'NGN' : 'NGN';  // extend for multi-currency
 
         DB::beginTransaction();
         try {
-            $transaction = PaymentTransaction::where('reference', $reference)->first();
+            $transaction = PaymentTransaction::where('reference', $reference)
+                ->when($data['paymentReference'] ?? null, fn($q) => $q->orWhere('reference', $data['paymentReference']))
+                ->when($data['merchantReference'] ?? null, fn($q) => $q->orWhere('reference', $data['merchantReference']))
+                ->first();
 
             if (!$transaction) {
-                // Virtual account transfer — identify user from account number
-                $virtualAccount = VirtualAccount::where('account_number', $accountNumber)
-                    ->where('channel', 'interswitch')
-                    ->first();
+                // Virtual account transfer — identify user from virtual account details
+                $virtualAccount = null;
 
-                if (!$virtualAccount) {
-                    $webhook->update(['status' => 'failed', 'message' => 'Virtual account not found: ' . $accountNumber]);
-                    DB::rollBack();
-                    return response('', 200);
+                if ($accountNumber) {
+                    $virtualAccount = VirtualAccount::where('account_number', $accountNumber)->first();
                 }
 
-                $user = User::find($virtualAccount->user_id);
+                if (!$virtualAccount && $payableCode) {
+                    $virtualAccount = VirtualAccount::where('customer_id', $payableCode)->first();
+                }
+
+                if (!$virtualAccount) {
+                    $refCandidates = array_filter([$reference, $data['paymentReference'] ?? null, $data['merchantReference'] ?? null]);
+                    foreach ($refCandidates as $candidateRef) {
+                        $matchedVA = VirtualAccount::where('channel', 'interswitch')
+                            ->whereNotNull('customer_id')
+                            ->whereRaw('? LIKE CONCAT(customer_id, "%")', [$candidateRef])
+                            ->first();
+                        if ($matchedVA) {
+                            $virtualAccount = $matchedVA;
+                            break;
+                        }
+                    }
+                }
+
+                $user = null;
+                if ($virtualAccount) {
+                    $user = User::find($virtualAccount->user_id);
+                } elseif ($customerEmail) {
+                    $user = User::where('email', $customerEmail)->first();
+                }
+
                 if (!$user) {
-                    $webhook->update(['status' => 'failed', 'message' => 'User not found']);
+                    $webhook->update(['status' => 'failed', 'message' => 'Virtual account or user not found: ' . $accountNumber]);
                     DB::rollBack();
                     return response('', 200);
                 }
@@ -905,7 +936,7 @@ class WebhookController extends Controller
                     'currency' => $currency,
                     'channel' => 'interswitch',
                     'type' => 'transfer_topup',
-                    'description' => 'Virtual Account Transfer from ' . ($data['merchantCustomerName'] ?? 'Unknown'),
+                    'description' => 'Virtual Account Transfer from ' . ($data['merchantCustomerName'] ?? $data['customerName'] ?? 'Unknown'),
                     'tx_type' => 'Credit',
                     'user_type' => 'regular',
                 ]);
@@ -977,20 +1008,20 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleInterswitchCallback(Request $request)
     {
-        $reference = $request->query('txnref') ?? $request->query('reference');
+        $rawReference = $request->query('txnref') ?? $request->query('reference');
         $amount = $request->query('amount') ?? 0;
 
-        if (!$reference) {
+        if (!$rawReference) {
             return response()->json([
                 'status' => false,
                 'message' => 'No reference supplied',
             ], 400);
         }
 
-        $verified = $this->interswitch->verifyPayment($reference, $amount);
+        $verified = $this->interswitch->verifyPayment($rawReference, $amount);
 
         Log::info('Interswitch callback verify', [
-            'reference' => $reference,
+            'reference' => $rawReference,
             'response' => $verified,
         ]);
 
@@ -1004,9 +1035,18 @@ class WebhookController extends Controller
             ], 402);
         }
 
-        $reference = $verified['MerchantReference']
-            ?? $verified['merchantReference']
-            ?? $reference;
+        $merchantReference = $verified['MerchantReference'] ?? $verified['merchantReference'] ?? null;
+        $paymentReference = $verified['PaymentReference'] ?? $verified['paymentReference'] ?? null;
+        $paymentId = $verified['PaymentId'] ?? $verified['paymentId'] ?? null;
+        $retrievalReferenceNumber = $verified['RetrievalReferenceNumber'] ?? $verified['retrievalReferenceNumber'] ?? null;
+        $accountNumber = $verified['AccountNumber']
+            ?? $verified['accountNumber']
+            ?? $verified['virtualAccountNumber']
+            ?? $verified['VirtualAccountNumber']
+            ?? $verified['customerAccountNumber']
+            ?? null;
+        $payableCode = $verified['PayableCode'] ?? $verified['payableCode'] ?? null;
+        $customerEmail = $verified['CustomerEmail'] ?? $verified['customerEmail'] ?? $verified['email'] ?? null;
 
         $amount = isset($verified['Amount'])
             ? $verified['Amount'] / 100
@@ -1019,58 +1059,80 @@ class WebhookController extends Controller
         DB::beginTransaction();
 
         try {
-            $transaction = PaymentTransaction::where('reference', $reference)->first();
+            // Find existing transaction by checking all potential reference identifiers
+            $transaction = PaymentTransaction::where('reference', $rawReference)
+                ->when($merchantReference, fn($q) => $q->orWhere('reference', $merchantReference))
+                ->when($paymentReference, fn($q) => $q->orWhere('reference', $paymentReference))
+                ->when($paymentId, fn($q) => $q->orWhere('reference', (string) $paymentId))
+                ->first();
 
             if (!$transaction) {
-                // Fallback to Virtual Account
-                $accountNumber = $verified['RetrievalReferenceNumber']
-                    ?? $verified['retrievalReferenceNumber']
-                    ?? null;
+                // Fallback to Virtual Account lookup
+                $virtualAccount = null;
 
-                if (!$accountNumber) {
-                    DB::rollBack();
-
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'Virtual account number missing',
-                    ], 404);
+                if ($accountNumber) {
+                    $virtualAccount = VirtualAccount::where('account_number', $accountNumber)->first();
                 }
 
-                $virtualAccount = VirtualAccount::where('account_number', $accountNumber)
-                    ->where('channel', 'interswitch')
-                    ->first();
+                if (!$virtualAccount && $payableCode) {
+                    $virtualAccount = VirtualAccount::where('customer_id', $payableCode)->first();
+                }
 
+                // Check if any reference starts with customer_id (payable code)
                 if (!$virtualAccount) {
-                    DB::rollBack();
-
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'Virtual account not found',
-                    ], 404);
+                    $refCandidates = array_filter([$merchantReference, $paymentReference, $rawReference]);
+                    foreach ($refCandidates as $candidateRef) {
+                        $matchedVA = VirtualAccount::where('channel', 'interswitch')
+                            ->whereNotNull('customer_id')
+                            ->whereRaw('? LIKE CONCAT(customer_id, "%")', [$candidateRef])
+                            ->first();
+                        if ($matchedVA) {
+                            $virtualAccount = $matchedVA;
+                            break;
+                        }
+                    }
                 }
 
-                $user = User::find($virtualAccount->user_id);
+                if (!$virtualAccount && $retrievalReferenceNumber) {
+                    $virtualAccount = VirtualAccount::where('account_number', $retrievalReferenceNumber)->first();
+                }
+
+                $user = null;
+                if ($virtualAccount) {
+                    $user = User::find($virtualAccount->user_id);
+                } elseif ($customerEmail) {
+                    $user = User::where('email', $customerEmail)->first();
+                }
 
                 if (!$user) {
                     DB::rollBack();
 
+                    Log::warning('Interswitch callback: user / virtual account not found', [
+                        'rawReference' => $rawReference,
+                        'merchantReference' => $merchantReference,
+                        'retrievalReferenceNumber' => $retrievalReferenceNumber,
+                        'accountNumber' => $accountNumber,
+                    ]);
+
                     return response()->json([
                         'status' => false,
-                        'message' => 'User not found',
+                        'message' => 'Virtual account or user not found',
                     ], 404);
                 }
+
+                $finalRef = $merchantReference ?? $paymentReference ?? $rawReference;
 
                 $transaction = PaymentTransaction::create([
                     'user_id' => $user->id,
                     'campaign_id' => 1,
-                    'reference' => $reference,
+                    'reference' => $finalRef,
                     'amount' => $amount,
                     'balance' => 0,
                     'status' => 'pending',
                     'currency' => $currency,
                     'channel' => 'interswitch',
                     'type' => 'transfer_topup',
-                    'description' => 'Virtual Account Transfer',
+                    'description' => 'Interswitch Transfer Topup',
                     'tx_type' => 'Credit',
                     'user_type' => 'regular',
                 ]);
@@ -1112,7 +1174,7 @@ class WebhookController extends Controller
                 'email' => $user->email,
                 'amount' => $amount,
                 'currency' => $currency,
-                'reference' => $reference,
+                'reference' => $transaction->reference,
                 'channel' => 'interswitch',
             ]);
 
@@ -1138,10 +1200,10 @@ class WebhookController extends Controller
             DB::rollBack();
 
             Log::error('Interswitch callback error', [
-                'reference' => $reference,
+                'reference' => $rawReference,
                 'error' => $e->getMessage(),
             ]);
-            teamsError($e, ['channel' => 'Interswitch Callback', 'reference' => $reference ?? null]);
+            teamsError($e, ['channel' => 'Interswitch Callback', 'reference' => $rawReference ?? null]);
 
             return response()->json([
                 'status' => false,
