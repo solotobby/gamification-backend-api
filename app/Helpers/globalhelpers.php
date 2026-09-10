@@ -1268,3 +1268,76 @@ if (!function_exists('availableJobs')) {
         return $filteredArray;
     }
 }
+
+if (!function_exists('teamsLog')) {
+    /**
+     * Send a general log card to Microsoft Teams with full account and device context.
+     *
+     * @param string $message
+     * @param string $level
+     * @param array $context
+     * @return bool
+     */
+    function teamsLog(string $message, string $level = 'info', array $context = []): bool
+    {
+        try {
+            return app(\App\Services\Logging\TeamsLoggerService::class)->sendLog($level, $message, $context);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('teamsError')) {
+    /**
+     * Send an error / exception card to Microsoft Teams with full account and device context.
+     *
+     * @param \Throwable|string $error
+     * @param array $context
+     * @return bool
+     */
+    function teamsError($error, array $context = []): bool
+    {
+        try {
+            return app(\App\Services\Logging\TeamsLoggerService::class)->sendError($error, $context);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('teamsInfo')) {
+    /**
+     * Send an informational card to Microsoft Teams with full account and device context.
+     *
+     * @param string $message
+     * @param array $context
+     * @return bool
+     */
+    function teamsInfo(string $message, array $context = []): bool
+    {
+        try {
+            return app(\App\Services\Logging\TeamsLoggerService::class)->sendInfo($message, $context);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('teamsWarning')) {
+    /**
+     * Send a warning card to Microsoft Teams with full account and device context.
+     *
+     * @param string $message
+     * @param array $context
+     * @return bool
+     */
+    function teamsWarning(string $message, array $context = []): bool
+    {
+        try {
+            return app(\App\Services\Logging\TeamsLoggerService::class)->sendWarning($message, $context);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+}

@@ -18,8 +18,36 @@ class Handler extends ExceptionHandler
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            //
+            if ($this->shouldReportToTeams($e)) {
+                try {
+                    app(\App\Services\Logging\TeamsLoggerService::class)->sendError($e);
+                } catch (Throwable $loggingException) {
+                    // Suppress to ensure reporting failure never halts execution
+                }
+            }
         });
+    }
+
+    /**
+     * Determine if the exception should be reported to Microsoft Teams.
+     *
+     * @param Throwable $e
+     * @return bool
+     */
+    protected function shouldReportToTeams(Throwable $e): bool
+    {
+        if (!config('teams.enabled', true)) {
+            return false;
+        }
+
+        $ignored = config('teams.ignored_exceptions', []);
+        foreach ($ignored as $ignoredClass) {
+            if ($e instanceof $ignoredClass) {
+                return false;
+            }
+        }
+
+        return $this->shouldReport($e);
     }
 
     public function render($request, Throwable $exception)
