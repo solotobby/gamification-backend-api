@@ -539,6 +539,12 @@ class JobService
                         'error' => $e->getMessage(),
                     ]);
 
+                    teamsError($e, [
+                        'action' => 'task_proof_upload_failed',
+                        'campaign_id' => $campaign->id,
+                        'user_id' => $user->id,
+                    ]);
+
                     return response()->json([
                         'status' => false,
                         'message' => 'Error uploading proof image'
@@ -596,6 +602,15 @@ class JobService
 
             $campaignWorker['campaign_id'] = $campaign->job_id;
 
+            teamsInfo("Task Work Submitted: {$campaign->post_title}", [
+                'campaign_id' => $campaign->job_id,
+                'campaign_title' => $campaign->post_title,
+                'amount' => $unitPrice,
+                'currency' => $currency->code,
+                'worker_id' => $user->id,
+                'has_proof_upload' => $campaign->allow_upload && $request->hasFile('proof'),
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Task Submitted Successfully',
@@ -619,6 +634,10 @@ class JobService
                 'trace' => $exception->getTraceAsString(),
             ]);
 
+            teamsError($exception, [
+                'action' => 'task_submission_failed',
+                'job_id' => $request->job_id,
+            ]);
 
             return response()->json([
                 'status' => false,
@@ -985,12 +1004,24 @@ class JobService
                 ->cc('favour@freebyztechnologies.com')
                 ->send(new GeneralMail(auth()->user(), $content, $subject, $url));
 
+            teamsInfo("Task Dispute Created: Job ID {$job->id}", [
+                'job_id' => $job->id,
+                'campaign_id' => $job->campaign_id,
+                'reason' => $request->reason,
+                'user_id' => $user->id,
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Dispute created successfully',
 
             ], 200);
         } catch (Throwable $exception) {
+            teamsError($exception, [
+                'action' => 'task_dispute_creation_failed',
+                'job_id' => $request->job_id,
+            ]);
+
             return response()->json([
                 'status' => false,
                 'error' => $exception->getMessage(),

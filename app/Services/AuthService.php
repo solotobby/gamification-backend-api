@@ -92,6 +92,13 @@ class AuthService
                 'dashboard' => $dashboard,
             ];
 
+            teamsInfo("New User Registered: {$user->email}", [
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'referral_code' => $user->referral_code,
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Registration successfully',
@@ -99,6 +106,12 @@ class AuthService
             ], 201);
         } catch (Throwable $e) {
             Log::error($e->getMessage());
+
+            teamsError($e, [
+                'action' => 'user_registration_failed',
+                'email' => $request->email ?? null,
+            ]);
+
             throw new BadRequestException('Error processing request');
         }
     }
@@ -289,6 +302,11 @@ class AuthService
             }
 
             if ($user->is_blacklisted) {
+                teamsWarning("Blacklisted User Attempted Login: {$user->email}", [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                ]);
+
                 return response()->json([
                     'status' => false,
                     'message' => 'Your account has been blacklisted. Please contact support (holla@freebyz.com) for assistance.'

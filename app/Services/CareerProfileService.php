@@ -94,13 +94,28 @@ class CareerProfileService
                 $profile->update(['is_public' => $wantsPublic]);
             }
 
+            $freshProfile = $profile->fresh(['skills:id,name', 'availabilities']);
+
+            teamsInfo("Career Profile Updated: " . (auth()->user()->name ?? 'User'), [
+                'user_id' => $userId,
+                'profile_id' => $profile->id,
+                'completeness' => $profile->profile_completeness,
+                'is_public' => (bool) $profile->is_public,
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Profile updated successfully.',
-                'data' => $profile->fresh(['skills:id,name', 'availabilities']),
+                'data' => $freshProfile,
             ], 200);
         } catch (Throwable $e) {
             Log::error('Career profile update failed: ' . $e->getMessage());
+
+            teamsError($e, [
+                'action' => 'career_profile_update_failed',
+                'user_id' => auth()->id(),
+            ]);
+
             return response()->json(['status' => false, 'message' => 'Error updating profile.', 'error' => $e->getMessage()], 500);
         }
     }
@@ -120,6 +135,12 @@ class CareerProfileService
 
         $exp = $this->repo->addExperience(auth()->id(), $validated);
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
+
+        teamsInfo("Career Experience Added: {$exp->position} at {$exp->employer}", [
+            'user_id' => auth()->id(),
+            'position' => $exp->position,
+            'employer' => $exp->employer,
+        ]);
 
         return response()->json(['status' => true, 'message' => 'Experience added.', 'data' => $exp], 201);
     }
@@ -161,6 +182,12 @@ class CareerProfileService
 
         $edu = $this->repo->addEducation(auth()->id(), $validated);
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
+
+        teamsInfo("Career Education Added: {$edu->qualification} at {$edu->institution}", [
+            'user_id' => auth()->id(),
+            'institution' => $edu->institution,
+            'qualification' => $edu->qualification,
+        ]);
 
         return response()->json([
             'status' => true,
@@ -211,6 +238,12 @@ class CareerProfileService
 
         $cert = $this->repo->addCertification(auth()->id(), $validated);
         $this->recalculate($this->repo->getOrCreate(auth()->id()));
+
+        teamsInfo("Career Certification Added: {$cert->name}", [
+            'user_id' => auth()->id(),
+            'name' => $cert->name,
+            'issuer' => $cert->issuer,
+        ]);
 
         return response()->json(['status' => true, 'message' => 'Certification added.', 'data' => $cert], 201);
     }

@@ -49,6 +49,12 @@ class TicketService
 
             $this->ticketModel->sendMessage($user, $ticket->id, $request);
 
+            teamsInfo("Support Ticket Created: {$ticket->subject}", [
+                'ticket_id' => $ticket->id,
+                'subject' => $ticket->subject,
+                'user_id' => $user->id,
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Ticket raised successfully.',
@@ -56,6 +62,11 @@ class TicketService
 
             ], 201);
         } catch (Throwable $e) {
+            teamsError($e, [
+                'action' => 'ticket_creation_failed',
+                'subject' => $request->subject ?? null,
+            ]);
+
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request'
@@ -142,6 +153,11 @@ class TicketService
                 'data' => $messages
             ], 201);
         } catch (Throwable $e) {
+            teamsError($e, [
+                'action' => 'ticket_message_send_failed',
+                'ticket_id' => $ticketId,
+            ]);
+
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request'

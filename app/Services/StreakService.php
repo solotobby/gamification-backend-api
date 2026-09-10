@@ -101,9 +101,16 @@ class StreakService
                 // replace it, or a second bonus grant would wipe out the
                 // first one.
                 $wallet->increment('bonus', $amount);
+
+                teamsInfo("Streak Bonus Granted to {$user->name}: {$curr} {$amount}", [
+                    'user_id' => $user->id,
+                    'amount' => $amount,
+                    'currency' => $curr,
+                ]);
             });
         } catch (\Throwable $e) {
             Log::error('Bonus grant failed: ' . $e->getMessage());
+            teamsError($e, ['service' => 'Streak Bonus Grant', 'user_id' => $user->id ?? null]);
         }
     }
 
@@ -221,6 +228,13 @@ class StreakService
         ]);
 
         $user->update(['streak_redeemed' => true]);
+
+        teamsInfo("Streak Reward Redeemed by {$user->name}: {$bonus->currency} {$bonus->amount}", [
+            'user_id' => $user->id,
+            'amount' => $bonus->amount,
+            'currency' => $bonus->currency,
+            'target_column' => $targetColumn,
+        ]);
 
         return true;
     }

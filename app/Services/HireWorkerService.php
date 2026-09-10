@@ -191,6 +191,13 @@ class HireWorkerService
                 $this->repo->createPortfolio($validated['portfolio'], $skill->skill_id, auth()->id());
             }
 
+            teamsInfo("Worker Skill Asset Created: {$skill->title}", [
+                'skill_asset_id' => $skill->id,
+                'title' => $skill->title,
+                'skill_id' => $skill->skill_id,
+                'user_id' => auth()->id(),
+            ]);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Skill created successfully.',
@@ -200,7 +207,13 @@ class HireWorkerService
                 ),
             ], 201);
         } catch (Throwable $e) {
-            Log::error('Bonus grant failed: ' . $e->getMessage());
+            Log::error('Skill creation failed: ' . $e->getMessage());
+
+            teamsError($e, [
+                'action' => 'create_skill_asset_failed',
+                'title' => $request->input('title'),
+            ]);
+
             return response()->json([
                 'status'  => false,
                 'message' => 'Error creating skill.',
@@ -244,6 +257,12 @@ class HireWorkerService
                 $this->repo->updatePortfolio($validated['portfolio'] ?? [], $skill->skill_id, auth()->id());
             }
 
+            teamsInfo("Worker Skill Asset Updated: {$skill->title}", [
+                'skill_asset_id' => $skill->id,
+                'title' => $skill->title,
+                'user_id' => auth()->id(),
+            ]);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Skill updated successfully.',
@@ -253,7 +272,13 @@ class HireWorkerService
                 ),
             ], 200);
         } catch (Throwable $e) {
-            Log::error('Bonus grant failed: ' . $e->getMessage());
+            Log::error('Skill update failed: ' . $e->getMessage());
+
+            teamsError($e, [
+                'action' => 'update_skill_asset_failed',
+                'skill_asset_id' => $id,
+            ]);
+
             return response()->json([
                 'status'  => false,
                 'message' => 'Error updating skill.',
@@ -410,6 +435,14 @@ class HireWorkerService
 
             DB::commit();
 
+            teamsInfo("Hire Worker Point Purchased: Worker ID {$worker->id}", [
+                'worker_id' => $worker->id,
+                'worker_user_id' => $worker->user_id,
+                'buyer_id' => $user->id,
+                'amount' => $amount,
+                'currency' => $currency->code,
+            ]);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Point purchased successfully.',
@@ -420,6 +453,11 @@ class HireWorkerService
             ], 200);
         } catch (Throwable $e) {
             DB::rollBack();
+
+            teamsError($e, [
+                'action' => 'hire_worker_point_purchase_failed',
+                'worker_id' => $id,
+            ]);
 
             return response()->json([
                 'status'  => false,

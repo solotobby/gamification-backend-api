@@ -114,6 +114,12 @@ class DepositService
                 default => response()->json(['status' => false, 'message' => 'Invalid method.'], 422),
             };
         } catch (Throwable $e) {
+            teamsError($e, [
+                'action' => 'deposit_initiation_failed',
+                'method' => $request->method ?? null,
+                'amount' => $request->amount ?? null,
+            ]);
+
             return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error initiating deposit.'], 500);
         }
     }

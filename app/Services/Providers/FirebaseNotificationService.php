@@ -33,6 +33,10 @@ class FirebaseNotificationService
                 'title'   => $title,
                 'error'   => $e->getMessage(),
             ]);
+            teamsError($e, [
+                'service' => 'Firebase Push Notification',
+                'title'   => $title,
+            ]);
 
             return false;
         }
@@ -53,6 +57,11 @@ class FirebaseNotificationService
                 'tokens'  => $tokens,
                 'title'   => $title,
                 'error'   => $e->getMessage(),
+            ]);
+            teamsError($e, [
+                'service' => 'Firebase Multicast Push Notification',
+                'title'   => $title,
+                'recipient_count' => count($tokens),
             ]);
 
             return false;

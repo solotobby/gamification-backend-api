@@ -164,6 +164,17 @@ class JobListingService
                 "Your Job Listing has been Created Successfully and pending approval from the admin",
                 'job_listing'
             );
+
+            teamsInfo("Job Vacancy Created: {$job->title}", [
+                'job_id' => $job->id,
+                'title' => $job->title,
+                'company_name' => $job->company_name,
+                'tier' => $job->tier,
+                'type' => $job->type,
+                'location' => $job->location,
+                'posted_by' => $user->email,
+            ]);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Vacancy posted successfully.',
@@ -171,6 +182,13 @@ class JobListingService
             ], 201);
         } catch (Throwable $e) {
             DB::rollBack();
+
+            teamsError($e, [
+                'action' => 'job_vacancy_create_failed',
+                'title' => $request->input('title'),
+                'company' => $request->input('company_name'),
+            ]);
+
             return response()->json([
                 'status'  => false,
                 'error' => 'Error posting job.',
@@ -210,12 +228,24 @@ class JobListingService
 
             $job = $this->jobRepository->updateUserJob($job, $validated);
 
+            teamsInfo("Job Vacancy Updated: {$job->title}", [
+                'job_id' => $job->id,
+                'title' => $job->title,
+                'company_name' => $job->company_name,
+                'updated_fields' => array_keys($validated),
+            ]);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Vacancy updated successfully.',
                 'data'    => $this->formatJob($job),
             ]);
         } catch (Throwable $e) {
+            teamsError($e, [
+                'action' => 'job_vacancy_update_failed',
+                'job_id' => $jobId,
+            ]);
+
             return response()->json([
                 'status'  => false,
                 'message' => 'Error updating job.',
@@ -395,12 +425,24 @@ class JobListingService
                 'resume_path'  => $resumePath,
             ]);
 
+            teamsInfo("Job Application Submitted: {$job->title}", [
+                'job_id' => $job->id,
+                'job_title' => $job->title,
+                'applicant_id' => $user->id,
+                'applicant_email' => $user->email,
+            ]);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Application submitted successfully.',
                 'data'    => $application,
             ], 201);
         } catch (Throwable $e) {
+            teamsError($e, [
+                'action' => 'job_application_failed',
+                'job_id' => $id,
+            ]);
+
             return response()->json([
                 'status'  => false,
                 'message' => 'Error submitting application',
@@ -584,6 +626,13 @@ class JobListingService
 
             DB::commit();
 
+            teamsInfo("Job Point Purchased: {$job->title}", [
+                'job_id' => $job->id,
+                'amount' => $amount,
+                'currency' => $currency->code,
+                'user_id' => $user->id,
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Premium access purchased successfully.',
@@ -591,6 +640,11 @@ class JobListingService
         } catch (Throwable $e) {
 
             DB::rollBack();
+
+            teamsError($e, [
+                'action' => 'job_point_purchase_failed',
+                'job_id' => $id,
+            ]);
 
             return response()->json([
                 'status' => false,

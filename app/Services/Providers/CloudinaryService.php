@@ -50,6 +50,7 @@ class CloudinaryService
             return $uploadedFile?->getSecurePath();
         } catch (\Exception $e) {
             Log::error('Cloudinary image upload failed: ' . $e->getMessage());
+            teamsError($e, ['service' => 'Cloudinary Image Upload', 'folder' => $folder]);
             return null;
         }
     }
@@ -98,6 +99,7 @@ class CloudinaryService
             Log::error('Cloudinary base64 upload failed', [
                 'error' => $e->getMessage()
             ]);
+            teamsError($e, ['service' => 'Cloudinary Base64 Upload', 'folder' => $folder]);
             return null;
         }
     }
@@ -120,6 +122,7 @@ class CloudinaryService
             return "https://res.cloudinary.com/{$cloudName}/raw/upload/{$publicId}";
         } catch (\Exception $e) {
             Log::error('Cloudinary file upload failed: ' . $e->getMessage());
+            teamsError($e, ['service' => 'Cloudinary Raw File Upload', 'folder' => $folder]);
             return null;
         }
     }

@@ -141,6 +141,15 @@ class WebhookController extends Controller
 
             DB::commit();
 
+            teamsInfo("Paystack Payment Received: {$currency} {$amount} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'reference' => $reference,
+                'channel' => $channel,
+            ]);
+
             $this->notification->createNotification(
                 $user,
                 'Wallet Funding Successful!',
@@ -156,6 +165,7 @@ class WebhookController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Paystack callback error: ' . $e->getMessage());
+            teamsError($e, ['channel' => 'Paystack Callback', 'reference' => $reference ?? null]);
 
             return response()->json([
                 'status' => false,
@@ -188,6 +198,10 @@ class WebhookController extends Controller
                 'computed' => $computed
             ]);
             Log::warning('Invalid Paystack webhook signature');
+            teamsWarning('Invalid Paystack webhook signature detected', [
+                'ip' => $request->ip(),
+                'signature_header' => $signature,
+            ]);
             // return response()->json([
             //     'status' => 'invalid signature'
             // ], 200);
@@ -304,6 +318,15 @@ class WebhookController extends Controller
 
             DB::commit();
 
+            teamsInfo("Paystack Payment Processed (Webhook): {$currency} {$amount} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'reference' => $reference,
+                'channel' => 'paystack',
+            ]);
+
             $this->notification->createNotification(
                 user: $user,
                 title: 'Wallet Credited',
@@ -316,13 +339,6 @@ class WebhookController extends Controller
             $content = 'Congratulations, your wallet has been credited with ' . $currency . ' ' . $amount;
             Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
 
-            // $this->notification->createNotification(
-            //     $user,
-            //     'Wallet Credited',
-            //     "{$currency} {$amount} has been added to your wallet.",
-            //     'wallet'
-            // );
-            // return response()->json(['status' => 'success'], 200);
             return response()->json([
                 'status' => true,
                 'message' => 'Payment successful',
@@ -330,7 +346,7 @@ class WebhookController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Paystack webhook error: ' . $e->getMessage());
-            // return response()->json(['status' => 'error'], 500);
+            teamsError($e, ['channel' => 'Paystack Webhook', 'reference' => $reference ?? null]);
             return response()->json([
                 'status' => false,
                 'message' => 'Payment processing error',
@@ -370,6 +386,9 @@ class WebhookController extends Controller
             Log::warning('Invalid KoraPay webhook signature', [
                 'received' => $signature,
                 'expected' => $computedSignature,
+            ]);
+            teamsWarning('Invalid KoraPay webhook signature detected', [
+                'ip' => $request->ip(),
             ]);
 
             return response()->json(['status' => 'invalid signature'], 200);
@@ -485,6 +504,15 @@ class WebhookController extends Controller
 
                     DB::commit();
 
+                    teamsInfo("KoraPay Payment Received (Webhook): {$currency} {$amount} for {$user->name}", [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'amount' => $amount,
+                        'currency' => $currency,
+                        'reference' => $reference,
+                        'channel' => 'korapay',
+                    ]);
+
                     $this->notification->createNotification(
                         user: $user,
                         title: 'Wallet Credited',
@@ -526,6 +554,13 @@ class WebhookController extends Controller
                         $transaction->update(['status' => 'failed']);
 
                         if ($user) {
+                            teamsWarning("KoraPay Transfer Failed (Refunded to {$user->name}): {$transaction->currency} {$transaction->amount}", [
+                                'user_id' => $user->id,
+                                'reference' => $reference,
+                                'amount' => $transaction->amount,
+                                'currency' => $transaction->currency,
+                            ]);
+
                             $this->notification->createNotification(
                                 user: $user,
                                 title: 'Transfer Failed',
@@ -554,6 +589,7 @@ class WebhookController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('KoraPay webhook error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            teamsError($e, ['channel' => 'KoraPay Webhook']);
             $webhook->update(['status' => 'failed', 'message' => $e->getMessage()]);
             return response()->json(['status' => 'error'], 500);
         }
@@ -666,6 +702,15 @@ class WebhookController extends Controller
 
             DB::commit();
 
+            teamsInfo("KoraPay Payment Processed (Callback): {$currency} {$amount} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'reference' => $reference,
+                'channel' => 'korapay',
+            ]);
+
             $this->notification->createNotification(
                 $user,
                 'Wallet Funding Successful!',
@@ -682,6 +727,7 @@ class WebhookController extends Controller
             DB::rollBack();
 
             Log::error('KoraPay callback error: ' . $e->getMessage());
+            teamsError($e, ['channel' => 'KoraPay Callback', 'reference' => $reference ?? null]);
 
             return response()->json(['status' => 'error'], 500);
         }
@@ -703,6 +749,7 @@ class WebhookController extends Controller
             );
         } catch (\Exception $e) {
             Log::warning('Invalid Stripe webhook signature: ' . $e->getMessage());
+            teamsWarning('Invalid Stripe webhook signature: ' . $e->getMessage(), ['ip' => $request->ip()]);
             return response()->json(['message' => 'Invalid signature.'], 401);
         }
 
@@ -744,6 +791,15 @@ class WebhookController extends Controller
 
             DB::commit();
 
+            teamsInfo("Stripe Payment Received: {$transaction->currency} {$amountPaid} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amountPaid,
+                'currency' => $transaction->currency,
+                'reference' => $reference,
+                'channel' => 'stripe',
+            ]);
+
             $this->notification->createNotification(
                 user: $user,
                 title: 'Wallet Credited',
@@ -760,6 +816,7 @@ class WebhookController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Stripe webhook error: ' . $e->getMessage());
+            teamsError($e, ['channel' => 'Stripe Webhook', 'reference' => $reference ?? null]);
             return response()->json(['status' => 'error'], 500);
         }
     }
@@ -771,17 +828,6 @@ class WebhookController extends Controller
     {
         $rawBody = $request->getContent();
         $signature = $request->header('X-Interswitch-Signature');
-
-        // Per docs: HmacSHA512 of raw JSON body, hex-encoded
-        // $computed = hash_hmac('sha512', $rawBody, config('services.interswitch.client_secret'));
-
-        // if (!$signature || !hash_equals($computed, $signature)) {
-        //     Log::warning('Invalid Interswitch webhook signature', [
-        //         'received' => $signature,
-        //         'computed' => $computed,
-        //     ]);
-        //     return response('', 200); // docs say always return 200, no body
-        // }
 
         $payload = json_decode($rawBody, true);
         $event = $payload['event'] ?? null;
@@ -892,6 +938,16 @@ class WebhookController extends Controller
 
             $webhook->update(['status' => 'processed', 'message' => 'Payment successful']);
 
+            teamsInfo("Interswitch VA Payment Received: {$currency} {$amount} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'reference' => $reference,
+                'account_number' => $accountNumber,
+                'channel' => 'interswitch',
+            ]);
+
             $this->notification->createNotification(
                 user: $user,
                 title: 'Wallet Credited',
@@ -910,6 +966,7 @@ class WebhookController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Interswitch webhook error: ' . $e->getMessage());
+            teamsError($e, ['channel' => 'Interswitch Webhook', 'reference' => $reference ?? null]);
             $webhook->update(['status' => 'failed', 'message' => $e->getMessage()]);
             return response('', 200);  // still 200 so Interswitch doesn't retry endlessly
         }
@@ -1050,6 +1107,15 @@ class WebhookController extends Controller
 
             DB::commit();
 
+            teamsInfo("Interswitch Callback Payment Verified: {$currency} {$amount} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'reference' => $reference,
+                'channel' => 'interswitch',
+            ]);
+
             $this->notification->createNotification(
                 user: $user,
                 title: 'Wallet Credited',
@@ -1075,6 +1141,7 @@ class WebhookController extends Controller
                 'reference' => $reference,
                 'error' => $e->getMessage(),
             ]);
+            teamsError($e, ['channel' => 'Interswitch Callback', 'reference' => $reference ?? null]);
 
             return response()->json([
                 'status' => false,
@@ -1152,6 +1219,7 @@ class WebhookController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Interswitch callback error: ' . $e->getMessage());
+            teamsError($e, ['channel' => 'Interswitch Callback Old', 'reference' => $reference ?? null]);
             return response()->json(['status' => false, 'message' => 'Processing error'], 500);
         }
     }
@@ -1352,6 +1420,7 @@ class WebhookController extends Controller
 
         if (!$signature || $signature !== $expected) {
             Log::warning('Invalid Flutterwave webhook signature');
+            teamsWarning('Invalid Flutterwave webhook signature', ['ip' => $request->ip()]);
             return response()->json(['status' => false, 'message' => 'Invalid signature'], 401);
         }
 
@@ -1433,6 +1502,16 @@ class WebhookController extends Controller
             DB::commit();
             $webhook->update(['status' => 'processed', 'message' => 'Payment successful']);
 
+            teamsInfo("Flutterwave VA Payment Received: {$currency} {$amount} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'reference' => $reference,
+                'account_number' => $accountNumber,
+                'channel' => 'flutterwave',
+            ]);
+
             $this->notification->createNotification(user: $user, title: 'Wallet Credited', body: "{$currency} {$amount} has been added to your wallet.", type: 'wallet');
             Mail::to($user->email)->send(new GeneralMail($user, "Congratulations, your wallet has been credited with {$currency} {$amount}", 'Wallet Credited', ''));
 
@@ -1440,6 +1519,7 @@ class WebhookController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Flutterwave webhook error: ' . $e->getMessage());
+            teamsError($e, ['channel' => 'Flutterwave Webhook', 'reference' => $reference ?? null]);
             $webhook->update(['status' => 'failed', 'message' => $e->getMessage()]);
             return response()->json(['status' => 'error'], 500);
         }
@@ -1482,12 +1562,22 @@ class WebhookController extends Controller
 
             DB::commit();
 
+            teamsInfo("Flutterwave Callback Payment Verified: {$currency} {$amount} for {$user->name}", [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $amount,
+                'currency' => $currency,
+                'reference' => $reference,
+                'channel' => 'flutterwave',
+            ]);
+
             $this->notification->createNotification(user: $user, title: 'Wallet Credited', body: "{$currency} {$amount} has been added to your wallet.", type: 'wallet');
 
             return response()->json(['status' => true, 'message' => 'Payment successful'], 200);
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Flutterwave callback error: ' . $e->getMessage());
+            teamsError($e, ['channel' => 'Flutterwave Callback', 'reference' => $reference ?? null]);
             return response()->json(['status' => false, 'message' => 'Processing error'], 500);
         }
     }

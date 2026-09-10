@@ -167,6 +167,14 @@ class BannerService
                 'banner'
             );
             DB::commit();
+
+            teamsInfo("Banner Ad Created: {$banner->banner_id}", [
+                'banner_id' => $banner->banner_id,
+                'budget' => $request->budget,
+                'currency' => $currency->code,
+                'user_id' => $user->id,
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Banner Ad Created Successfully and it is currently under review, you will get a notification when it goes live!',
@@ -175,6 +183,12 @@ class BannerService
         } catch (Exception $exception) {
             DB::rollBack();
             Log::error($exception->getMessage());
+
+            teamsError($exception, [
+                'action' => 'banner_create_failed',
+                'budget' => $request->budget ?? null,
+            ]);
+
             return response()->json([
                 'status' => false,
                 'error' => $exception->getMessage(),
@@ -286,6 +300,12 @@ class BannerService
 
             DB::commit();
 
+            teamsInfo("Banner Ad Clicks Increased: {$banner->banner_id}", [
+                'banner_id' => $banner->banner_id,
+                'extra_budget' => $request->extra_budget,
+                'clicks' => $banner->clicks,
+            ]);
+
             return response()->json([
                 'status'  => true,
                 'message' => 'Banner clicks increased successfully.',
@@ -294,6 +314,12 @@ class BannerService
         } catch (Exception $e) {
             DB::rollBack();
             Log::error($e->getMessage());
+
+            teamsError($e, [
+                'action' => 'banner_increase_clicks_failed',
+                'banner_id' => $request->banner_id ?? null,
+            ]);
+
             return response()->json([
                 'status' => false,
                 'message' => 'Error processing request'
