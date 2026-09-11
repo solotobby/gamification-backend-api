@@ -287,9 +287,10 @@ class CareerProfileService
         try {
             $request->validate([
                 'availability' => 'sometimes|nullable|string|in:open_to_work,available_immediately,available_this_week,available_next_month,freelance,remote,hybrid,onsite,internship,volunteer,consulting,research,speaking',
+                'sort' => 'sometimes|nullable|string|in:recommended,highest_score,completeness,latest,random',
             ]);
 
-            $filters = $request->only(['skill', 'location', 'professional_level', 'availability', 'price_min', 'price_max', 'search', 'per_page']);
+            $filters = $request->only(['skill', 'location', 'professional_level', 'availability', 'price_min', 'price_max', 'search', 'sort', 'seed', 'per_page']);
             $profiles = $this->repo->getCareerProfiles($filters, $request->query('page'), $publicOnly);
 
             $data = [];
@@ -337,6 +338,7 @@ class CareerProfileService
             'city' => $profile->city,
             'country' => $profile->country,
             'photo_path' => $profile->photo_path,
+            'cv_file_path' => $profile->cv_file_path,
             'talent_score' => $profile->talent_score,
             'profile_completeness' => $profile->profile_completeness,
             'skills' => $profile->skills,

@@ -119,23 +119,99 @@ class CareerProfileRepository
         $query = CareerProfile::query()
             ->with(['user:id,name,email', 'skills:id,name'])
             ->when($publicOnly, fn($q) => $q->where('is_public', true))
-            ->when($filters['skill'] ?? null, fn($q, $skillId) =>
-                $q->whereHas('skills', fn($sq) => $sq->where('skills.id', $skillId)))
+            ->when($filters['skill'] ?? null, function ($q, $skill) {
+                $q->whereHas('skills', function ($sq) use ($skill) {
+                    if (is_numeric($skill)) {
+                        $sq->where('skills.id', $skill);
+                    } else {
+                        $sq->where('skills.name', 'like', "%{$skill}%");
+                    }
+                });
+            })
             ->when($filters['availability'] ?? null, fn($q, $avail) =>
                 $q->whereHas('availabilities', fn($aq) => $aq->where('type', $avail)))
-            ->when($filters['location'] ?? null, fn($q, $loc) =>
-                $q->where(fn($lq) => $lq->where('city', 'like', "%{$loc}%")->orWhere('country', 'like', "%{$loc}%")))
+            ->when($filters['location'] ?? null, function ($q, $loc) {
+                $loc = trim($loc);
+                $q->where(function ($lq) use ($loc) {
+                    $lq->where('city', 'like', "%{$loc}%")
+                        ->orWhere('state', 'like', "%{$loc}%")
+                        ->orWhere('country', 'like', "%{$loc}%");
+                });
+            })
             ->when($filters['professional_level'] ?? null, fn($q, $lvl) =>
                 $q->where('professional_level', $lvl))
-            ->when($filters['price_min'] ?? null, fn($q, $min) =>
-                $q->where('price_max', '>=', $min))
-            ->when($filters['price_max'] ?? null, fn($q, $max) =>
-                $q->where('price_min', '<=', $max))
-            ->when($filters['search'] ?? null, fn($q, $search) =>
-                $q->where(fn($sq) => $sq
-                    ->where('headline', 'like', "%{$search}%")
-                    ->orWhere('professional_title', 'like', "%{$search}%")))
-            ->latest();
+            ->when(isset($filters['price_min']) && $filters['price_min'] !== '', function ($q) use ($filters) {
+                $min = (float) $filters['price_min'];
+                $q->where(function ($pq) use ($min) {
+                    $pq->where('price_max', '>=', $min)
+                        ->orWhere(function ($sub) use ($min) {
+                            $sub->whereNull('price_max')->where('price_min', '>=', $min);
+                        });
+                });
+            })
+            ->when(isset($filters['price_max']) && $filters['price_max'] !== '', function ($q) use ($filters) {
+                $max = (float) $filters['price_max'];
+                $q->where('price_min', '<=', $max);
+            })
+            ->when($filters['search'] ?? null, function ($q, $search) {
+                $term = trim($search);
+                $q->where(function ($sq) use ($term) {
+                    $sq->where('professional_title', 'like', "%{$term}%")
+                        ->orWhere('headline', 'like', "%{$term}%")
+                        ->orWhere('summary', 'like', "%{$term}%")
+                        ->orWhere('city', 'like', "%{$term}%")
+                        ->orWhere('state', 'like', "%{$term}%")
+                        ->orWhere('country', 'like', "%{$term}%")
+                        ->orWhereHas('user', fn($uq) => $uq->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('skills', fn($skq) => $skq->where('skills.name', 'like', "%{$term}%"));
+                });
+            });
+
+        // ── Smart Ranking / Sorting ───────────────────────────────────
+        $sort = $filters['sort'] ?? 'recommended';
+        $seed = (int) ($filters['seed'] ?? crc32(date('Y-m-d') . '-talent'));
+
+        switch ($sort) {
+            case 'highest_score':
+                $query->orderByDesc('talent_score')
+                    ->orderByDesc('profile_completeness')
+                    ->orderByDesc('id');
+                break;
+
+            case 'completeness':
+                $query->orderByDesc('profile_completeness')
+                    ->orderByDesc('talent_score')
+                    ->orderByDesc('id');
+                break;
+
+            case 'latest':
+                $query->latest('created_at');
+                break;
+
+            case 'random':
+                $query->inRandomOrder($seed);
+                break;
+
+            case 'recommended':
+            default:
+                $driver = DB::connection()->getDriverName();
+                if ($driver === 'mysql') {
+                    $rawScore = "
+                        (career_profiles.profile_completeness * 0.35) +
+                        (career_profiles.talent_score * 0.35) +
+                        (CASE WHEN career_profiles.photo_path IS NOT NULL AND career_profiles.photo_path != '' THEN 10 ELSE 0 END) +
+                        (CASE WHEN career_profiles.cv_file_path IS NOT NULL AND career_profiles.cv_file_path != '' THEN 10 ELSE 0 END) +
+                        (CASE WHEN career_profiles.updated_at >= NOW() - INTERVAL 30 DAY THEN 10 WHEN career_profiles.updated_at >= NOW() - INTERVAL 90 DAY THEN 5 ELSE 0 END) +
+                        (MOD(ABS(career_profiles.id * {$seed}), 100) / 100.0 * 20.0)
+                    ";
+                    $query->orderByRaw("({$rawScore}) DESC");
+                } else {
+                    $query->orderByDesc('talent_score')
+                        ->orderByDesc('profile_completeness')
+                        ->orderByDesc('id');
+                }
+                break;
+        }
 
         return $query->paginate($filters['per_page'] ?? 15, ['*'], 'page', $page);
     }
@@ -233,18 +309,38 @@ class CareerProfileRepository
             $query->whereHas('skills', fn($q) => $q->where('skills.id', $skill->id));
         }
 
-        return $query->with('skills:id,name')->latest()->paginate($perPage, ['*'], 'page', $page);
+        $seed = (int) crc32(date('Y-m-d') . '-' . $categorySlug);
+        $rawScore = "
+            (career_profiles.profile_completeness * 0.35) +
+            (career_profiles.talent_score * 0.35) +
+            (CASE WHEN career_profiles.photo_path IS NOT NULL AND career_profiles.photo_path != '' THEN 10 ELSE 0 END) +
+            (CASE WHEN career_profiles.cv_file_path IS NOT NULL AND career_profiles.cv_file_path != '' THEN 10 ELSE 0 END) +
+            (MOD(ABS(career_profiles.id * {$seed}), 100) / 100.0 * 20.0)
+        ";
+
+        return $query->with(['skills:id,name', 'user:id,name,email'])
+            ->orderByRaw("({$rawScore}) DESC")
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function skillPage(string $skillSlug, $page = 1, $perPage = 20)
     {
         $skill = Skill::whereRaw('LOWER(REPLACE(name, " ", "-")) = ?', [$skillSlug])->firstOrFail();
 
+        $seed = (int) crc32(date('Y-m-d') . '-' . $skillSlug);
+        $rawScore = "
+            (career_profiles.profile_completeness * 0.35) +
+            (career_profiles.talent_score * 0.35) +
+            (CASE WHEN career_profiles.photo_path IS NOT NULL AND career_profiles.photo_path != '' THEN 10 ELSE 0 END) +
+            (CASE WHEN career_profiles.cv_file_path IS NOT NULL AND career_profiles.cv_file_path != '' THEN 10 ELSE 0 END) +
+            (MOD(ABS(career_profiles.id * {$seed}), 100) / 100.0 * 20.0)
+        ";
+
         $profiles = CareerProfile::query()
             ->where('is_public', true)
             ->whereHas('skills', fn($q) => $q->where('skills.id', $skill->id))
-            ->with('skills:id,name')
-            ->latest()
+            ->with(['skills:id,name', 'user:id,name,email'])
+            ->orderByRaw("({$rawScore}) DESC")
             ->paginate($perPage, ['*'], 'page', $page);
 
         return [$skill, $profiles];
@@ -254,11 +350,20 @@ class CareerProfileRepository
     {
         $university = University::where('slug', $universitySlug)->firstOrFail();
 
+        $seed = (int) crc32(date('Y-m-d') . '-' . $universitySlug);
+        $rawScore = "
+            (career_profiles.profile_completeness * 0.35) +
+            (career_profiles.talent_score * 0.35) +
+            (CASE WHEN career_profiles.photo_path IS NOT NULL AND career_profiles.photo_path != '' THEN 10 ELSE 0 END) +
+            (CASE WHEN career_profiles.cv_file_path IS NOT NULL AND career_profiles.cv_file_path != '' THEN 10 ELSE 0 END) +
+            (MOD(ABS(career_profiles.id * {$seed}), 100) / 100.0 * 20.0)
+        ";
+
         $profiles = CareerProfile::query()
             ->where('is_public', true)
             ->whereHas('educations', fn($q) => $q->where('university_id', $university->id))
-            ->with('skills:id,name')
-            ->latest()
+            ->with(['skills:id,name', 'user:id,name,email'])
+            ->orderByRaw("({$rawScore}) DESC")
             ->paginate($perPage, ['*'], 'page', $page);
 
         return [$university, $profiles];
