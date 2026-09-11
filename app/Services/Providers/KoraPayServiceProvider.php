@@ -57,7 +57,7 @@ class KoraPayServiceProvider
                 ->timeout(10)
                 ->get("{$this->baseUrl}/misc/banks", $queryParams);
 
-            Log::info('KoraPay Get Banks Response for ' . $countryCode . ': ' . $res->body());
+            // Log::info('KoraPay Get Banks Response for ' . $countryCode . ': ' . $res->body());
 
             if (!$res->successful()) {
                 return null;
@@ -81,7 +81,7 @@ class KoraPayServiceProvider
                 ->values()
                 ->all();
         } catch (\Throwable $e) {
-            Log::error('KoraPay getBanks error: ' . $e->getMessage());
+            // Log::error('KoraPay getBanks error: ' . $e->getMessage());
             return null;
         }
     }
@@ -143,7 +143,7 @@ class KoraPayServiceProvider
                 ->timeout(12)
                 ->post("{$this->baseUrl}/misc/banks/resolve", $payload);
 
-            Log::info('KoraPay Resolve Account Response: ' . $res->body());
+            // Log::info('KoraPay Resolve Account Response: ' . $res->body());
 
             if ($res->successful()) {
                 $data = $res->json('data');
