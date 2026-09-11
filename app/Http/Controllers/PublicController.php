@@ -172,7 +172,7 @@ public function blogDetails(Request $request, $slug) { return $this->blogService
             return response()->json(['status' => false, 'message' => 'Not found.'], 404);
         }
 
-        Log::info('Public utility data request', ['key' => $key]);
+        // Log::info('Public utility data request', ['key' => $key]);
 
         return response()->json(['status' => true, 'data' => $section], 200);
     }

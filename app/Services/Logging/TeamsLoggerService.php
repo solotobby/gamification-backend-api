@@ -40,6 +40,19 @@ class TeamsLoggerService
     ];
 
     /**
+     * Cache of dispatched signatures in current lifecycle to prevent duplicate sends.
+     */
+    protected static array $dispatchedSignatures = [];
+
+    /**
+     * Reset dispatched signatures cache (useful for tests and long-running workers).
+     */
+    public static function resetDispatchedSignatures(): void
+    {
+        self::$dispatchedSignatures = [];
+    }
+
+    /**
      * Send an error / exception card to Microsoft Teams.
      *
      * @param Throwable|string $error
@@ -49,14 +62,30 @@ class TeamsLoggerService
      */
     public function sendError($error, array $context = [], ?Request $request = null): bool
     {
-        $request = $request ?: (app()->runningInConsole() ? null : request());
-        $extracted = ContextExtractor::extract($request, $context);
+        // Check ignored exceptions (e.g. 404, validation errors, auth exceptions)
+        if (is_object($error)) {
+            foreach (config('teams.ignored_exceptions', []) as $ignoredClass) {
+                if ($error instanceof $ignoredClass) {
+                    return false;
+                }
+            }
+        }
 
         $exceptionClass = is_object($error) ? get_class($error) : 'Error';
         $message = is_object($error) ? $error->getMessage() : (string) $error;
         $file = is_object($error) ? $error->getFile() : null;
         $line = is_object($error) ? $error->getLine() : null;
         $trace = is_object($error) ? $error->getTraceAsString() : null;
+
+        // Deduplication: prevent sending identical error cards within the same request lifecycle
+        $signature = 'error:' . md5($exceptionClass . ':' . $message . ':' . ($file ?? '') . ':' . ($line ?? ''));
+        if (isset(self::$dispatchedSignatures[$signature])) {
+            return true;
+        }
+        self::$dispatchedSignatures[$signature] = true;
+
+        $request = $request ?: (app()->runningInConsole() ? null : request());
+        $extracted = ContextExtractor::extract($request, $context);
 
         $env = strtoupper($extracted['environment']);
         $title = sprintf('%s [%s] %s', self::LEVEL_ICONS['error'], $env, $exceptionClass);
@@ -157,6 +186,14 @@ class TeamsLoggerService
     public function sendLog(string $level, string $message, array $context = [], ?Request $request = null): bool
     {
         $level = strtolower($level);
+
+        // Deduplication: prevent sending identical log cards within the same request lifecycle
+        $signature = 'log:' . md5($level . ':' . $message . ':' . json_encode($context));
+        if (isset(self::$dispatchedSignatures[$signature])) {
+            return true;
+        }
+        self::$dispatchedSignatures[$signature] = true;
+
         $request = $request ?: (app()->runningInConsole() ? null : request());
         $extracted = ContextExtractor::extract($request, $context);
 

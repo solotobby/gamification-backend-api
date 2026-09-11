@@ -145,6 +145,7 @@ class TeamsLoggingTest extends TestCase
 
     public function test_global_helper_functions_work_without_throwing()
     {
+        TeamsLoggerService::resetDispatchedSignatures();
         Http::fake([
             '*' => Http::response(['status' => 1], 200),
         ]);
@@ -153,5 +154,41 @@ class TeamsLoggingTest extends TestCase
         $this->assertTrue(teamsInfo('Testing teamsInfo helper'));
         $this->assertTrue(teamsWarning('Testing teamsWarning helper'));
         $this->assertTrue(teamsError('Testing teamsError helper'));
+    }
+
+    public function test_ignored_exceptions_are_skipped()
+    {
+        TeamsLoggerService::resetDispatchedSignatures();
+        Http::fake([
+            '*' => Http::response(['status' => 1], 200),
+        ]);
+
+        $service = new TeamsLoggerService();
+        $ignoredException = new \Symfony\Component\HttpKernel\Exception\NotFoundHttpException('Page not found');
+
+        $result = $service->sendError($ignoredException);
+
+        $this->assertFalse($result);
+        Http::assertNothingSent();
+    }
+
+    public function test_duplicate_errors_in_same_request_are_deduplicated()
+    {
+        TeamsLoggerService::resetDispatchedSignatures();
+        Http::fake([
+            'https://mock.teams.webhook.url/errors*' => Http::response(['status' => 1], 200),
+        ]);
+
+        $service = new TeamsLoggerService();
+        $exception = new Exception('Unique error message for deduplication test');
+
+        $firstResult = $service->sendError($exception);
+        $secondResult = $service->sendError($exception);
+
+        $this->assertTrue($firstResult);
+        $this->assertTrue($secondResult);
+
+        // Webhook should only have been sent once!
+        Http::assertSentCount(1);
     }
 }

@@ -269,7 +269,6 @@ class BankService
                 'data' => $response,
             ]);
         } catch (\Exception $e) {
-            Log::error('BankService saveUserAccountDetails error: ' . $e->getMessage());
             teamsError($e, ['service' => 'BankService Save Details', 'user_id' => $user->id ?? null]);
             return response()->json(['status' => false, 'message' => 'Error processing request.', 'error' => $e->getMessage()], 500);
         }

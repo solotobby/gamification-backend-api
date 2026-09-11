@@ -132,7 +132,7 @@ class DepositService
             'GHS' => $this->handleFlutterwaveVirtualAccount($user),
             default => response()->json([
                 'status' => false,
-                'message' => "Static virtual accounts aren't available for {$currency} accounts. Use the 'flutterwave' method for a one-time payment link instead.",
+                'message' => "Static virtual accounts aren't available for {$currency} accounts. Please use other means of wallet funding on the wallet page.",
             ], 422),
         };
     }
@@ -347,7 +347,7 @@ class DepositService
             if (!($virtual['status'] ?? false)) {
                 return response()->json([
                     'status' => false,
-                    'message' => $virtual['message'] ?? 'Unable to generate virtual account',
+                    'message' => $virtual['message'] ?? 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.',
                 ], $response->status());
             }
 
@@ -468,7 +468,7 @@ class DepositService
             if (!($virtual['status'] ?? false)) {
                 return response()->json([
                     'status' => false,
-                    'message' => $virtual['message'] ?? 'Unable to generate virtual account',
+                    'message' => $virtual['message'] ?? 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.',
                 ], $response->status());
             }
 
@@ -587,7 +587,7 @@ class DepositService
             $virtual = $response->getData(true);
 
             if (!($virtual['status'] ?? false)) {
-                return response()->json(['status' => false, 'message' => $virtual['message'] ?? 'Unable to generate virtual account'], $response->status());
+                return response()->json(['status' => false, 'message' => $virtual['message'] ?? 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.'], $response->status());
             }
 
             $virtualAccount = $virtual['data'] ?? null;

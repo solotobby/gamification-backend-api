@@ -14,7 +14,7 @@ class TeamsLoggerHandlerFactory
      */
     public function __invoke(array $config): Logger
     {
-        $level = $config['level'] ?? config('teams.level', 'info');
+        $level = $config['level'] ?? config('teams.level', 'error');
         $handler = new TeamsLogHandler($level);
 
         return new Logger('teams', [$handler]);

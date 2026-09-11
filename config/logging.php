@@ -88,7 +88,7 @@ return [
             'driver' => 'custom',
             'via' => \App\Services\Logging\Monolog\TeamsLoggerHandlerFactory::class,
             'url' => env('TEAMS_WEBHOOK_URL'),
-            'level' => env('TEAMS_LOG_LEVEL', 'info'),
+            'level' => env('TEAMS_LOG_LEVEL', 'error'),
         ],
 
         'papertrail' => [

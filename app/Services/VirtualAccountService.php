@@ -34,7 +34,7 @@ class VirtualAccountService
         } else {
             return response()->json([
                 'status'  => false,
-                'message' => "Virtual accounts are not available for {$currency} users.",
+                'message' => "Virtual accounts are not available for {$currency} users. Please use other means of wallet funding on the wallet page.",
             ], 422);
         }
     }
@@ -46,7 +46,7 @@ class VirtualAccountService
             if ($user->wallet->base_currency !== 'NGN' && $user->wallet->base_currency !== 'GHS') {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Virtual accounts are only available for NGN and GHS users.',
+                    'message' => 'Virtual accounts are only available for NGN and GHS users. Please use other means of wallet funding on the wallet page.',
                 ], 422);
             }
 
@@ -70,7 +70,7 @@ class VirtualAccountService
             ]);
 
             if (!$customerRes || !$customerRes['status']) {
-                return response()->json(['status' => false, 'message' => 'Failed to create Paystack customer.'], 500);
+                return response()->json(['status' => false, 'message' => 'Failed to create virtual account customer. Please use other means of wallet funding on the wallet page.'], 500);
             }
 
             $customerCode = $customerRes['data']['customer_code'];
@@ -82,7 +82,7 @@ class VirtualAccountService
             ]);
 
             if (!$accountRes || !$accountRes['status']) {
-                return response()->json(['status' => false, 'message' => 'Failed to create virtual account.'], 500);
+                return response()->json(['status' => false, 'message' => 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.'], 500);
             }
 
             $accountData = $accountRes['data'];
@@ -113,7 +113,7 @@ class VirtualAccountService
 
             ]);
         } catch (Throwable $e) {
-            return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Error creating virtual account.'], 500);
+            return response()->json(['status' => false, 'error' => $e->getMessage(), 'message' => 'Unable to create virtual account at this time. Please use other means of wallet funding on the wallet page.'], 500);
         }
     }
 
@@ -125,7 +125,7 @@ class VirtualAccountService
             if ($user->wallet->base_currency !== 'NGN') {
                 return response()->json([
                     'status'  => false,
-                    'message' => 'Virtual accounts are only available for NGN users.',
+                    'message' => 'Virtual accounts are only available for NGN users. Please use other means of wallet funding on the wallet page.',
                 ], 422);
             }
 
@@ -156,7 +156,7 @@ class VirtualAccountService
                 ]);
                 return response()->json([
                     'status'  => false,
-                    'message' => $result['description'] ?? 'Could not generate virtual account.',
+                    'message' => 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.',
                 ], 500);
             }
 
@@ -197,7 +197,7 @@ class VirtualAccountService
             teamsError($e, ['service' => 'Interswitch VA Creation', 'user_id' => $user->id ?? null]);
             return response()->json([
                 'status'  => false,
-                'message' => 'Error creating virtual account.',
+                'message' => 'Unable to create virtual account at this time. Please use other means of wallet funding on the wallet page.',
                 'error'   => $e->getMessage(),
             ], 500);
         }
@@ -207,7 +207,7 @@ class VirtualAccountService
     {
         try {
             if (!in_array($currency, FlutterwaveServiceProvider::VIRTUAL_ACCOUNT_CURRENCIES)) {
-                return response()->json(['status' => false, 'message' => "Static virtual accounts are not available for {$currency}."], 422);
+                return response()->json(['status' => false, 'message' => "Static virtual accounts are not available for {$currency}. Please use other means of wallet funding on the wallet page."], 422);
             }
 
             $existing = $this->bankRepo->getVirtualBank($user->id, 'flutterwave');
@@ -229,7 +229,7 @@ class VirtualAccountService
                     'user_id' => $user->id,
                     'currency' => $currency,
                 ]);
-                return response()->json(['status' => false, 'message' => 'Could not generate virtual account.'], 500);
+                return response()->json(['status' => false, 'message' => 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.'], 500);
             }
 
             $virtual = VirtualAccount::create([
@@ -261,7 +261,7 @@ class VirtualAccountService
         } catch (Throwable $e) {
             Log::error('Flutterwave VA error: ' . $e->getMessage());
             teamsError($e, ['service' => 'Flutterwave VA Creation', 'user_id' => $user->id ?? null]);
-            return response()->json(['status' => false, 'message' => 'Error creating virtual account.', 'error' => $e->getMessage()], 500);
+            return response()->json(['status' => false, 'message' => 'Unable to create virtual account at this time. Please use other means of wallet funding on the wallet page.', 'error' => $e->getMessage()], 500);
         }
     }
 }

@@ -116,7 +116,7 @@ class InterswitchServiceProvider
                 ->timeout(20)
                 ->post($url, $payload);
 
-            Log::info('Interswitch Create Virtual Account Response: ' . $res->body());
+            // Log::info('Interswitch Create Virtual Account Response: ' . $res->body());
 
             return $res->successful() ? $res->json() : null;
         } catch (\Throwable $e) {
@@ -143,7 +143,7 @@ class InterswitchServiceProvider
                 'siteRedirectUrl' => $data['callback_url'],
             ]);
 
-        Log::info('Interswitch Initialize Payment Response: ' . $res->body());
+        // Log::info('Interswitch Initialize Payment Response: ' . $res->body());
 
         return $res->successful() ? $res->json() : null;
     }

@@ -33,10 +33,11 @@ return [
     |--------------------------------------------------------------------------
     |
     | The minimum log level to dispatch to Teams: debug, info, notice,
-    | warning, error, critical, alert, emergency.
+    | warning, error, critical, alert, emergency. Defaults to 'error' so routine
+    | informational logs (e.g. 3rd party vendor queries) do not clutter Teams.
     |
     */
-    'level' => env('TEAMS_LOG_LEVEL', 'info'),
+    'level' => env('TEAMS_LOG_LEVEL', 'error'),
 
     /*
     |--------------------------------------------------------------------------

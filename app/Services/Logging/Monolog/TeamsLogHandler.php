@@ -19,7 +19,7 @@ class TeamsLogHandler extends AbstractProcessingHandler
      * @param bool $bubble Whether the messages that are handled can bubble up the stack or not
      * @param TeamsLoggerService|null $teamsService
      */
-    public function __construct($level = 'info', bool $bubble = true, ?TeamsLoggerService $teamsService = null)
+    public function __construct($level = 'error', bool $bubble = true, ?TeamsLoggerService $teamsService = null)
     {
         parent::__construct($level, $bubble);
         $this->teamsService = $teamsService ?: app(TeamsLoggerService::class);
