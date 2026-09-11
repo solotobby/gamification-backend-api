@@ -85,6 +85,7 @@ return [
         \App\Exceptions\BadRequestException::class,
         \App\Exceptions\UnauthorizedException::class,
         \App\Exceptions\ForbiddenException::class,
+        \Kreait\Firebase\Exception\Messaging\NotFound::class,
     ],
 
     /*

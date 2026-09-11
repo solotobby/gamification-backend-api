@@ -381,30 +381,95 @@ class CareerProfileService
     /**
      * Weighted profile completeness + talent score.
      * Recalculated after any profile-affecting write, not on read — cheap writes only.
+     * A complete profile with accurate info but no certification gets 96%.
+     * Uploading certification(s) awards the remaining 4% to reach 100%.
      */
-    private function recalculate($profile): void
+    public function recalculate($profile): void
     {
-        $profile->loadCount(['experiences', 'educations', 'certifications', 'skills']);
+        if ($profile->exists) {
+            $profile->loadCount(['experiences', 'educations', 'certifications', 'skills']);
+            $profile->loadMissing(['experiences']);
+        }
+
+        // 1. Headline & Title (10 pts)
+        $hasHeadline = !empty(trim($profile->headline ?? '')) || !empty(trim($profile->professional_title ?? ''));
+        $headlineScore = $hasHeadline ? 10 : 0;
+
+        // 2. Summary / Bio (15 pts) — rewards detailed, meaningful descriptions
+        $summaryLen = strlen(trim($profile->summary ?? ''));
+        if ($summaryLen >= 40) {
+            $summaryScore = 15;
+        } elseif ($summaryLen > 0) {
+            $summaryScore = 10;
+        } else {
+            $summaryScore = 0;
+        }
+
+        // 3. Profile Photo (10 pts)
+        $photoScore = !empty($profile->photo_path) ? 10 : 0;
+
+        // 4. CV Upload (10 pts)
+        $cvScore = !empty($profile->cv_file_path) ? 10 : 0;
+
+        // 5. Location / Location Details (5 pts)
+        $hasLocation = !empty(trim($profile->city ?? '')) || !empty(trim($profile->country ?? ''));
+        $locationScore = $hasLocation ? 5 : 0;
+
+        // 6. Work Experience (22 pts) — base 18 pts + 4 pts for quality/depth (responsibilities/achievements filled or 2+ roles)
+        if ($profile->experiences_count > 0) {
+            $hasDetailedExp = false;
+            if ($profile->relationLoaded('experiences')) {
+                foreach ($profile->experiences as $exp) {
+                    if (!empty(trim($exp->responsibilities ?? '')) || !empty(trim($exp->achievements ?? ''))) {
+                        $hasDetailedExp = true;
+                        break;
+                    }
+                }
+            }
+            $experienceScore = ($profile->experiences_count >= 2 || $hasDetailedExp) ? 22 : 18;
+        } else {
+            $experienceScore = 0;
+        }
+
+        // 7. Education (14 pts)
+        $educationScore = $profile->educations_count > 0 ? 14 : 0;
+
+        // 8. Skills (10 pts) — 6 pts for 1 skill, 10 pts for 2+ skills
+        if ($profile->skills_count >= 2) {
+            $skillsScore = 10;
+        } elseif ($profile->skills_count === 1) {
+            $skillsScore = 6;
+        } else {
+            $skillsScore = 0;
+        }
+
+        // 9. Certification (4 pts) — completes the final slice to reach 100%
+        $certScore = $profile->certifications_count > 0 ? 4 : 0;
 
         $checks = [
-            'headline' => !empty($profile->headline) ? 10 : 0,
-            'summary' => !empty($profile->summary) ? 10 : 0,
-            'skills' => $profile->skills_count > 0 ? 15 : 0,
-            'experience' => $profile->experiences_count > 0 ? 20 : 0,
-            'education' => $profile->educations_count > 0 ? 15 : 0,
-            'portfolio' => 0,  // wired up once Portfolio is linked to career profile
-            'certificate' => $profile->certifications_count > 0 ? 10 : 0,
-            'cv' => !empty($profile->cv_file_path) ? 10 : 0,
-            'photo' => !empty($profile->photo_path) ? 10 : 0,
+            'headline'    => $headlineScore,
+            'summary'     => $summaryScore,
+            'photo'       => $photoScore,
+            'cv'          => $cvScore,
+            'location'    => $locationScore,
+            'experience'  => $experienceScore,
+            'education'   => $educationScore,
+            'skills'      => $skillsScore,
+            'certificate' => $certScore,
         ];
 
-        $completeness = array_sum($checks);
-        $talentScore = (int) round($completeness * 0.86);  // placeholder weighting until verification/recommendations land
+        $completeness = min(array_sum($checks), 100);
+        $talentScore = $completeness;
 
-        $profile->forceFill([
-            'profile_completeness' => min($completeness, 100),
-            'talent_score' => min($talentScore, 100),
-        ])->saveQuietly();
+        if ($profile->exists) {
+            $profile->forceFill([
+                'profile_completeness' => $completeness,
+                'talent_score'         => $talentScore,
+            ])->saveQuietly();
+        } else {
+            $profile->profile_completeness = $completeness;
+            $profile->talent_score = $talentScore;
+        }
     }
 
     public function getPublic(string $slug)
