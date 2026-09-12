@@ -271,13 +271,24 @@ class FeedbackService
                 $type = 'image';
             }
 
+            $user = $reply->user;
+            $userRole = strtolower($user->role ?? '');
+            $isStaffOrAdmin = in_array($userRole, ['admin', 'super_admin', 'staff']) || ($user && ($user->is_admin ?? false));
+
+            if ($isStaffOrAdmin) {
+                $fullName = trim($user->name ?? 'Staff');
+                $firstName = explode(' ', $fullName)[0] ?: 'Staff';
+                $displayName = $firstName . '- FS';
+            } else {
+                $displayName = $user->name ?? 'User';
+            }
+
             $data[] = [
                 'id'          => $reply->id,
                 'sender_id'   => $reply->user_id,
-                'sender_name' => in_array($reply->user->role, ['admin', 'super_admin', 'staff'])
-                    ? 'Freebyz Support'
-                    : $reply->user->name,
-                'sender_role' => $reply->user->role,
+                'sender_name' => $displayName,
+                'sender_role' => $user->role ?? null,
+                'is_staff'    => $isStaffOrAdmin,
                 'type'        => $type,
                 'message'     => $reply->text_message ?? $reply->message,
                 'image_url'   => $reply->image_url,
