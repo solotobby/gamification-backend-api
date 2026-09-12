@@ -12,35 +12,31 @@ class FixTransactionTxType extends Command
 
     public function handle()
     {
-        $debitTypes = [
-            'ad_banner',
-            'added_more_worker',
-            'airtime_purchase',
-            'campaign_posted',
-            'cash_withdrawal',
-            'databundle',
-            'edit_campaign_payment',
-            'point_purchase',
-            'safelock_created',
-            'upgrade_payment',
-            'upgrade_payment_naira_dollar',
-            'wallet_debit',
-            'job_point_purchase'
-        ];
-
-        $this->info("Setting debit tx_type...");
+        $this->info("Setting standard debit tx_type...");
 
         DB::table('payment_transactions')
-            ->whereIn('type', $debitTypes)
-            ->update(['tx_type' => 'debit']);
+            ->whereIn('type', \App\Models\PaymentTransaction::DEBIT_TYPES)
+            ->update(['tx_type' => 'Debit']);
 
-        $this->info("Setting credit tx_type...");
+        $this->info("Setting standard credit tx_type...");
 
         DB::table('payment_transactions')
-            ->whereNotIn('type', $debitTypes)
-            ->update(['tx_type' => 'credit']);
+            ->whereIn('type', \App\Models\PaymentTransaction::CREDIT_TYPES)
+            ->update(['tx_type' => 'Credit']);
 
-        $this->info("Completed.");
+        $this->info("Setting bi-directional exchange and conversion tx_types based on description...");
+
+        DB::table('payment_transactions')
+            ->whereIn('type', ['naira_dollar_exchange', 'currency_conversion'])
+            ->where('description', 'LIKE', '%Debit%')
+            ->update(['tx_type' => 'Debit']);
+
+        DB::table('payment_transactions')
+            ->whereIn('type', ['naira_dollar_exchange', 'currency_conversion'])
+            ->where('description', 'LIKE', '%Credit%')
+            ->update(['tx_type' => 'Credit']);
+
+        $this->info("Completed successfully.");
         return Command::SUCCESS;
     }
 }
