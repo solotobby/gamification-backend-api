@@ -366,9 +366,14 @@ class CareerProfileService
         ]);
 
         $this->repo->syncSocialProfiles(auth()->id(), $validated['profiles']);
-        $this->recalculate($this->repo->getOrCreate(auth()->id()));
+        $profile = $this->repo->getOrCreate(auth()->id());
+        $this->recalculate($profile);
 
-        return response()->json(['status' => true, 'message' => 'Social profiles updated.'], 200);
+        return response()->json([
+            'status' => true,
+            'message' => 'Social profiles updated.',
+            'data' => $profile->fresh(),
+        ], 200);
     }
 
     public function getSkillOptions()
@@ -383,11 +388,12 @@ class CareerProfileService
      * Recalculated after any profile-affecting write, not on read — cheap writes only.
      * A complete profile with accurate info but no certification gets 96%.
      * Uploading certification(s) awards the remaining 4% to reach 100%.
+     * Connected social profiles award 1 point each.
      */
     public function recalculate($profile): void
     {
         if ($profile->exists) {
-            $profile->loadCount(['experiences', 'educations', 'certifications', 'skills']);
+            $profile->loadCount(['experiences', 'educations', 'certifications', 'skills', 'socialProfiles']);
             $profile->loadMissing(['experiences']);
         }
 
@@ -446,16 +452,29 @@ class CareerProfileService
         // 9. Certification (4 pts) — completes the final slice to reach 100%
         $certScore = $profile->certifications_count > 0 ? 4 : 0;
 
+        // 10. Social Profiles (1 pt per profile)
+        if (isset($profile->social_profiles_count)) {
+            $socialCount = (int) $profile->social_profiles_count;
+        } elseif ($profile->relationLoaded('socialProfiles')) {
+            $socialCount = $profile->socialProfiles->count();
+        } elseif ($profile->exists) {
+            $socialCount = $profile->socialProfiles()->count();
+        } else {
+            $socialCount = 0;
+        }
+        $socialScore = $socialCount * 1;
+
         $checks = [
-            'headline'    => $headlineScore,
-            'summary'     => $summaryScore,
-            'photo'       => $photoScore,
-            'cv'          => $cvScore,
-            'location'    => $locationScore,
-            'experience'  => $experienceScore,
-            'education'   => $educationScore,
-            'skills'      => $skillsScore,
-            'certificate' => $certScore,
+            'headline'        => $headlineScore,
+            'summary'         => $summaryScore,
+            'photo'           => $photoScore,
+            'cv'              => $cvScore,
+            'location'        => $locationScore,
+            'experience'      => $experienceScore,
+            'education'       => $educationScore,
+            'skills'          => $skillsScore,
+            'certificate'     => $certScore,
+            'social_profiles' => $socialScore,
         ];
 
         $completeness = min(array_sum($checks), 100);

@@ -100,16 +100,8 @@ class InterswitchServiceProvider
         $payload = [
             'accountName' => 'Freebyz Technologies/' . $accountName,
             'merchantCode' => (string) $this->merchantCode,
+            'provider' => $provider ?? $this->providerCode ?? 'WEMA',
         ];
-
-        if ($this->payableCode) {
-            $payload['payableCode'] = (string) $this->payableCode;
-        }
-
-        $provider = $provider ?? $this->providerCode;
-        if ($provider) {
-            $payload['provider'] = $provider;
-        }
 
         try {
             $res = Http::withHeaders($this->oauthHeaders())

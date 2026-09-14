@@ -114,4 +114,73 @@ class CareerProfileScoreTest extends TestCase
         $this->assertEquals(83, $profile->profile_completeness);
         $this->assertEquals(83, $profile->talent_score);
     }
+
+    public function test_profile_with_social_profiles_adds_one_point_per_profile()
+    {
+        $mockRepo = Mockery::mock(CareerProfileRepository::class);
+        $mockSpaces = Mockery::mock(SpacesService::class);
+        $service = new CareerProfileService($mockRepo, $mockSpaces);
+
+        $profile = new CareerProfile([
+            'headline' => 'Developer',
+            'summary' => 'Short bio',
+            'photo_path' => 'photos/user_1.webp',
+            'cv_file_path' => 'cvs/user_1_resume.pdf',
+            'city' => 'Lagos',
+            'country' => 'Nigeria',
+        ]);
+
+        $exp1 = new Experience([
+            'employer' => 'Tech Corp',
+            'position' => 'Junior Dev',
+        ]);
+
+        $profile->setRelation('experiences', collect([$exp1]));
+        $profile->experiences_count = 1;
+        $profile->educations_count = 1;
+        $profile->skills_count = 1; // 83 base
+        $profile->certifications_count = 0;
+        $profile->social_profiles_count = 3; // 3 social profiles -> +3 points
+
+        $service->recalculate($profile);
+
+        // 83 base + 3 (social) = 86
+        $this->assertEquals(86, $profile->profile_completeness);
+        $this->assertEquals(86, $profile->talent_score);
+    }
+
+    public function test_profile_with_social_profiles_caps_at_100_percent()
+    {
+        $mockRepo = Mockery::mock(CareerProfileRepository::class);
+        $mockSpaces = Mockery::mock(SpacesService::class);
+        $service = new CareerProfileService($mockRepo, $mockSpaces);
+
+        $profile = new CareerProfile([
+            'headline' => 'Senior Backend Developer',
+            'summary' => 'Experienced software engineer with over 6 years building scalable web APIs and distributed systems.',
+            'photo_path' => 'photos/user_1.webp',
+            'cv_file_path' => 'cvs/user_1_resume.pdf',
+            'city' => 'Lagos',
+            'country' => 'Nigeria',
+        ]);
+
+        $exp1 = new Experience([
+            'employer' => 'Tech Corp',
+            'position' => 'Senior Engineer',
+            'responsibilities' => 'Built APIs and microservices',
+            'achievements' => 'Scaled platform to 1M users',
+        ]);
+
+        $profile->setRelation('experiences', collect([$exp1]));
+        $profile->experiences_count = 1;
+        $profile->educations_count = 1;
+        $profile->skills_count = 3;
+        $profile->certifications_count = 1; // 100 base
+        $profile->social_profiles_count = 5; // 5 social profiles
+
+        $service->recalculate($profile);
+
+        $this->assertEquals(100, $profile->profile_completeness);
+        $this->assertEquals(100, $profile->talent_score);
+    }
 }
