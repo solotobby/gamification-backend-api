@@ -49,11 +49,11 @@ class TicketService
 
             $this->ticketModel->sendMessage($user, $ticket->id, $request);
 
-            teamsInfo("Support Ticket Created: {$ticket->subject}", [
-                'ticket_id' => $ticket->id,
-                'subject' => $ticket->subject,
-                'user_id' => $user->id,
-            ]);
+            // teamsInfo("Support Ticket Created: {$ticket->subject}", [
+            //     'ticket_id' => $ticket->id,
+            //     'subject' => $ticket->subject,
+            //     'user_id' => $user->id,
+            // ]);
 
             return response()->json([
                 'status' => true,

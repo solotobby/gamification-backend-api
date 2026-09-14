@@ -98,7 +98,7 @@ class KoraPayServiceProvider
                     'countryCode' => strtoupper($countryCode),
                 ]);
 
-            Log::info('KoraPay Get MMO Response for ' . $countryCode . ': ' . $res->body());
+            // Log::info('KoraPay Get MMO Response for ' . $countryCode . ': ' . $res->body());
 
             if (!$res->successful()) {
                 return null;

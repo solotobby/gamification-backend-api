@@ -165,15 +165,15 @@ class JobListingService
                 'job_listing'
             );
 
-            teamsInfo("Job Vacancy Created: {$job->title}", [
-                'job_id' => $job->id,
-                'title' => $job->title,
-                'company_name' => $job->company_name,
-                'tier' => $job->tier,
-                'type' => $job->type,
-                'location' => $job->location,
-                'posted_by' => $user->email,
-            ]);
+            // teamsInfo("Job Vacancy Created: {$job->title}", [
+            //     'job_id' => $job->id,
+            //     'title' => $job->title,
+            //     'company_name' => $job->company_name,
+            //     'tier' => $job->tier,
+            //     'type' => $job->type,
+            //     'location' => $job->location,
+            //     'posted_by' => $user->email,
+            // ]);
 
             return response()->json([
                 'status'  => true,
@@ -228,12 +228,12 @@ class JobListingService
 
             $job = $this->jobRepository->updateUserJob($job, $validated);
 
-            teamsInfo("Job Vacancy Updated: {$job->title}", [
-                'job_id' => $job->id,
-                'title' => $job->title,
-                'company_name' => $job->company_name,
-                'updated_fields' => array_keys($validated),
-            ]);
+            // teamsInfo("Job Vacancy Updated: {$job->title}", [
+            //     'job_id' => $job->id,
+            //     'title' => $job->title,
+            //     'company_name' => $job->company_name,
+            //     'updated_fields' => array_keys($validated),
+            // ]);
 
             return response()->json([
                 'status'  => true,
@@ -425,12 +425,12 @@ class JobListingService
                 'resume_path'  => $resumePath,
             ]);
 
-            teamsInfo("Job Application Submitted: {$job->title}", [
-                'job_id' => $job->id,
-                'job_title' => $job->title,
-                'applicant_id' => $user->id,
-                'applicant_email' => $user->email,
-            ]);
+            // teamsInfo("Job Application Submitted: {$job->title}", [
+            //     'job_id' => $job->id,
+            //     'job_title' => $job->title,
+            //     'applicant_id' => $user->id,
+            //     'applicant_email' => $user->email,
+            // ]);
 
             return response()->json([
                 'status'  => true,
@@ -627,12 +627,12 @@ class JobListingService
 
             DB::commit();
 
-            teamsInfo("Job Point Purchased: {$job->title}", [
-                'job_id' => $job->id,
-                'amount' => $amount,
-                'currency' => $currency->code,
-                'user_id' => $user->id,
-            ]);
+            // teamsInfo("Job Point Purchased: {$job->title}", [
+            //     'job_id' => $job->id,
+            //     'amount' => $amount,
+            //     'currency' => $currency->code,
+            //     'user_id' => $user->id,
+            // ]);
 
             return response()->json([
                 'status' => true,

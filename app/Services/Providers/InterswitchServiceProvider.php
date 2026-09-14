@@ -44,7 +44,7 @@ class InterswitchServiceProvider
                     'grant_type' => 'client_credentials',
                 ]);
 
-            Log::info('Interswitch Auth Response: ' . $res->body());
+            // Log::info('Interswitch Auth Response: ' . $res->body());
 
             return $res->successful() ? $res->json('access_token') : null;
         });

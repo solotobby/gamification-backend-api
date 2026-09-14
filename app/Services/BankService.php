@@ -256,12 +256,12 @@ class BankService
 
             $response = $this->bank->saveBankDetails($data, $user);
 
-            teamsInfo("Bank Details Saved for {$user->name}: {$data['bank_name']} ({$data['account_number']})", [
-                'user_id' => $user->id,
-                'bank_name' => $data['bank_name'] ?? 'N/A',
-                'account_number' => $data['account_number'],
-                'currency' => $data['currency'],
-            ]);
+            // teamsInfo("Bank Details Saved for {$user->name}: {$data['bank_name']} ({$data['account_number']})", [
+            //     'user_id' => $user->id,
+            //     'bank_name' => $data['bank_name'] ?? 'N/A',
+            //     'account_number' => $data['account_number'],
+            //     'currency' => $data['currency'],
+            // ]);
 
             return response()->json([
                 'status' => true,

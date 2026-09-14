@@ -191,12 +191,12 @@ class HireWorkerService
                 $this->repo->createPortfolio($validated['portfolio'], $skill->skill_id, auth()->id());
             }
 
-            teamsInfo("Worker Skill Asset Created: {$skill->title}", [
-                'skill_asset_id' => $skill->id,
-                'title' => $skill->title,
-                'skill_id' => $skill->skill_id,
-                'user_id' => auth()->id(),
-            ]);
+            // teamsInfo("Worker Skill Asset Created: {$skill->title}", [
+            //     'skill_asset_id' => $skill->id,
+            //     'title' => $skill->title,
+            //     'skill_id' => $skill->skill_id,
+            //     'user_id' => auth()->id(),
+            // ]);
 
             return response()->json([
                 'status'  => true,
@@ -257,11 +257,11 @@ class HireWorkerService
                 $this->repo->updatePortfolio($validated['portfolio'] ?? [], $skill->skill_id, auth()->id());
             }
 
-            teamsInfo("Worker Skill Asset Updated: {$skill->title}", [
-                'skill_asset_id' => $skill->id,
-                'title' => $skill->title,
-                'user_id' => auth()->id(),
-            ]);
+            // teamsInfo("Worker Skill Asset Updated: {$skill->title}", [
+            //     'skill_asset_id' => $skill->id,
+            //     'title' => $skill->title,
+            //     'user_id' => auth()->id(),
+            // ]);
 
             return response()->json([
                 'status'  => true,
@@ -435,13 +435,13 @@ class HireWorkerService
 
             DB::commit();
 
-            teamsInfo("Hire Worker Point Purchased: Worker ID {$worker->id}", [
-                'worker_id' => $worker->id,
-                'worker_user_id' => $worker->user_id,
-                'buyer_id' => $user->id,
-                'amount' => $amount,
-                'currency' => $currency->code,
-            ]);
+            // teamsInfo("Hire Worker Point Purchased: Worker ID {$worker->id}", [
+            //     'worker_id' => $worker->id,
+            //     'worker_user_id' => $worker->user_id,
+            //     'buyer_id' => $user->id,
+            //     'amount' => $amount,
+            //     'currency' => $currency->code,
+            // ]);
 
             return response()->json([
                 'status'  => true,

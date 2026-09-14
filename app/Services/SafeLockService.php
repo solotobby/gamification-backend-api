@@ -173,15 +173,15 @@ class  SafeLockService
             $content = "Your SafeLock has been created successfully with a total amount of {$currency->code}{$amountLocked} for {$duration} months at an interest of {$interestRate}%, giving a total payout of {$currency->code}{$totalPayment} on {$maturityDate}.";
             Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
 
-            teamsInfo("SafeLock Created: {$currency->code} " . number_format($amountLocked, 2), [
-                'user_id' => $user->id,
-                'amount' => $amountLocked,
-                'currency' => $currency->code,
-                'duration_months' => $duration,
-                'interest_rate' => $interestRate,
-                'total_payment' => $totalPayment,
-                'maturity_date' => $maturityDate->toDateString(),
-            ]);
+            // teamsInfo("SafeLock Created: {$currency->code} " . number_format($amountLocked, 2), [
+            //     'user_id' => $user->id,
+            //     'amount' => $amountLocked,
+            //     'currency' => $currency->code,
+            //     'duration_months' => $duration,
+            //     'interest_rate' => $interestRate,
+            //     'total_payment' => $totalPayment,
+            //     'maturity_date' => $maturityDate->toDateString(),
+            // ]);
 
             return response()->json([
                 'status' => true,

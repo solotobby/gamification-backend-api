@@ -229,12 +229,12 @@ class StreakService
 
         $user->update(['streak_redeemed' => true]);
 
-        teamsInfo("Streak Reward Redeemed by {$user->name}: {$bonus->currency} {$bonus->amount}", [
-            'user_id' => $user->id,
-            'amount' => $bonus->amount,
-            'currency' => $bonus->currency,
-            'target_column' => $targetColumn,
-        ]);
+        // teamsInfo("Streak Reward Redeemed by {$user->name}: {$bonus->currency} {$bonus->amount}", [
+        //     'user_id' => $user->id,
+        //     'amount' => $bonus->amount,
+        //     'currency' => $bonus->currency,
+        //     'target_column' => $targetColumn,
+        // ]);
 
         return true;
     }

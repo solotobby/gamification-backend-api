@@ -168,12 +168,12 @@ class BannerService
             );
             DB::commit();
 
-            teamsInfo("Banner Ad Created: {$banner->banner_id}", [
-                'banner_id' => $banner->banner_id,
-                'budget' => $request->budget,
-                'currency' => $currency->code,
-                'user_id' => $user->id,
-            ]);
+            // teamsInfo("Banner Ad Created: {$banner->banner_id}", [
+            //     'banner_id' => $banner->banner_id,
+            //     'budget' => $request->budget,
+            //     'currency' => $currency->code,
+            //     'user_id' => $user->id,
+            // ]);
 
             return response()->json([
                 'status' => true,
@@ -300,11 +300,11 @@ class BannerService
 
             DB::commit();
 
-            teamsInfo("Banner Ad Clicks Increased: {$banner->banner_id}", [
-                'banner_id' => $banner->banner_id,
-                'extra_budget' => $request->extra_budget,
-                'clicks' => $banner->clicks,
-            ]);
+            // teamsInfo("Banner Ad Clicks Increased: {$banner->banner_id}", [
+            //     'banner_id' => $banner->banner_id,
+            //     'extra_budget' => $request->extra_budget,
+            //     'clicks' => $banner->clicks,
+            // ]);
 
             return response()->json([
                 'status'  => true,

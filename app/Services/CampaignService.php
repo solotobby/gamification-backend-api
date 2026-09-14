@@ -280,14 +280,14 @@ class CampaignService
             Mail::to($user->email)
                 ->send(new CreateCampaign($campaign));
 
-            teamsInfo("Campaign Created: {$campaign->post_title}", [
-                'campaign_id' => $campaign->id,
-                'job_id' => $campaign->job_id,
-                'category' => $request->campaign_subcategory ?? $request['campaign_subcategory'] ?? null,
-                'total_amount' => $amounts['total'],
-                'currency' => $currency->code,
-                'staff_count' => $request->number_of_staff ?? $request['number_of_staff'] ?? null,
-            ]);
+            // teamsInfo("Campaign Created: {$campaign->post_title}", [
+            //     'campaign_id' => $campaign->id,
+            //     'job_id' => $campaign->job_id,
+            //     'category' => $request->campaign_subcategory ?? $request['campaign_subcategory'] ?? null,
+            //     'total_amount' => $amounts['total'],
+            //     'currency' => $currency->code,
+            //     'staff_count' => $request->number_of_staff ?? $request['number_of_staff'] ?? null,
+            // ]);
 
             return response()->json([
                 'status' => true,
@@ -528,13 +528,13 @@ class CampaignService
             // Notify user via email
             Mail::to($user->email)->send(new CreateCampaign($saveCampaign));
 
-            teamsInfo("Campaign Workers Updated: Job ID {$campaign->job_id}", [
-                'campaign_id' => $campaign->id,
-                'job_id' => $campaign->job_id,
-                'new_workers' => $request->new_worker_number,
-                'total_charged' => $total,
-                'currency' => $baseCurrency,
-            ]);
+            // teamsInfo("Campaign Workers Updated: Job ID {$campaign->job_id}", [
+            //     'campaign_id' => $campaign->id,
+            //     'job_id' => $campaign->job_id,
+            //     'new_workers' => $request->new_worker_number,
+            //     'total_charged' => $total,
+            //     'currency' => $baseCurrency,
+            // ]);
 
             return response()->json([
                 'status' => true,
@@ -1296,16 +1296,16 @@ class CampaignService
                 'public_link' => "https://freebyz.com/tasks/" . $campaign->job_id,
             ];
 
-            teamsInfo("Campaign Job " . ucfirst($action) . "ed: ID {$job->id}", [
-                'campaign_id' => $campaign->job_id,
-                'campaign_title' => $campaign->post_title,
-                'job_id' => $job->id,
-                'action' => $action,
-                'worker_id' => $worker->id,
-                'worker_email' => $worker->email,
-                'amount' => $job->amount,
-                'reason' => $reason,
-            ]);
+            // teamsInfo("Campaign Job " . ucfirst($action) . "ed: ID {$job->id}", [
+            //     'campaign_id' => $campaign->job_id,
+            //     'campaign_title' => $campaign->post_title,
+            //     'job_id' => $job->id,
+            //     'action' => $action,
+            //     'worker_id' => $worker->id,
+            //     'worker_email' => $worker->email,
+            //     'amount' => $job->amount,
+            //     'reason' => $reason,
+            // ]);
 
             return response()->json([
                 'status' => true,
