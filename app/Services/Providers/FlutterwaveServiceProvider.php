@@ -57,20 +57,38 @@ class FlutterwaveServiceProvider
         $payload = array_filter([
             'email' => $data['email'],
             'currency' => 'GHS',
-            'amount' => $data['amount'] ?? 1,
-            'tx_ref' => $data['tx_ref'],
+            'amount' => $data['amount'] ?? null,
+            'tx_ref' => $data['tx_ref'] ?? ('VA-' . time() . '-' . rand(100, 999)),
             'is_permanent' => true,
             'firstname' => $data['firstname'] ?? null,
             'lastname' => $data['lastname'] ?? null,
+            'phonenumber' => $data['phone'] ?? $data['phonenumber'] ?? null,
             'narration' => $data['narration'] ?? 'Wallet Funding Account',
-        ]);
+        ], fn($v) => !is_null($v));
 
-        $res = Http::withHeaders($this->headers())
-            ->post("{$this->baseUrl}/virtual-account-numbers", $payload);
+        try {
+            $res = Http::withHeaders($this->headers())
+                ->timeout(15)
+                ->post("{$this->baseUrl}/virtual-account-numbers", $payload);
 
-        Log::info('Flutterwave Create Virtual Account Response: ' . $res->body());
+            Log::info('Flutterwave Create Virtual Account Response: ' . $res->body());
 
-        return $res->successful() ? $res->json('data') : null;
+            if ($res->successful()) {
+                return $res->json('data') ?? $res->json();
+            }
+
+            Log::error('Flutterwave Create Virtual Account Failed: ' . $res->body(), [
+                'status' => $res->status(),
+                'payload' => $payload,
+            ]);
+
+            return null;
+        } catch (\Throwable $e) {
+            Log::error('Flutterwave Create Virtual Account Error: ' . $e->getMessage(), [
+                'payload' => $payload,
+            ]);
+            return null;
+        }
     }
 
     // public function initializePayment(array $data): ?array

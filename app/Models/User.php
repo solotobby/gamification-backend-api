@@ -6,12 +6,33 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Mail\AccountDeletionScheduledMail;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted()
+    {
+        static::deleted(function ($user) {
+            // Only send if it is a soft delete (not permanent forceDelete) and email is present
+            if (!$user->isForceDeleting() && !empty($user->email)) {
+                try {
+                    Mail::to($user->email)->send(new AccountDeletionScheduledMail($user));
+                } catch (\Throwable $e) {
+                    Log::error("Failed to send account deletion email to {$user->email}: " . $e->getMessage());
+                }
+            }
+        });
+    }
 
     /**
      * The attributes that are mass assignable.

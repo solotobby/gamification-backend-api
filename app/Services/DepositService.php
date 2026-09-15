@@ -270,68 +270,7 @@ class DepositService
         ]);
     }
 
-    // public function generateInterswitchVirtualAccount(User $user)
-    // {
-    //     $existing = $user->virtualAccount;
-    //     // if ($existing) {
-    //     //     return response()->json([
-    //     //         'status' => true,
-    //     //         'data' => $existing
-    //     //     ]);
-    //     // }
-
-    //     $result = $this->interswitch->createVirtualAccount($user->name, null);
-
-    //     if (!$result) {
-    //         return response()->json([
-    //             'status' => false,
-    //             'message' => 'Could not generate virtual account.'
-    //         ], 500);
-    //     }
-
-    //     // Persist to DB same as existing virtual account flow
-    //     $user->virtualAccount()->create([
-    //         'bank_name'      => $result['bankName']      ?? 'Interswitch',
-    //         'account_name'   => $result['accountName']   ?? $user->name,
-    //         'account_number' => $result['accountNumber'] ?? null,
-    //         'currency'       => 'NGN',
-    //         'status'         => true,
-    //         'channel'       => 'interswitch',
-    //         'customer_id'    => $result['payableCode'] ?? $user->id . now(),
-    //         'customer_intgration'    => $result['merchantCode'] ?? 'Freebyz',
-    //     ]);
-    //     $virtualAccount = $user->virtualAccount;
-
-    //     // Normalize (handle both array and object)
-    //     $bankName = is_array($virtualAccount)
-    //         ? ($virtualAccount['bank_name'] ?? null)
-    //         : $virtualAccount->bank_name;
-
-    //     $accountName = is_array($virtualAccount)
-    //         ? ($virtualAccount['account_name'] ?? null)
-    //         : $virtualAccount->account_name;
-
-    //     $accountNumber = is_array($virtualAccount)
-    //         ? ($virtualAccount['account_number'] ?? null)
-    //         : $virtualAccount->account_number;
-
-    //     return response()->json([
-    //         'status'  => true,
-    //         'message' => 'Transfer to this account to fund your wallet.',
-    //         'data'    => [
-    //             'method'         => 'virtual_account',
-    //             'bank_name'      => $bankName,
-    //             'account_name'   => $accountName,
-    //             'account_number' => $accountNumber,
-    //             'note'           => 'Funds will be credited automatically once payment is confirmed.',
-    //             'manual_verification' => false
-    //         ],
-    //     ]);
-
-    //     // return response()->json(['status' => true, 'data' => $result]);
-    // }
-
-    private function handleInterswitchVirtualAccount($user)
+  private function handleInterswitchVirtualAccount($user)
     {
         // $virtualAccount = VirtualAccount::where('user_id', $user->id)
         //     ->where('channel', 'interswitch')
@@ -375,6 +314,53 @@ class DepositService
                 'bank_name' => $bankName,
                 'account_name' => $accountName,
                 'account_number' => $accountNumber,
+                'note' => 'Funds will be credited automatically once payment is confirmed.',
+                'manual_verification' => false,
+            ],
+        ]);
+    }
+
+    private function handleFlutterwaveVirtualAccount($user)
+    {
+        $virtualAccount = $user->virtualAccount;
+
+        if (!$virtualAccount || $virtualAccount->currency !== 'GHS') {
+            $response = $this->virtual->generateFlutterwaveVirtualAccount($user, 'GHS');
+
+            $virtual = $response->getData(true);
+
+            if (!($virtual['status'] ?? false)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $virtual['message'] ?? 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.',
+                ], $response->status());
+            }
+
+            $virtualAccount = $virtual['data'] ?? null;
+        }
+
+        // Normalize (handle both array and object)
+        $bankName = is_array($virtualAccount)
+            ? ($virtualAccount['bank_name'] ?? null)
+            : $virtualAccount->bank_name;
+
+        $accountName = is_array($virtualAccount)
+            ? ($virtualAccount['account_name'] ?? null)
+            : $virtualAccount->account_name;
+
+        $accountNumber = is_array($virtualAccount)
+            ? ($virtualAccount['account_number'] ?? null)
+            : $virtualAccount->account_number;
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Transfer to this account to fund your wallet.',
+            'data' => [
+                'method' => 'virtual_account',
+                'bank_name' => $bankName,
+                'account_name' => $accountName,
+                'account_number' => $accountNumber,
+                'currency' => 'GHS',
                 'note' => 'Funds will be credited automatically once payment is confirmed.',
                 'manual_verification' => false,
             ],
@@ -502,46 +488,7 @@ class DepositService
         ]);
     }
 
-    // private function handleFlutterwave($user, float $amount, string $ref, string $currency, string $device)
-    // {
-    //     if (!in_array($currency, ['GHS', 'USD', 'ZAR', 'KES'])) {
-    //         return response()->json(['status' => false, 'message' => "Flutterwave does not support {$currency} accounts."], 422);
-    //     }
-
-    //     $redirectUrl = $device === 'web'
-    //         ? 'https://dashboard.freebyz.com/wallet'
-    //         : route('webhook.flutterwave.callback');
-
-    //     $result = $this->flutterwave->initializePayment([
-    //         'reference' => $ref,
-    //         'amount' => $amount,
-    //         'currency' => $currency,
-    //         'email' => $user->email,
-    //         'name' => $user->name,
-    //         'callback_url' => $redirectUrl,
-    //     ]);
-
-    //     if (!$result) {
-    //         return response()->json(['status' => false, 'message' => 'Failed to initialize Flutterwave payment.'], 500);
-    //     }
-
-    //     $this->createPendingTransaction($user, $amount, $ref, $currency, 'flutterwave');
-
-    //     return response()->json([
-    //         'status' => true,
-    //         'message' => 'Redirect user to payment link.',
-    //         'data' => [
-    //             'method' => 'flutterwave',
-    //             'link' => $result['link'] ?? null,
-    //             'reference' => $ref,
-    //             'manual_verification' => false,
-    //         ],
-    //     ]);
-    // }
-
-    // DepositService::handleFlutterwave()
-
-    private function handleFlutterwave($user, float $amount, string $ref, string $currency, string $device)
+  private function handleFlutterwave($user, float $amount, string $ref, string $currency, string $device)
     {
         if (!in_array($currency, ['GHS', 'USD', 'ZAR', 'KES', 'UGX'])) {
             return response()->json(['status' => false, 'message' => "Flutterwave does not support {$currency} accounts."], 422);
@@ -578,39 +525,39 @@ class DepositService
         ]);
     }
 
-    private function handleFlutterwaveVirtualAccount($user)
-    {
-        $virtualAccount = $this->bankRepo->getVirtualBank($user->id, 'flutterwave');
+    // private function handleFlutterwaveVirtualAccount($user)
+    // {
+    //     $virtualAccount = $this->bankRepo->getVirtualBank($user->id, 'flutterwave');
 
-        if (!$virtualAccount) {
-            $response = $this->virtual->generateFlutterwaveVirtualAccount($user, 'GHS');
-            $virtual = $response->getData(true);
+    //     if (!$virtualAccount) {
+    //         $response = $this->virtual->generateFlutterwaveVirtualAccount($user, 'GHS');
+    //         $virtual = $response->getData(true);
 
-            if (!($virtual['status'] ?? false)) {
-                return response()->json(['status' => false, 'message' => $virtual['message'] ?? 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.'], $response->status());
-            }
+    //         if (!($virtual['status'] ?? false)) {
+    //             return response()->json(['status' => false, 'message' => $virtual['message'] ?? 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.'], $response->status());
+    //         }
 
-            $virtualAccount = $virtual['data'] ?? null;
-        }
+    //         $virtualAccount = $virtual['data'] ?? null;
+    //     }
 
-        $bankName = is_array($virtualAccount) ? ($virtualAccount['bank_name'] ?? null) : $virtualAccount->bank_name;
-        $accountName = is_array($virtualAccount) ? ($virtualAccount['account_name'] ?? null) : $virtualAccount->account_name;
-        $accountNumber = is_array($virtualAccount) ? ($virtualAccount['account_number'] ?? null) : $virtualAccount->account_number;
+    //     $bankName = is_array($virtualAccount) ? ($virtualAccount['bank_name'] ?? null) : $virtualAccount->bank_name;
+    //     $accountName = is_array($virtualAccount) ? ($virtualAccount['account_name'] ?? null) : $virtualAccount->account_name;
+    //     $accountNumber = is_array($virtualAccount) ? ($virtualAccount['account_number'] ?? null) : $virtualAccount->account_number;
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Transfer to this account to fund your wallet.',
-            'data' => [
-                'method' => 'virtual_account',
-                'currency' => 'GHS',
-                'bank_name' => $bankName,
-                'account_name' => $accountName,
-                'account_number' => $accountNumber,
-                'note' => 'Funds will be credited automatically once payment is confirmed.',
-                'manual_verification' => false,
-            ],
-        ]);
-    }
+    //     return response()->json([
+    //         'status' => true,
+    //         'message' => 'Transfer to this account to fund your wallet.',
+    //         'data' => [
+    //             'method' => 'virtual_account',
+    //             'currency' => 'GHS',
+    //             'bank_name' => $bankName,
+    //             'account_name' => $accountName,
+    //             'account_number' => $accountNumber,
+    //             'note' => 'Funds will be credited automatically once payment is confirmed.',
+    //             'manual_verification' => false,
+    //         ],
+    //     ]);
+    // }
 
     private function handleManualAccount($user, $currency)
     {

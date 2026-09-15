@@ -219,30 +219,34 @@ class VirtualAccountService
                 'email'     => $user->email,
                 'currency'  => $currency,
                 'tx_ref'    => 'VA-' . $user->id . '-' . time(),
-                'firstname' => explode(' ', $user->name)[0] ?? $user->name,
-                'lastname'  => explode(' ', $user->name)[1] ?? 'User',
+                'firstname' => 'Freebyz Technologies/',
+                'lastname'  => $user->name,
+                'phone'     => $user->phone ?? null,
                 'narration' => 'Freebyz Wallet Funding',
             ]);
 
-            if (!$result) {
-                teamsError('Flutterwave VA creation returned empty result', [
+            if (!$result || empty($result['account_number'])) {
+                teamsError('Flutterwave VA creation returned empty result or missing account number', [
                     'user_id' => $user->id,
                     'currency' => $currency,
+                    'response' => $result,
                 ]);
                 return response()->json(['status' => false, 'message' => 'Unable to generate virtual account at this time. Please use other means of wallet funding on the wallet page.'], 500);
             }
 
-            $virtual = VirtualAccount::create([
-                'user_id'             => $user->id,
-                'channel'             => 'flutterwave',
-                'customer_id'         => $result['order_ref'] ?? $result['id'] ?? null,
-                'customer_intgration' => $result['flw_ref'] ?? null,
-                'bank_name'           => $result['bank_name'] ?? 'Flutterwave',
-                'account_name'        => $result['account_name'] ?? $user->name,
-                'account_number'      => $result['account_number'] ?? null,
-                'status'              => true,
-                'currency'            => $currency,
-            ]);
+            $virtual = VirtualAccount::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'channel'             => 'flutterwave',
+                    'customer_id'         => $result['order_ref'] ?? $result['id'] ?? null,
+                    'customer_intgration' => $result['flw_ref'] ?? null,
+                    'bank_name'           => $result['bank_name'] ?? 'Flutterwave',
+                    'account_name'        => $result['account_name'] ?? 'Freebyz Technologies/ ' .$user->name,
+                    'account_number'      => $result['account_number'] ?? null,
+                    'status'              => true,
+                    'currency'            => $currency,
+                ]
+            );
 
             teamsInfo("Flutterwave VA Created: {$virtual->bank_name} - {$virtual->account_number} for {$user->name}", [
                 'user_id' => $user->id,

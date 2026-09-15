@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\BadRequestException;
 use App\Mail\GeneralMail;
 use App\Mail\Welcome;
+use App\Models\User;
 use App\Repositories\AuthRepositoryModel;
 use App\Repositories\BankRepositoryModel;
 use App\Repositories\LogRepositoryModel;
@@ -149,6 +150,10 @@ class AuthService
             $user = $this->auth->findUser($email);
 
             if (!$user) {
+                if ($deletedResponse = $this->handleDeletedUserResponse($email)) {
+                    return $deletedResponse;
+                }
+
                 return response()->json([
                     'status' => false,
                     'message' => 'Invalid Credentials'
@@ -224,6 +229,10 @@ class AuthService
             $user = $this->auth->findUser($email);
 
             if (!$user) {
+                if ($deletedResponse = $this->handleDeletedUserResponse($email)) {
+                    return $deletedResponse;
+                }
+
                 // optional: create user if not found
                 // $user = $this->auth->createUser(['email' => $email, 'name' => $name, ...]);
                 return response()->json([
@@ -294,7 +303,18 @@ class AuthService
             // Find user by email
             $user = $this->auth->findUser($request->email);
 
-            if (!$user || !$user->role || $user->role != 'regular') {
+            if (!$user) {
+                if ($deletedResponse = $this->handleDeletedUserResponse($request->email)) {
+                    return $deletedResponse;
+                }
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Incorrect Credentials'
+                ], 403);
+            }
+
+            if (!$user->role || $user->role != 'regular') {
                 return response()->json([
                     'status' => false,
                     'message' => 'Incorrect Credentials'
@@ -778,5 +798,33 @@ class AuthService
             ], 500);
         }
         //  return response()->json(['message' => 'Registration successfully', 'status' => true, 'data' => $data], 201);
+    }
+
+    /**
+     * Check if user account was soft-deleted and return scheduled deletion notice.
+     */
+    protected function handleDeletedUserResponse($email)
+    {
+        $deletedUser = User::onlyTrashed()->where('email', $email)->first();
+        if ($deletedUser && $deletedUser->deleted_at) {
+            $daysPassed = (int) $deletedUser->deleted_at->diffInDays(now());
+            $daysLeft = max(0, 60 - $daysPassed);
+            $daysText = $daysLeft === 1 ? '1 day' : ($daysLeft === 0 ? 'less than 24 hours' : "{$daysLeft} days");
+
+            teamsWarning("Deleted User Attempted Login: {$deletedUser->email}", [
+                'user_id' => $deletedUser->id,
+                'email' => $deletedUser->email,
+                'days_left' => $daysLeft,
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'is_deleted' => true,
+                'days_left' => $daysLeft,
+                'message' => "Your account has been scheduled for deletion. You have {$daysText} left before final deletion. If you do not want to delete your account, please contact support (holla@freebyz.com) to help reactivate your account."
+            ], 403);
+        }
+
+        return null;
     }
 }
