@@ -40,7 +40,7 @@ class BannerRepositoryModel
         );
     }
 
-    public function createBanner($user, $request, $bannerUrl, $currency)
+    public function createBanner($user, $request, $bannerUrl, $currency, $bannerUrlMobile = null)
     {
         $banner = new Banner();
 
@@ -57,6 +57,7 @@ class BannerRepositoryModel
         $banner->live_state = 'Under Review';
         $banner->amount = $request->budget;
         $banner->banner_url = $bannerUrl;
+        $banner->banner_url_mobile = $bannerUrlMobile;
         $banner->impression = 0;
         $banner->impression_count = 0;
         $banner->clicks = $request->budget / $currency->banner_clicks_amount;

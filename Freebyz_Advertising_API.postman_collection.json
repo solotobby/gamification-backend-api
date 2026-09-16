@@ -1,0 +1,592 @@
+{
+	"info": {
+		"_postman_id": "8a3e7b1a-9f42-4f12-9852-ad01f9e85191",
+		"name": "Freebyz - Advertising & Telemetry API",
+		"description": "Comprehensive Postman collection for Freebyz Advertising Monetization (Adsterra & Direct Banners), Public Client Config, Telemetry Beacons, and Admin Management APIs.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8081",
+			"type": "string"
+		},
+		{
+			"key": "admin_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Public Client APIs (Mobile & Web)",
+			"description": "Endpoints consumed by the Mobile App (Android/iOS) and Web frontend to fetch ad configuration and send telemetry events.",
+			"item": [
+				{
+					"name": "Get Ad Config - Android App",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "X-Platform",
+								"value": "ANDROID_APP"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/public/advertising/config?platform=android_app&device=mobile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"advertising",
+								"config"
+							],
+							"query": [
+								{
+									"key": "platform",
+									"value": "android_app",
+									"description": "android_app, ios_app, or web"
+								},
+								{
+									"key": "device",
+									"value": "mobile",
+									"description": "mobile, desktop, or all"
+								}
+							]
+						},
+						"description": "Retrieves the active advertising configuration, kill-switch status, session limits, and placement rules for Android App."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ad Config - iOS App",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/public/advertising/config?platform=ios_app&device=mobile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"advertising",
+								"config"
+							],
+							"query": [
+								{
+									"key": "platform",
+									"value": "ios_app"
+								},
+								{
+									"key": "device",
+									"value": "mobile"
+								}
+							]
+						},
+						"description": "Retrieves active configuration for iOS devices."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ad Config - Web Client",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/public/advertising/config?platform=web&device=all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"advertising",
+								"config"
+							],
+							"query": [
+								{
+									"key": "platform",
+									"value": "web"
+								},
+								{
+									"key": "device",
+									"value": "all"
+								}
+							]
+						},
+						"description": "Retrieves active configuration for Freebyz Web frontend."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Ad Config - Specific Page (Tasks Feed)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/public/advertising/config?platform=android_app&page_type=TASKS_LIST",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"advertising",
+								"config"
+							],
+							"query": [
+								{
+									"key": "platform",
+									"value": "android_app"
+								},
+								{
+									"key": "page_type",
+									"value": "TASKS_LIST",
+									"description": "TASKS_LIST, JOBS_LIST, JOB_DETAIL, BLOG_ARTICLE, TALENT_MARKETPLACE"
+								}
+							]
+						},
+						"description": "Fetches ad placements filtered specifically for the Available Tasks screen."
+					},
+					"response": []
+				},
+				{
+					"name": "Telemetry - Log Ad Impression (Rendered)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"ad_rendered\",\n  \"placement_key\": \"TASKS_LIST_MID_NATIVE\",\n  \"page_type\": \"TASKS_LIST\",\n  \"ad_format\": \"NATIVE_BANNER\",\n  \"ad_provider\": \"ADSTERRA\",\n  \"platform\": \"android_app\",\n  \"device_type\": \"mobile\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/public/advertising/events",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"advertising",
+								"events"
+							]
+						},
+						"description": "Logs an impression beacon when an ad card is rendered on screen."
+					},
+					"response": []
+				},
+				{
+					"name": "Telemetry - Log Ad Click",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"ad_clicked\",\n  \"placement_key\": \"TASKS_LIST_MID_NATIVE\",\n  \"page_type\": \"TASKS_LIST\",\n  \"ad_format\": \"NATIVE_BANNER\",\n  \"ad_provider\": \"ADSTERRA\",\n  \"platform\": \"android_app\",\n  \"device_type\": \"mobile\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/public/advertising/events",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"advertising",
+								"events"
+							]
+						},
+						"description": "Logs a click beacon when a user taps an ad."
+					},
+					"response": []
+				},
+				{
+					"name": "Telemetry - Log Ad Failure / Blocked",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_name\": \"ad_failed\",\n  \"placement_key\": \"TASKS_LIST_MID_NATIVE\",\n  \"page_type\": \"TASKS_LIST\",\n  \"ad_format\": \"NATIVE_BANNER\",\n  \"platform\": \"android_app\",\n  \"device_type\": \"mobile\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/public/advertising/events",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"public",
+								"advertising",
+								"events"
+							]
+						},
+						"description": "Logs when an ad fails to render or is blocked by network filters."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Direct Banner Ads (Dual Upload)",
+			"description": "Endpoints for creating and listing user-created direct banner ads with dual desktop and mobile image support.",
+			"item": [
+				{
+					"name": "Create Banner Ad (Dual Desktop & Mobile Images)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "banner_image",
+									"type": "file",
+									"description": "Desktop banner image (1024x250)"
+								},
+								{
+									"key": "banner_image_mobile",
+									"type": "file",
+									"description": "Mobile banner image (300x250 / 320x100)"
+								},
+								{
+									"key": "external_link",
+									"value": "https://mybusiness.com",
+									"type": "text"
+								},
+								{
+									"key": "budget",
+									"value": "5000",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/banner/create-ad",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"banner",
+								"create-ad"
+							]
+						},
+						"description": "Creates a new banner ad with optional mobile-specific image to prevent mobile distortion."
+					},
+					"response": []
+				},
+				{
+					"name": "List User Banner Ads",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{user_token}}"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/banner/list/?page=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"banner",
+								"list",
+								""
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Returns user banners including both banner_url (desktop) and banner_url_mobile."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Admin Advertising Management APIs",
+			"description": "Admin APIs for controlling master kill switches, format flags, placement rules, script snippets, and analytics filtering.",
+			"item": [
+				{
+					"name": "Get Master Advertising Config",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/advertising/config",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"advertising",
+								"config"
+							]
+						},
+						"description": "Fetches current master status, format toggles, and session capping limit."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Master Advertising Config",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"ACTIVE\",\n  \"web_enabled\": true,\n  \"mobile_app_enabled\": true,\n  \"native_enabled\": true,\n  \"banner_enabled\": true,\n  \"social_bar_enabled\": false,\n  \"interstitial_enabled\": false,\n  \"popunder_enabled\": false,\n  \"smartlink_enabled\": false,\n  \"max_ads_per_session\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/advertising/config",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"advertising",
+								"config"
+							]
+						},
+						"description": "Updates global kill switch, platform flags, format flags, and session capping."
+					},
+					"response": []
+				},
+				{
+					"name": "List All Placements",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/advertising/placements",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"advertising",
+								"placements"
+							]
+						},
+						"description": "Lists all configured ad placement slots with display intervals, frequency caps, and priorities."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Placement Rule",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"enabled\": true,\n  \"display_interval\": 5,\n  \"frequency_cap\": 3,\n  \"priority\": 1,\n  \"code\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/advertising/placements/2",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"advertising",
+								"placements",
+								"2"
+							]
+						},
+						"description": "Updates a placement's active status, display interval, frequency cap, and code override."
+					},
+					"response": []
+				},
+				{
+					"name": "List Adsterra Code Snippets",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/advertising/codes",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"advertising",
+								"codes"
+							]
+						},
+						"description": "Retrieves all script slots (Native, Desktop Banner, Mobile Banner, Social Bar, etc.)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Analytics Summary (with Period Filter)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/advertising/analytics?period=7d",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"advertising",
+								"analytics"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "7d",
+									"description": "Filter period: 24h, 7d, 30d, 60d, 90d, all"
+								}
+							]
+						},
+						"description": "Returns grouped telemetry summary (impressions, clicks, errors) filtered by time range."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

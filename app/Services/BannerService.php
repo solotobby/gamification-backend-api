@@ -60,6 +60,7 @@ class BannerService
                     'user_id' => $banner->user_id,
                     'banner_id' => $banner->banner_id,
                     'banner_url' => $banner->banner_url,
+                    'banner_url_mobile' => $banner->banner_url_mobile,
                     'external_link' => $banner->external_link,
                     'currency' => $banner->currency,
                     'budget' => $banner->amount,
@@ -131,16 +132,24 @@ class BannerService
                 ], 401);
             }
 
-            // s3 bucket processing
+            // s3 bucket processing for Desktop image
             $file = $request->file('banner_image');
             $bannerUrl = $this->spacesService->uploadImage($file);
+
+            // Optional/Recommended Mobile image
+            $bannerUrlMobile = null;
+            if ($request->hasFile('banner_image_mobile')) {
+                $mobileFile = $request->file('banner_image_mobile');
+                $bannerUrlMobile = $this->spacesService->uploadImage($mobileFile);
+            }
 
             //Save Banner
             $banner = $this->bannerModel->createBanner(
                 $user,
                 $request,
                 $bannerUrl,
-                $currency
+                $currency,
+                $bannerUrlMobile
             );
 
             //transaction log

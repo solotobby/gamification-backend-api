@@ -11,6 +11,7 @@ class BannerValidator
     {
         $validationRules = [
             'banner_image' => 'required|image',
+            'banner_image_mobile' => 'nullable|image',
             'external_link' => 'required|string|url',
             // 'audience' => 'required|array|min:5',
             'budget' => 'required|string',

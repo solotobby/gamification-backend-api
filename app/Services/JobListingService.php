@@ -515,6 +515,7 @@ class JobListingService
                 $bannerData[] = [
                     'banner_id' => $bannerItem->banner_id,
                     'banner_url' => $bannerItem->banner_url,
+                    'banner_url_mobile' => $bannerItem->banner_url_mobile,
                     'status' => $bannerItem->status ? true : false,
                     'clicks' => $bannerItem->click_count,
                     'created_at' => $bannerItem->created_at,

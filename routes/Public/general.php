@@ -38,4 +38,9 @@ Route::group(['namespace' => 'auth'], function () {
 
     Route::get('/public/blogs', [PublicController::class, 'blogs']);
     Route::get('/public/blogs/{slug}', [PublicController::class, 'blogDetails']);
+
+    // Advertising APIs (Web & Mobile App)
+    Route::get('/public/advertising/config', [\App\Http\Controllers\AdvertisingController::class, 'getConfig']);
+    Route::get('/v1/advertising/config', [\App\Http\Controllers\AdvertisingController::class, 'getConfig']);
+    Route::post('/public/advertising/events', [\App\Http\Controllers\AdvertisingController::class, 'logEvent']);
 });
