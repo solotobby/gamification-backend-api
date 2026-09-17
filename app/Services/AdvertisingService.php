@@ -31,8 +31,9 @@ class AdvertisingService
             $platformKey = 'WEB';
         }
 
-        // Cache configuration for 5 minutes
-        $cacheKey = "ad_config_{$platformKey}_{$device}_" . ($pageType ?: 'all');
+        // Version cache key based on latest DB timestamps so changes from admin (gamification app) reflect instantly
+        $version = (string) (AdvertisingConfig::max('updated_at') . '_' . AdPlacement::max('updated_at') . '_' . AdCode::max('updated_at'));
+        $cacheKey = "ad_config_{$version}_{$platformKey}_{$device}_" . ($pageType ?: 'all');
 
         $configData = Cache::remember($cacheKey, 300, function () use ($platformKey, $device, $pageType) {
             $config = AdvertisingConfig::current();

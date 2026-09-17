@@ -42,7 +42,11 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handlePaystackCallback(Request $request)
     {
-        $reference = $request->query('reference');
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
+        $reference = trim($request->query('reference') ?? '', "\\ \t\n\r\0\x0B");
 
         if (!$reference) {
             return response()->json(['status' => 'no reference'], 400);
@@ -177,6 +181,10 @@ class WebhookController extends Controller
 
     public function handlePaystackWebhook(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         // $payload = json_decode($request->getContent(), true);
         // $event = $request->input('event');
         // $data  = $request->input('data');
@@ -359,6 +367,10 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleKoraPay(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         ini_set('serialize_precision', '-1');
 
         $rawBody = $request->getContent();
@@ -597,7 +609,11 @@ class WebhookController extends Controller
 
     public function handleKoraPayCallback(Request $request)
     {
-        $reference = $request->query('reference');
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
+        $reference = trim($request->query('reference') ?? '', "\\ \t\n\r\0\x0B");
 
         if (!$reference) {
             // return response()->json(['status' => 'no reference'], 400);
@@ -738,6 +754,10 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleStripe(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         $payload = $request->getContent();
         $sigHeader = $request->header('Stripe-Signature');
 
@@ -826,6 +846,10 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleInterswitchWebhook(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         $rawBody = $request->getContent();
         $signature = $request->header('X-Interswitch-Signature');
 
@@ -1008,7 +1032,11 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function handleInterswitchCallback(Request $request)
     {
-        $rawReference = $request->query('txnref') ?? $request->query('reference');
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
+        $rawReference = trim($request->query('txnref') ?? $request->query('reference') ?? '', "\\ \t\n\r\0\x0B");
         $amount = $request->query('amount') ?? 0;
 
         if (!$rawReference) {
@@ -1214,8 +1242,12 @@ class WebhookController extends Controller
 
     public function handleInterswitchCallbackOld(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         // Interswitch redirects with txnref param
-        $reference = $request->query('txnref') ?? $request->query('reference');
+        $reference = trim($request->query('txnref') ?? $request->query('reference') ?? '', "\\ \t\n\r\0\x0B");
         $amount = $request->query('amount') ?? 0;
         if (!$reference) {
             return response()->json(['status' => false, 'message' => 'No reference'], 400);
@@ -1291,6 +1323,10 @@ class WebhookController extends Controller
     // ---------------------------------------------------------------
     public function zeptoWebhook(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         $data = $request->json()->all();
         $eventName = $data['event_name'][0] ?? null;
         $message = $data['event_message'][0] ?? null;
@@ -1318,6 +1354,10 @@ class WebhookController extends Controller
 
     public function zeptoWebhookBounces(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         $data = $request->json()->all();
 
         Log::info('zeptomail webhook', [$data]);
@@ -1477,6 +1517,10 @@ class WebhookController extends Controller
 
     public function handleFlutterwaveWebhook(Request $request)
     {
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
         $signature = $request->header('verif-hash');
         $expected = config('services.flutterwave.webhook_hash');
 
@@ -1589,7 +1633,11 @@ class WebhookController extends Controller
 
     public function handleFlutterwaveCallback(Request $request)
     {
-        $reference = $request->query('tx_ref');
+        if ($request->isMethod('head')) {
+            return response()->noContent();
+        }
+
+        $reference = trim($request->query('tx_ref') ?? '', "\\ \t\n\r\0\x0B");
 
         if (!$reference) {
             return response()->json(['status' => false, 'message' => 'No reference supplied'], 400);
