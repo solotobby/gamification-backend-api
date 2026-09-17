@@ -101,13 +101,8 @@ class BankService
                 ]);
             }
 
-            // Bank list - Korapay is prioritized for all supported currencies
-            $bankList = $this->korapay->getBanks($countryCode, $currency);
-
-            // Fallback to Flutterwave if Korapay bank list is empty or failed
-            if (empty($bankList)) {
-                $bankList = $this->flutterwave->getBanks($countryCode);
-            }
+            // Bank list - Flutterwave alone
+            $bankList = $this->flutterwave->getBanks($countryCode);
 
             if (!$bankList) {
                 return response()->json(['status' => false, 'message' => 'Failed to fetch bank list'], 500);
@@ -159,13 +154,8 @@ class BankService
                 ]);
             }
 
-            // Resolve bank account using Korapay first
-            $resolved = $this->korapay->resolveAccount($request->account_number, $request->bank_code, $currency, $countryCode);
-
-            // Fallback to Flutterwave if Korapay resolution fails
-            if (!$resolved || empty($resolved['account_name'])) {
-                $resolved = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
-            }
+            // Resolve bank account using Flutterwave alone
+            $resolved = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
 
             if (!$resolved || empty($resolved['account_name'])) {
                 return response()->json(['status' => false, 'message' => 'Account Name not found'], 401);
@@ -228,13 +218,8 @@ class BankService
                     'currency' => $currency,
                 ];
             } else {
-                // Verify account using Korapay first
-                $verified = $this->korapay->resolveAccount($request->account_number, $request->bank_code, $currency, $countryCode);
-
-                // Fallback to Flutterwave if Korapay resolution is unavailable
-                if (!$verified || empty($verified['account_name'])) {
-                    $verified = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
-                }
+                // Verify account using Flutterwave alone
+                $verified = $this->flutterwave->resolveAccount($request->account_number, $request->bank_code);
 
                 if (!$verified && !$request->filled('account_name')) {
                     return response()->json(['status' => false, 'message' => 'Unable to verify account details. Please try again.'], 401);

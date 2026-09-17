@@ -1067,27 +1067,39 @@ class AdminController extends Controller
     }
 
     public function updateUserAccountDetails(Request $request){
+        $request->validate([
+            'user_id' => 'required',
+            'account_number' => 'required',
+            'bank_code' => 'required',
+        ]);
 
-            $accountInformation = PaystackHelpers::resolveBankName($request->account_number, $request->bank_code);
+        $flutterwave = app(\App\Services\Providers\FlutterwaveServiceProvider::class);
+        $resolved = $flutterwave->resolveAccount($request->account_number, $request->bank_code);
+        $accountName = $resolved['account_name'] ?? $request->account_name;
 
-            if($accountInformation['status'] == 'true')
-            {
-                $recipientCode = PaystackHelpers::recipientCode($accountInformation['data']['account_name'], $request->account_number, $request->bank_code);
-                $bankInfor = BankInformation::where('user_id', $request->user_id)->first();
-                $bankInfor->name = $accountInformation['data']['account_name'];
-                $bankInfor->bank_name = $recipientCode['data']['details']['bank_name'];
-                $bankInfor->account_number = $request->account_number;
-                $bankInfor->bank_code = $request->bank_code;
-                $bankInfor->recipient_code = $recipientCode['data']['recipient_code'];
-                $bankInfor->save();
-            }
+        if (!$accountName) {
+            return back()->with('error', 'Unable to resolve account name');
+        }
 
-            $user = User::where('id', $request->user_id)->first();
+        BankInformation::updateOrCreate(
+            ['user_id' => $request->user_id],
+            [
+                'name' => $accountName,
+                'bank_name' => $request->bank_name ?? ($resolved['bank_name'] ?? 'Bank Account'),
+                'account_number' => $request->account_number,
+                'bank_code' => $request->bank_code,
+                'recipient_code' => null,
+            ]
+        );
+
+        $user = User::where('id', $request->user_id)->first();
+        if ($user) {
             $subject = 'Account Details Updated';
             $content = 'Congratulations, your account details has been updated on Freebyz.';
             Mail::to($user->email)->send(new GeneralMail($user, $content, $subject, ''));
+        }
 
-            return back()->with('success', 'Account Details Upated');
+        return back()->with('success', 'Account Details Updated');
     }
 
     public function virtualAccountList(){
