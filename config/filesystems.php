@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DISK', 'local'),
+    'default' => env('FILESYSTEM_DISK', env('FILESYSTEM_DRIVER', 'spaces')),
 
     /*
     |--------------------------------------------------------------------------
@@ -62,6 +62,8 @@ return [
             'region'   => env('DO_SPACES_REGION'),
             'bucket'   => env('DO_SPACES_BUCKET'),
             'endpoint' => env('DO_SPACES_ENDPOINT'),
+            'url'      => env('DO_SPACES_CDN_URL', env('DO_SPACES_ENDPOINT')),
+            'cdn_url'  => env('DO_SPACES_CDN_URL', env('DO_SPACES_ENDPOINT')),
             // 'use_path_style_endpoint' => false,
             'visibility' => 'public',
         ],

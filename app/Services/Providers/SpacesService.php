@@ -17,7 +17,11 @@ class SpacesService
 
     public function __construct()
     {
-        $this->cdnUrl = rtrim(env('DO_SPACES_CDN_URL', env('DO_SPACES_ENDPOINT')), '/');
+        $this->cdnUrl = rtrim(
+            config('filesystems.disks.spaces.url')
+                ?: env('DO_SPACES_CDN_URL', env('DO_SPACES_ENDPOINT', 'https://freebyzbucket.sfo3.cdn.digitaloceanspaces.com')),
+            '/'
+        );
         $this->imageManager = new ImageManager(new Driver());
     }
 

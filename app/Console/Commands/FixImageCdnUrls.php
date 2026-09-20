@@ -50,7 +50,11 @@ class FixImageCdnUrls extends Command
      */
     public function handle(): int
     {
-        $cdnUrl = rtrim(env('DO_SPACES_CDN_URL', env('DO_SPACES_ENDPOINT', 'https://freebyzbucket.sfo3.cdn.digitaloceanspaces.com')), '/');
+        $cdnUrl = rtrim(
+            config('filesystems.disks.spaces.url')
+                ?: env('DO_SPACES_CDN_URL', env('DO_SPACES_ENDPOINT', 'https://freebyzbucket.sfo3.cdn.digitaloceanspaces.com')),
+            '/'
+        );
 
         if (empty($cdnUrl)) {
             $this->error('DO_SPACES_CDN_URL or DO_SPACES_ENDPOINT is not configured.');
