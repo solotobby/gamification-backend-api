@@ -34,7 +34,7 @@ class TicketService
             $user = auth()->user();
             $proofUrl = 'no image';
             if ($request->hasFile('proof')) {
-                $file = $request->hasFile('proof');
+                $file = $request->file('proof');
                 // $proofUrl = $this->cloudinary->uploadImage($file);
                 $proofUrl = $this->spacesService->uploadImage($file);
             }
