@@ -69,6 +69,6 @@ class Kernel extends HttpKernel
         'isAdmin' =>   \App\Http\Middleware\isAdmin::class,
         'isUser' =>   \App\Http\Middleware\isUser::class,
         'turnstile' => \App\Http\Middleware\VerifyTurnstile::class,
-
+        'track.activity' => \App\Http\Middleware\TrackActivity::class,
     ];
 }
