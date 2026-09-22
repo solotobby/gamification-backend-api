@@ -203,6 +203,14 @@ class AdvertisingService
     public function recordEvent(Request $request): JsonResponse
     {
         try {
+            // Handle raw beacon payload if sent as text/plain to avoid preflight
+            if (!$request->isJson() && !empty($request->getContent())) {
+                $decoded = json_decode($request->getContent(), true);
+                if (is_array($decoded)) {
+                    $request->merge($decoded);
+                }
+            }
+
             $data = $request->validate([
                 'event_name' => 'required|string|in:ad_requested,ad_loaded,ad_failed,ad_rendered,ad_viewed,ad_clicked',
                 'placement_key' => 'required|string|max:100',

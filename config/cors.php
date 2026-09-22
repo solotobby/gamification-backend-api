@@ -15,20 +15,33 @@ return [
     |
     */
 
-    'paths' => ['api/*'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'https://freebyz.com',
+        'https://www.freebyz.com',
+        'https://dashboard.freebyz.com',
+        'https://cv.freebyz.com',
+        'http://localhost',
+        'http://localhost:8000',
+        'http://localhost:8081',
+        'http://127.0.0.1:8000',
+        'http://127.0.0.1:8081',
+        'http://127.0.0.1:8001',
+    ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https?://([a-zA-Z0-9-]+\.)*freebyz\.(com|test|ng)$#',
+    ],
 
     'allowed_headers' => ['*'],
 
     'exposed_headers' => [],
 
-    'max_age' => 0,
+    'max_age' => 86400,
 
-    'supports_credentials' => false,
+    'supports_credentials' => true,
 
 ];
