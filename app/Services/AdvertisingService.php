@@ -102,13 +102,37 @@ class AdvertisingService
                 if ($formatKey === 'popunder' && !$config->popunder_enabled) continue;
                 if ($formatKey === 'smartlink' && !$config->smartlink_enabled) continue;
 
-                // Resolve snippet code
+                // Resolve snippet code with robust format & device fallback
                 $snippet = $placement->code;
                 if (empty($snippet)) {
-                    // Fallback to format code
-                    $formatCodeKey = $placement->ad_format . '_' . $placement->device;
-                    $formatCodeAllKey = $placement->ad_format . '_ALL';
-                    $snippet = $codes[$formatCodeKey]->code ?? ($codes[$formatCodeAllKey]->code ?? '');
+                    $format = strtoupper($placement->ad_format);
+                    $dev = strtoupper($placement->device);
+
+                    // Standard candidates
+                    $candidateKeys = [
+                        $format . '_' . $dev,
+                        $format . '_ALL',
+                    ];
+
+                    // Format aliases: STANDARD_BANNER -> BANNER_DESKTOP / BANNER_MOBILE
+                    if ($format === 'STANDARD_BANNER' || $format === 'BANNER') {
+                        if ($device === 'MOBILE' || $dev === 'MOBILE') {
+                            $candidateKeys[] = 'BANNER_MOBILE_MOBILE';
+                            $candidateKeys[] = 'BANNER_MOBILE_ALL';
+                            $candidateKeys[] = 'BANNER_DESKTOP_DESKTOP';
+                        } else {
+                            $candidateKeys[] = 'BANNER_DESKTOP_DESKTOP';
+                            $candidateKeys[] = 'BANNER_DESKTOP_ALL';
+                            $candidateKeys[] = 'BANNER_MOBILE_MOBILE';
+                        }
+                    }
+
+                    foreach ($candidateKeys as $cKey) {
+                        if (!empty($codes[$cKey]->code)) {
+                            $snippet = $codes[$cKey]->code;
+                            break;
+                        }
+                    }
                 }
 
                 $formattedPlacements[] = [
@@ -126,6 +150,27 @@ class AdvertisingService
                 ];
             }
 
+            // Global scripts that apply across pages when their formats are enabled
+            $globalScripts = [];
+            if ($config->popunder_enabled && !empty($codes['POPUNDER_ALL']->code)) {
+                $globalScripts['popunder'] = $codes['POPUNDER_ALL']->code;
+            }
+            if ($config->social_bar_enabled && !empty($codes['SOCIAL_BAR_ALL']->code)) {
+                $globalScripts['social_bar'] = $codes['SOCIAL_BAR_ALL']->code;
+            }
+            if ($config->interstitial_enabled && !empty($codes['INTERSTITIAL_ALL']->code)) {
+                $globalScripts['interstitial'] = $codes['INTERSTITIAL_ALL']->code;
+            }
+            if ($config->smartlink_enabled && !empty($codes['SMARTLINK_ALL']->code)) {
+                $globalScripts['smartlink'] = $codes['SMARTLINK_ALL']->code;
+            }
+
+            // Keyed map of all active codes for client reference
+            $rawCodesMap = [];
+            foreach ($codes as $key => $item) {
+                $rawCodesMap[$key] = $item->code;
+            }
+
             return [
                 'enabled' => true,
                 'provider' => 'adsterra',
@@ -139,6 +184,8 @@ class AdvertisingService
                     'popunder' => (bool) $config->popunder_enabled,
                     'smartlink' => (bool) $config->smartlink_enabled,
                 ],
+                'global_scripts' => $globalScripts,
+                'codes' => $rawCodesMap,
                 'placements' => $formattedPlacements,
             ];
         });
